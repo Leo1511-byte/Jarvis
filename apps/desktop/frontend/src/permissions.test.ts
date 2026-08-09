@@ -8,6 +8,16 @@ describe("permissionLevelFor", () => {
     expect(permissionLevelFor("help")).toBe(1);
   });
 
+  it("classifies read-only orchestrator commands as level 1", () => {
+    expect(permissionLevelFor("research")).toBe(1);
+    expect(permissionLevelFor("check-calendar")).toBe(1);
+    expect(permissionLevelFor("check-email")).toBe(1);
+  });
+
+  it("classifies workspace-modifying commands as level 2", () => {
+    expect(permissionLevelFor("continue-project")).toBe(2);
+  });
+
   it("classifies destructive commands as level 3", () => {
     expect(permissionLevelFor("delete-project")).toBe(3);
   });

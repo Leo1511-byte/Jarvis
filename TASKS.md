@@ -21,16 +21,21 @@
       Claude, even under a blanket "always allow" grant (2026-08-09): that README states the
       reasoning explicitly — a recurring job that writes to your vault should start because you
       turned it on, not because an assistant decided it should run. 3 lines, your terminal.
-- [ ] **Test the new `research <topic>` command in the actual running app** — type it into the
-      real command bar in the `cargo tauri dev` window and confirm you get a real result back
-      (not just the automated tests, which mock the Tauri IPC boundary). This is the one piece
-      of M10's first slice nobody has clicked through yet.
-- [ ] **M10 orchestrator, next slices** — the first real slice (below, "Done") proved the
-      subprocess approach works: Rust shells out to `claude -p --output-format json` for
-      synchronous replies. Still open: a background-mode path (`claude --bg` + polling
-      `claude agents --json`) for longer workflows like M11's "continue project X", which
-      shouldn't block the command bar the way `research` currently does. Scope that as its own
-      slice rather than building it speculatively.
+- [ ] **Test all four orchestrator-routed commands in the actual running app** — `research
+      <topic>`, `continue project <name>`, `check my calendar`, `check my email` — type each into
+      the real command bar in the `cargo tauri dev` window and confirm you get a real result back
+      (not just the automated tests, which mock the Tauri IPC boundary). Nobody has clicked
+      through any of the three added 2026-08-09 (calendar/email/continue-project) yet.
+- [ ] **Background-mode path for the orchestrator** — every command today (`research`,
+      `continue-project`, `check-calendar`, `check-email`) blocks the command bar's `processing`
+      state until the whole synchronous `claude -p` call finishes. Fine for quick reads, wrong
+      for `continue project`'s full spec §62 workflow on a big task. `claude --bg` + polling
+      `claude agents --json` were verified callable by hand but not built into `orchestrator.rs` —
+      scope as its own slice, not sync-mode's problem to solve.
+- [ ] **M12 (GitHub) still needs its own command-bar entry point** — `gh` CLI auth is verified,
+      but unlike Calendar/Gmail there's no GitHub MCP server configured locally yet, so there's
+      nothing for a `check my prs` / `check my issues` command to call yet. Needs that MCP server
+      set up locally first.
 - [ ] Known limitation in `orchestrator.rs`: `claude` is resolved via `PATH`, which works under
       `cargo tauri dev` (inherits Terminal's env) but will silently fail in a double-clicked,
       bundled app (Finder-launched processes get a minimal PATH). Not fixed yet — fix when the
@@ -148,6 +153,21 @@
       `localStorage.clear is not a function`. `TASKS.md`'s prior entry for that commit claiming
       "16 tests still pass" was wrong. Fixed via `NODE_OPTIONS=--no-experimental-webstorage` in
       the `test` script. All 20 tests pass now (16 prior + 4 new from the M10 slice above).
+- [x] 2026-08-09 — Committed local Claude Code's uncommitted M10 slice + real verification work
+      (`dd3bb38`) after independently re-running the frontend side myself (fresh `npm install`,
+      20/20 tests with the `NODE_OPTIONS` fix, `tsc -b`, `vite build`) — didn't just trust the
+      docs' claims. Added `.claude/settings.local.json` to `.gitignore` (machine-specific
+      permission grants, not shared config) so it doesn't get committed by either session.
+- [x] 2026-08-09 — Milestones 11, 14, 15, 16 (17 reframed): three more command-bar intents added
+      to `commandEngine.ts` (`continue-project`, `check-calendar`, `check-email`), all reusing the
+      existing `run_orchestrator` Tauri command with different prompts — zero new Rust needed,
+      since M10 already built a generic-enough interface. `permissions.ts` classifies
+      research/calendar/email as Level 1 (explicitly read-only prompts) and continue-project as
+      Level 2 (writes, but traceable via git history + session id, not gated per-action). 9 new
+      tests (4 parsing + 5 execution) — 29 total passing. `AGENT_SYSTEM.md` rewritten to describe
+      "specialists" honestly as prompt templates over one orchestrator call rather than separate
+      agent processes, which is what M17 actually turned out to need. `COMMANDS.md`, `ROADMAP.md`
+      updated to match. `tsc -b`/`vite build` verified.
 - [x] 2026-08-09 — Milestone 18 (permissions + approval) built: `permissions.ts` classifies
       command kinds by level, `ApprovalDialog` + `useApproval` implement a real, promise-based
       Level 3 approval flow (spec §55 format), wired into `ProjectsView`'s new Delete button —
@@ -161,8 +181,10 @@
 
 - Milestone 7's Supabase project: blocked on you creating an account (Claude doesn't create
   accounts on your behalf).
-- Milestone 3's visual confirmation: blocked on you actually running `cargo tauri dev` and
-  looking at the window.
+- Milestone 9's `speak_daemon.py`: blocked on adding a real key to `config.json`'s
+  `elevenlabs_api_key` (still empty as of 2026-08-09) — the file exists and the voice ID is set,
+  only the key itself is missing, and that's the one thing that shouldn't be typed into any
+  Claude chat.
 
 ## Backlog (unscoped, from the original spec — do not start yet)
 

@@ -2,6 +2,36 @@
 
 ## Unreleased
 
+### Added — 2026-08-09 (Milestones 11, 14, 15, 16 built; 17 reframed)
+- `commandEngine.ts`: three new command kinds — `continue-project` (M11, spec §62's full
+  workflow as a single orchestrator prompt), `check-calendar` (M14), `check-email` (M15) — plus
+  the `research` (M16) command committed earlier. All four call the same
+  `run_orchestrator` Tauri command from M10 with a different, purpose-built prompt; the
+  read-only three (research/calendar/email) explicitly tell the orchestrator not to send,
+  draft, label, or modify anything. No new Rust code required — `run_orchestrator`'s generic
+  `prompt: String` interface was already enough.
+- `permissions.ts`: classified the three new kinds — research/check-calendar/check-email as
+  Level 1 (explicitly read-only), continue-project as Level 2 (writes to a project repo, but
+  traceable via git history and the orchestrator's session id, not gated per-action).
+- `runOrchestratorOrExplain` helper added to `commandEngine.ts` so the "no orchestrator
+  connection" / error-handling logic exists once instead of copy-pasted across four commands.
+- 9 new tests (4 parsing, 5 execution) in `commandEngine.test.ts`; 2 new tests in
+  `permissions.test.ts`. 29 total frontend tests passing. `tsc -b`/`vite build` verified.
+- `AGENT_SYSTEM.md` rewritten: Milestone 17's original "specialist agents" design assumed
+  separate agent processes/personas behind a routing table. What actually got built is simpler
+  — four prompt templates over one orchestrator call — and there's no evidence yet that
+  separate personas would behave differently than a clear, scoped prompt each time. Documented
+  as the real (simpler) architecture rather than building the originally-sketched routing table
+  just to match the spec's shape.
+- `COMMANDS.md`, `ROADMAP.md` updated to describe all four orchestrator-routed commands and
+  their permission levels.
+- Committed local Claude Code's independently-completed M10 slice + verification work
+  (`dd3bb38`) after finding it uncommitted in the working tree: real `cargo tauri dev` launch,
+  `transcribe.py` verified end-to-end, `gh auth`/Calendar MCP/Gmail MCP all verified locally,
+  a real regression fix (Node 25's native `localStorage` breaking 6 tests since the vitest 2→4
+  bump). Re-verified the frontend side independently before committing rather than trusting the
+  docs' claims at face value. Added `.claude/settings.local.json` to `.gitignore`.
+
 ### Added — 2026-08-09
 - Initial repo scaffold: `apps/`, `packages/{ui,core,agents,memory,tools,voice,permissions,
   database,integrations,automations}`, `shared/`, `config/`, `tests/`, `scripts/`, `docs/`.

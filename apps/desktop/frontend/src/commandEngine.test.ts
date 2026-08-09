@@ -48,6 +48,26 @@ describe("parseCommand", () => {
       topic: "quantum computing",
     });
   });
+
+  it("parses continue-project commands", () => {
+    expect(parseCommand("continue project Ape War")).toEqual({
+      kind: "continue-project",
+      name: "Ape War",
+    });
+  });
+
+  it("parses calendar-check commands in their common phrasings", () => {
+    expect(parseCommand("check my calendar")).toEqual({ kind: "check-calendar" });
+    expect(parseCommand("check calendar")).toEqual({ kind: "check-calendar" });
+    expect(parseCommand("what's on my calendar")).toEqual({ kind: "check-calendar" });
+    expect(parseCommand("show my calendar")).toEqual({ kind: "check-calendar" });
+  });
+
+  it("parses email-check commands in their common phrasings", () => {
+    expect(parseCommand("check my email")).toEqual({ kind: "check-email" });
+    expect(parseCommand("check my inbox")).toEqual({ kind: "check-email" });
+    expect(parseCommand("check my mail")).toEqual({ kind: "check-email" });
+  });
 });
 
 describe("executeCommand", () => {
@@ -106,5 +126,45 @@ describe("executeCommand", () => {
       { setTheme: vi.fn() }
     );
     expect(response).toMatch(/isn't available/i);
+  });
+
+  it("routes continue-project through the orchestrator with the project name in the prompt", async () => {
+    const runOrchestrator = vi.fn().mockResolvedValue("Shipped the next task, tests passing.");
+    const response = await executeCommand(
+      { kind: "continue-project", name: "Ape War" },
+      { setTheme: vi.fn(), runOrchestrator }
+    );
+    expect(runOrchestrator).toHaveBeenCalledWith(expect.stringContaining("Ape War"));
+    expect(response).toBe("Shipped the next task, tests passing.");
+  });
+
+  it("routes check-calendar through the orchestrator with a read-only prompt", async () => {
+    const runOrchestrator = vi.fn().mockResolvedValue("Two meetings today.");
+    const response = await executeCommand(
+      { kind: "check-calendar" },
+      { setTheme: vi.fn(), runOrchestrator }
+    );
+    expect(runOrchestrator).toHaveBeenCalledWith(expect.stringContaining("Read-only"));
+    expect(response).toBe("Two meetings today.");
+  });
+
+  it("routes check-email through the orchestrator with a read-only prompt", async () => {
+    const runOrchestrator = vi.fn().mockResolvedValue("Nothing urgent.");
+    const response = await executeCommand(
+      { kind: "check-email" },
+      { setTheme: vi.fn(), runOrchestrator }
+    );
+    expect(runOrchestrator).toHaveBeenCalledWith(expect.stringContaining("Read-only"));
+    expect(response).toBe("Nothing urgent.");
+  });
+
+  it("reports orchestrator errors consistently across every routed command", async () => {
+    const runOrchestrator = vi.fn().mockRejectedValue(new Error("no session"));
+    const response = await executeCommand(
+      { kind: "check-calendar" },
+      { setTheme: vi.fn(), runOrchestrator }
+    );
+    expect(response).toMatch(/orchestrator error/i);
+    expect(response).toContain("no session");
   });
 });

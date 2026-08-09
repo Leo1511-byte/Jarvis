@@ -15,6 +15,9 @@ export type Command =
   | { kind: "help" }
   | { kind: "delete-project"; name: string }
   | { kind: "research"; topic: string }
+  | { kind: "continue-project"; name: string }
+  | { kind: "check-calendar" }
+  | { kind: "check-email" }
   | { kind: "unknown"; raw: string };
 
 const THEME_ALIASES: Record<string, Theme> = {
@@ -89,6 +92,31 @@ export function parseCommand(input: string): Command {
     return { kind: "research", topic: researchMatch[1].trim() };
   }
 
+  // "continue project <name>" -- Milestone 11: spec §62's "Continue
+  // Project X" workflow, routed through the same orchestrator rather than
+  // JARVIS inventing its own version of what a local Claude Code session
+  // already does when asked directly.
+  const continueMatch = input.trim().match(/^continue project\s+(.+)$/i);
+  if (continueMatch) {
+    return { kind: "continue-project", name: continueMatch[1].trim() };
+  }
+
+  // "check my calendar" / "what's on my calendar" -- Milestone 14. The
+  // Calendar MCP server is verified working in the local runtime (see
+  // MCP_SETUP.md); this just gives it a command bar entry point via the
+  // orchestrator, rather than JARVIS calling it directly (no calendar MCP
+  // client exists in the Rust/frontend code, and shouldn't -- the local
+  // `claude` CLI already has it configured).
+  if (/^(?:check |show |what'?s on )?(?:my )?calendar\??$/.test(text)) {
+    return { kind: "check-calendar" };
+  }
+
+  // "check my email" / "check my inbox" -- Milestone 15, same pattern as
+  // calendar above via the Gmail MCP server already verified locally.
+  if (/^check (?:my )?(?:email|inbox|mail)$/.test(text)) {
+    return { kind: "check-email" };
+  }
+
   return { kind: "unknown", raw: input };
 }
 
@@ -116,21 +144,54 @@ export async function executeCommand(
     case "system-status":
       return "Nothing is wired to real status yet — every integration on the System Status panel reads NOT WIRED YET, honestly.";
     case "help":
-      return "I can switch themes (e.g. \"switch to neon void\"), report status, and answer \"research <topic>\" via the local orchestrator. Everything else in the spec isn't built yet — see ROADMAP.md.";
+      return "I can switch themes (e.g. \"switch to neon void\"), report status, \"research <topic>\", \"continue project <name>\", \"check my calendar\", and \"check my email\" — the last four via the local orchestrator. Everything else in the spec isn't built yet — see ROADMAP.md.";
     case "delete-project":
       return `"Delete project ${command.name}" is a Level 3 action and needs a real approval dialog, not a typed command — use the Delete button in the Projects view instead.`;
     case "research":
-      if (!ctx.runOrchestrator) {
-        return "Research isn't available outside the desktop app (no orchestrator connection).";
-      }
-      try {
-        return await ctx.runOrchestrator(
-          `Research: ${command.topic}. Write findings as a new note in the Obsidian vault's Notes/ folder, then reply with one sentence summarizing what you found and the note's file path.`
-        );
-      } catch (e) {
-        return `Orchestrator error: ${e instanceof Error ? e.message : String(e)}`;
-      }
+      return runOrchestratorOrExplain(
+        ctx,
+        `Research: ${command.topic}. Write findings as a new note in the Obsidian vault's Notes/ folder, then reply with one sentence summarizing what you found and the note's file path.`
+      );
+    case "continue-project":
+      return runOrchestratorOrExplain(
+        ctx,
+        `Continue working on the "${command.name}" project (spec §62 workflow): load its context ` +
+          `(roadmap, tasks, recent activity), inspect the actual repo state, decide the next concrete ` +
+          `step, implement it, test it, update docs/changelog to match, then reply with 2-3 sentences ` +
+          `summarizing what you did.`
+      );
+    case "check-calendar":
+      return runOrchestratorOrExplain(
+        ctx,
+        `Check my calendar for today and the next couple of days using the Calendar MCP tools ` +
+          `already configured locally, then reply with 2-3 sentences summarizing what's coming up. ` +
+          `Read-only — don't create, modify, or respond to any events.`
+      );
+    case "check-email":
+      return runOrchestratorOrExplain(
+        ctx,
+        `Check my email inbox using the Gmail MCP tools already configured locally for anything ` +
+          `urgent or unread that needs my attention, then reply with 2-3 sentences summarizing it. ` +
+          `Read-only — don't send, draft, or label anything.`
+      );
     case "unknown":
       return `Not implemented yet: "${command.raw}". See ROADMAP.md for what's actually built.`;
+  }
+}
+
+/**
+ * Shared by every command that routes through the local orchestrator
+ * (research, continue-project, check-calendar, check-email) so the "no
+ * connection" / error-handling logic exists in exactly one place instead
+ * of being copy-pasted per command.
+ */
+async function runOrchestratorOrExplain(ctx: CommandContext, prompt: string): Promise<string> {
+  if (!ctx.runOrchestrator) {
+    return "That needs the desktop app's orchestrator connection, which isn't available here.";
+  }
+  try {
+    return await ctx.runOrchestrator(prompt);
+  } catch (e) {
+    return `Orchestrator error: ${e instanceof Error ? e.message : String(e)}`;
   }
 }

@@ -28,7 +28,19 @@ export function permissionLevelFor(kind: string): PermissionLevel {
     case "switch-theme":
     case "system-status":
     case "help":
+    case "research":
+    case "check-calendar":
+    case "check-email":
+      // Read/search/summarize, explicitly scoped as read-only in the
+      // prompts commandEngine.ts sends the orchestrator -- Level 1 per
+      // the table above.
       return 1;
+    case "continue-project":
+      // Writes code and docs in a project repo -- not sensitive in the
+      // Level 3 sense (no delete/send/deploy/purchase), but not read-only
+      // either. Level 2: traceable via the orchestrator's session id and
+      // the repo's own git history, not gated per-action.
+      return 2;
     default:
       // Unknown commands do nothing, so there's nothing to gate --
       // but default to the strictest level on principle, in case this
