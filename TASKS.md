@@ -22,9 +22,6 @@
       individually. None of them have been run yet, only syntax-checked.
 - [ ] Once the scripts work standalone: wire them into the Tauri app as sidecar processes, and
       feed `transcribe.py`'s output into the same `commandEngine.ts` the command bar uses.
-- [ ] `npm audit` flags a moderate-severity esbuild advisory in the vitest/vite dev toolchain
-      (dev-server only, not shipped in the production build). Not fixed yet — would need a
-      vitest major-version bump. Low priority but noted rather than ignored.
 - [ ] **Create the actual Supabase project** (`INSTALLATION.md` step 3) — the code's ready and
       waiting, only account creation is left, and that has to be you.
 - [ ] **Activate the morning brief launchd job**, if you want it running automatically — see
@@ -94,6 +91,12 @@
       plan. No new application code — building routing/integration code against a local
       orchestrator process that doesn't exist yet (M10/M11/M16/M17) would be untestable and
       would repeat the exact "renders but isn't connected" mistake the spec warns against.
+- [x] 2026-08-09 — Fixed the `npm audit` findings in `apps/desktop/frontend`. Turned out to be
+      worse than previously noted (esbuild moderate + vite high path-traversal + vitest
+      **critical** UI-server arbitrary file read, all dev-only). `npm audit fix --force` bumped
+      vitest `^2.1.8` → `^4.1.10` (vite stayed `^6.0.3`). Re-verified after the bump rather than
+      trusting the audit output alone: 16 tests still pass, `tsc -b` and `vite build` both still
+      pass. `npm audit` now reports 0 vulnerabilities.
 - [x] 2026-08-09 — Milestone 18 (permissions + approval) built: `permissions.ts` classifies
       command kinds by level, `ApprovalDialog` + `useApproval` implement a real, promise-based
       Level 3 approval flow (spec §55 format), wired into `ProjectsView`'s new Delete button —

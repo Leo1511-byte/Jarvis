@@ -85,6 +85,15 @@
   selection — that gap existed since Milestone 3 and is fixed now.
 - `INSTALLATION.md`, `DATABASE_SCHEMA.md` updated with the exact steps to provision Supabase.
 
+### Fixed — 2026-08-09 (npm audit)
+- `apps/desktop/frontend`: `npm audit` actually reported 5 findings (esbuild moderate, vite high
+  path-traversal, vitest **critical** — arbitrary file read/execute via its UI server — plus 2
+  more in the same dependency chain), not just the single moderate esbuild advisory previously
+  noted. All dev-only (not shipped in the production build), but the severity was undersold.
+  `npm audit fix --force` bumped `vitest` `^2.1.8` → `^4.1.10`; `vite` stayed `^6.0.3`. Re-ran the
+  full verification after the bump: 16 tests pass, `tsc -b` and `vite build` both pass. `npm
+  audit` now reports 0 vulnerabilities.
+
 ### Added — 2026-08-09 (Milestones 10, 11, 12, 14, 15, 16, 17, 19, 20 — architecture pass)
 - `ROADMAP.md`: replaced bare "Not started" rows with real design decisions and specific
   blockers for each remaining milestone, distinguishing "blocked on a local orchestrator process
