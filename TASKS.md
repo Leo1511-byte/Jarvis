@@ -16,6 +16,12 @@
 - [ ] Milestone 5 shipped with only 2 real actions (theme switch, status). Extending it further
       means building the backend each new command needs first — resist adding command phrases
       that "help" would list but that don't actually do anything (spec principle #6).
+- [ ] **Run the 3 voice scripts for real** (`~/Documents/Obsidian Vault/System/voice/README.md`)
+      — `uv pip install -r requirements.txt`, copy `config.example.json` to `config.json` with
+      your ElevenLabs key, then test `wake_listener.py`, `transcribe.py`, `speak_daemon.py`
+      individually. None of them have been run yet, only syntax-checked.
+- [ ] Once the scripts work standalone: wire them into the Tauri app as sidecar processes, and
+      feed `transcribe.py`'s output into the same `commandEngine.ts` the command bar uses.
 - [ ] `npm audit` flags a moderate-severity esbuild advisory in the vitest/vite dev toolchain
       (dev-server only, not shipped in the production build). Not fixed yet — would need a
       vitest major-version bump. Low priority but noted rather than ignored.
@@ -51,6 +57,10 @@
       typed `Command`, `executeCommand` runs it. 5 unit tests pass (`npm run test`). Wired into
       the now-enabled `CommandBar` and `App.tsx`, with a live command log. `tsc -b` and
       `vite build` both verified passing.
+- [x] 2026-08-09 — Milestone 9 (voice) partially built. Stack decided and documented in
+      `VOICE_SETUP.md`. 3 Python scripts written and syntax-checked (not run — no audio hardware
+      available). Frontend `VoiceSettings` panel built: real device enumeration, real permission
+      status, persisted toggles — `npm run test`/`build` both verified passing.
 
 ## Blocked
 

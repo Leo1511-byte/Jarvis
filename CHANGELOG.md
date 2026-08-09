@@ -57,6 +57,19 @@
 - Noted: `npm audit` reports a moderate esbuild advisory in the vitest/vite dev toolchain
   (dev-server only) — not fixed, tracked in `TASKS.md`.
 
+### Added — 2026-08-09 (Milestone 9, partial)
+- Voice stack decided: openWakeWord (local wake word), faster-whisper (local STT), ElevenLabs
+  (cloud TTS, behind an interchangeable interface). Rationale in `VOICE_SETUP.md`.
+- `~/Documents/Obsidian Vault/System/voice/{wake_listener,transcribe,speak_daemon}.py` written,
+  syntax-checked with `py_compile`. **Not run** — no microphone/audio hardware in the sandbox
+  that wrote them. `requirements.txt`, `config.example.json`, `README.md` included.
+- `JARVIS.md` corrected — it previously implied this folder already existed; it didn't until
+  today.
+- Frontend: `useVoiceSettings` (persisted toggles), `useAudioDevices` (real device enumeration +
+  permission status via Web APIs), `VoiceSettings` panel added to the dashboard. Wake-word
+  toggle is explicitly disabled with a tooltip explaining why, rather than looking functional
+  when it isn't. `npm run test`/`build` verified passing.
+
 ### Corrected vs. original spec
 - Runtime split documented: Cowork (this session) cannot run local system inspection, access
   the microphone, or persist a background process. `ARCHITECTURE.md` now specifies a local

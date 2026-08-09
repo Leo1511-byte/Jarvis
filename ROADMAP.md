@@ -13,7 +13,7 @@ test and update `TASKS.md`/`CHANGELOG.md` at the end of each.
 | 6 | Obsidian memory | **Done, verified 2026-08-09** — real `Inbox/`/`Daily/`/`Notes/`/`Briefs/`/`System/` structure built in `~/Documents/Obsidian Vault`, `JARVIS.md`, `System/memory.md`, and all 3 scripts (`what_open.py`, `connect_this.py`, `orphan_scan.py`) written and run successfully against real seeded content | Cowork |
 | 7 | Supabase | Not started | — |
 | 8 | Projects + tasks | Not started | — |
-| 9 | Voice + wake word | Partially exists (ElevenLabs bridge, no wake word) | — |
+| 9 | Voice + wake word | **Partially done, 2026-08-09.** Stack decided (openWakeWord + faster-whisper, local; ElevenLabs, cloud, behind an interface — see `VOICE_SETUP.md`). 3 Python scripts written in `~/Documents/Obsidian Vault/System/voice/` (syntax-checked, **not run** — no mic in the sandbox that wrote them). Frontend voice settings UI built and verified (`npm test`/`build` pass): real device enumeration, real permission status where supported, persisted toggles. Nothing wires the Python scripts to the Tauri app yet | Cowork |
 | 10 | Claude / agent orchestration | Not started | — |
 | 11 | Claude Code project development mode | Not started | — |
 | 12 | GitHub | Not started | — |

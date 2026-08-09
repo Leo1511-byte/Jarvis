@@ -173,3 +173,29 @@
   font-size: 13px;
   line-height: 1.6;
 }
+
+.voice-toggle-row,
+.voice-field {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  padding: var(--space-2) 0;
+  border-bottom: 1px dashed var(--border);
+  gap: var(--space-2);
+}
+
+.voice-toggle-row:last-of-type,
+.voice-field:last-of-type {
+  border-bottom: none;
+}
+
+.voice-field select {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 4px 6px;
+  font-size: 12px;
+  max-width: 160px;
+}

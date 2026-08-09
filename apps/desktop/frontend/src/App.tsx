@@ -6,6 +6,7 @@ import { CommandBar } from "./components/CommandBar";
 import { Sidebar } from "./components/Sidebar";
 import { StatusPanel } from "./components/StatusPanel";
 import { ThemeSwitcher } from "./components/ThemeSwitcher";
+import { VoiceSettings } from "./components/VoiceSettings";
 import { parseCommand, executeCommand } from "./commandEngine";
 
 // Manual override for exploring the core's states — the command engine
@@ -88,6 +89,7 @@ export default function App() {
             )}
           </div>
           <StatusPanel />
+          <VoiceSettings />
         </div>
       </main>
     </div>

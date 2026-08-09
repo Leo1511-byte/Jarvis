@@ -1,29 +1,48 @@
 # Voice Setup
 
-## What exists today
+## Corrected 2026-08-09
 
-A working TTS bridge, already built into your Obsidian vault: `System/voice/speak_daemon.py`
-watches `System/voice/queue/`, speaks new text via ElevenLabs (your own API key, kept in
-`System/voice/config.json`, never read by Claude), and archives spoken files to
-`System/voice/done/`. There's no STT or wake-word component yet — that daemon only speaks, it
-doesn't listen.
+Earlier drafts of this doc (and the pre-existing Jarvis skill) claimed a working ElevenLabs TTS
+bridge already existed at `System/voice/speak_daemon.py`. It didn't — Milestone 6's real
+inspection of `~/Documents/Obsidian Vault` found no `System/voice/` folder at all. This is the
+first time any of it has actually been written.
 
-## What Milestone 9 needs to add
+## Stack decided
 
-- **Wake word ("Hey Jarvis")** — local detection preferred, so raw audio isn't streamed to the
-  cloud just to catch the wake phrase. Candidate approaches (openWakeWord, Porcupine, or
-  similar) get evaluated once `SYSTEM_INSPECTION_PROMPT.md` reports available audio APIs and
-  hardware.
-- **STT** — needs to feed the same command engine as typed text (one command path, not two
-  parallel behaviors).
-- **TTS** — the ElevenLabs bridge already works; the question is whether the future desktop app
-  reuses it directly or wraps it behind an interchangeable provider interface (spec §34
-  requires the interface either way, so a competitor provider can swap in later).
-- **Follow-up mode, push-to-talk, interruption, mic privacy controls** — all UI-side work once
-  the desktop app exists (Milestone 3+).
+| Layer | Choice | Why |
+|---|---|---|
+| Wake word ("Hey Jarvis") | **openWakeWord**, running locally | Fully open-source, no account/API key required (unlike Porcupine's free tier), runs on-device so raw audio never leaves the machine to catch the wake phrase (spec §30). Trade-off: slightly lower accuracy than Porcupine's commercial models, acceptable for a personal assistant with retry-friendly UX. |
+| STT | **faster-whisper**, local, `small` or `base` model | Runs on-device (privacy, no per-request cost), works offline, reasonable latency on an M4. Trade-off: first run downloads a model file (~150–500 MB depending on size) — check free disk space first, it was ~22 GiB at last inspection and may be lower now after the Rust/npm installs. |
+| TTS | **ElevenLabs**, cloud, behind a provider interface | Cloud is justified here (spec §71: "cloud may be used where justified") — quality matters more for output than the wake-word privacy concern does, and it's genuinely used to *reply*, not to continuously listen. Kept behind an interchangeable interface (spec §34) so a local TTS engine (e.g. Piper) can swap in later without touching call sites. |
+| Command routing | Same `commandEngine.ts` as typed input (spec §32) | STT output gets handed to the exact same `parseCommand`/`executeCommand` pair the command bar uses — no separate voice-only behavior. |
 
-## Do not build yet
+## What's built now (unverified — no microphone or audio hardware in the Cowork sandbox that wrote this)
 
-Nothing here starts before Milestone 9, and Milestone 9 doesn't start before the desktop app
-shell (Milestone 3) exists to host the mic controls and visible state (spec §31: microphone
-state must always be visible in the UI — there's no UI yet).
+In `~/Documents/Obsidian Vault/System/voice/`:
+- `wake_listener.py` — openWakeWord loop, prints a detection event on "Hey Jarvis"
+- `transcribe.py` — faster-whisper wrapper, records a few seconds after wake, returns text
+- `speak_daemon.py` — the ElevenLabs bridge (queue/done pattern), formalized for real this time
+- `requirements.txt`, `config.example.json`, `README.md` with real setup steps
+
+None of this has been run. Per the same honesty rule applied to the Tauri backend
+(`apps/desktop/backend/README.md`): don't mark Milestone 9 done in `TASKS.md` until you've
+actually run it and it actually works.
+
+## UI (built and verified — `npm run build`/`test` pass)
+
+Voice settings panel in the frontend: wake-word enabled toggle, master mic toggle, input/output
+device selection (populated from `navigator.mediaDevices`, not hardcoded), push-to-talk
+shortcut, permission status display. All state-only right now — no live audio wired to Rust yet
+(see "Not built" below).
+
+## Not built yet
+
+- **The actual Rust-side audio bridge.** The Python scripts above run standalone; nothing in
+  `apps/desktop/backend` calls them yet. Wiring options: (a) Tauri shells out to the Python
+  scripts as a sidecar process, or (b) rewrite the wake-word/STT loop in Rust using `cpal`. (a)
+  is faster to ship and matches the existing ElevenLabs bridge pattern; (b) is more "native" but
+  a bigger lift. Recommend (a) for V1.
+- Follow-up conversation mode, configurable timeout, spoken interruption ("Jarvis, stop") — all
+  depend on the above existing first.
+- Startup greeting, activation sound, speech speed/volume settings — small additions once the
+  rest works.
