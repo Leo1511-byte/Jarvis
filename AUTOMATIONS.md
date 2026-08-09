@@ -2,8 +2,22 @@
 
 ## What runs today
 
-A Cowork scheduled task generates the morning brief into `Briefs/` around 7am, using the vault
-read procedure from the existing Jarvis skill. That's the only automation that currently exists.
+Nothing runs on a schedule yet — this section previously claimed a Cowork scheduled task
+generated the morning brief automatically, which wasn't true (checked 2026-08-09: no scheduled
+task existed). Corrected per spec principle #5 (never fake connection/automation status).
+
+## Morning brief (Milestone 13, 2026-08-09)
+
+`~/Documents/Obsidian Vault/System/scripts/morning_brief.py` is real and verified — run manually
+against the actual vault, it reads today's Daily note, open tasks across `Daily/`/`Notes/`/
+`Inbox/`, the Inbox backlog count, and the last 5 `System/memory.md` entries, and writes
+`Briefs/YYYY-MM-DD.md`. It explicitly says what it does *not* cover (no calendar/email yet)
+rather than silently omitting them.
+
+The `launchd` job that would run it daily at 7am is written
+(`packages/automations/launchd/dev.leonardo.jarvis.morningbrief.plist`) but **not activated** —
+see `packages/automations/launchd/README.md` for the exact `launchctl` commands. Claude doesn't
+load background jobs onto your Mac without you doing it yourself.
 
 ## Decided (2026-08-09): start without n8n
 

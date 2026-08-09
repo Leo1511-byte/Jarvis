@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Milestone 13. macOS launchd user agent that runs the morning brief
+  script once a day. WRITTEN, NOT ACTIVATED — see README.md in this
+  directory for the exact steps to install and load it yourself.
+  Claude does not run `launchctl load` on your behalf; a job that
+  writes to your vault on a schedule needs your explicit opt-in.
+
+  Replace /Users/leonardo with your actual home directory if this
+  file is ever copied for a different user/machine.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>dev.leonardo.jarvis.morningbrief</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/python3</string>
+    <string>/Users/leonardo/Documents/Obsidian Vault/System/scripts/morning_brief.py</string>
+  </array>
+
+  <!-- 7:00 AM daily -->
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>7</integer>
+    <key>Minute</key>
+    <integer>0</integer>
+  </dict>
+
+  <key>StandardOutPath</key>
+  <string>/Users/leonardo/Documents/Obsidian Vault/System/scripts/morning_brief.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/Users/leonardo/Documents/Obsidian Vault/System/scripts/morning_brief.err.log</string>
+
+  <!-- Don't relaunch immediately if the Mac was asleep at 7am; launchd
+       runs it at the next wake instead of stacking up missed runs. -->
+  <key>RunAtLoad</key>
+  <false/>
+</dict>
+</plist>

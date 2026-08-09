@@ -27,6 +27,8 @@
       vitest major-version bump. Low priority but noted rather than ignored.
 - [ ] **Create the actual Supabase project** (`INSTALLATION.md` step 3) — the code's ready and
       waiting, only account creation is left, and that has to be you.
+- [ ] **Activate the morning brief launchd job**, if you want it running automatically — see
+      `packages/automations/launchd/README.md`. Not done automatically on purpose.
 
 ## Done
 
@@ -68,6 +70,11 @@
 - [x] 2026-08-09 — Milestone 8 (Projects + Tasks) built: real CRUD views backed by a local-
       storage adapter matching the Supabase schema exactly. Sidebar nav now actually routes
       between views. 11 tests passing, build verified.
+- [x] 2026-08-09 — Milestone 13 (automations) built: `morning_brief.py` written and run
+      successfully against the real vault (not just syntax-checked) — produced a correct
+      `Briefs/2026-08-09.md`. `launchd` plist + activation README written; not loaded (needs your
+      `launchctl` command, on principle). Corrected `AUTOMATIONS.md`'s inaccurate claim that a
+      Cowork scheduled task already handled this.
 - [x] 2026-08-09 — Milestone 18 (permissions + approval) built: `permissions.ts` classifies
       command kinds by level, `ApprovalDialog` + `useApproval` implement a real, promise-based
       Level 3 approval flow (spec §55 format), wired into `ProjectsView`'s new Delete button —

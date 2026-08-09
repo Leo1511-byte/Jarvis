@@ -17,7 +17,7 @@ test and update `TASKS.md`/`CHANGELOG.md` at the end of each.
 | 10 | Claude / agent orchestration | Not started | — |
 | 11 | Claude Code project development mode | Not started | — |
 | 12 | GitHub | Not started | — |
-| 13 | n8n | Not started | — |
+| 13 | Automations (launchd, not n8n) | **Script done + verified, job written but not activated, 2026-08-09** — `~/Documents/Obsidian Vault/System/scripts/morning_brief.py` is real: run manually against the actual vault, produced a correct `Briefs/2026-08-09.md` from real Daily/Notes/Inbox/memory content, explicitly stating what it doesn't cover (calendar/email). `packages/automations/launchd/dev.leonardo.jarvis.morningbrief.plist` schedules it for 7am daily — written and documented (`packages/automations/launchd/README.md`) but deliberately not loaded; that's your call to make. Also corrected `AUTOMATIONS.md`, which previously and incorrectly claimed a Cowork scheduled task already did this | Cowork |
 | 14 | Calendar | Not started (Google Calendar connector suggested, not authorized) | — |
 | 15 | Email | Not started (Gmail connector suggested, not authorized) | — |
 | 16 | Web research | Not started (Cowork can do this today ad hoc, not wired into JARVIS) | — |

@@ -85,6 +85,18 @@
   selection — that gap existed since Milestone 3 and is fixed now.
 - `INSTALLATION.md`, `DATABASE_SCHEMA.md` updated with the exact steps to provision Supabase.
 
+### Added — 2026-08-09 (Milestone 13)
+- `~/Documents/Obsidian Vault/System/scripts/morning_brief.py`: generates `Briefs/YYYY-MM-DD.md`
+  from today's Daily note, open tasks across `Daily/`/`Notes/`/`Inbox/`, Inbox backlog count, and
+  the last 5 `System/memory.md` entries. Run manually against the real vault (not just syntax-
+  checked) — produced a correct brief. Explicitly states it doesn't cover calendar/email.
+- `packages/automations/launchd/dev.leonardo.jarvis.morningbrief.plist`: daily 7am launchd job.
+  Written and documented (`packages/automations/launchd/README.md`), **not loaded** —
+  `launchctl load` is left to the user, not run automatically.
+- Corrected `AUTOMATIONS.md`, which incorrectly stated a Cowork scheduled task already generated
+  the brief; no such task existed (verified via `list_scheduled_tasks`). Also updated
+  `JARVIS.md`'s "morning brief" trigger phrase and vault map to match reality.
+
 ### Added — 2026-08-09 (Milestone 18)
 - `apps/desktop/frontend/src/permissions.ts`: `PermissionLevel` (1/2/3) and `permissionLevelFor`,
   classifying command kinds per spec §54. Unknown kinds default to the strictest level.
