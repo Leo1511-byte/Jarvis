@@ -6,35 +6,35 @@
       session and your local Claude Code in Terminal) — both have made real progress
       independently (repo relocation + Rust build by local Claude Code; Milestone 6 by Cowork).
       No conflicts so far, but let one finish a logical chunk before the other edits again.
-- [ ] Run `cargo tauri dev` yourself at least once to see the actual window open — it's compiled
-      (`apps/desktop/backend/target/debug/jarvis` exists and runs), but nobody has visually
-      confirmed the app launches and looks right yet.
-- [ ] Spot-check `~/Desktop/Jarvis.app` (confirmed: unrelated third-party iOS chat app,
-      bundle id `jarvis.ios`), `~/plugins/jarvis`, and the `jarvis-desktop` remnants in
-      `~/.Trash` for anything that could collide with this app's bundle id
-      (`dev.leonardo.jarvis`).
-- [ ] Milestone 5 shipped with only 2 real actions (theme switch, status). Extending it further
-      means building the backend each new command needs first — resist adding command phrases
-      that "help" would list but that don't actually do anything (spec principle #6).
-- [ ] **Run the 3 voice scripts for real** (`~/Documents/Obsidian Vault/System/voice/README.md`)
-      — `uv pip install -r requirements.txt`, copy `config.example.json` to `config.json` with
-      your ElevenLabs key, then test `wake_listener.py`, `transcribe.py`, `speak_daemon.py`
-      individually. None of them have been run yet, only syntax-checked.
-- [ ] Once the scripts work standalone: wire them into the Tauri app as sidecar processes, and
-      feed `transcribe.py`'s output into the same `commandEngine.ts` the command bar uses.
+- [ ] **Run the remaining 2 voice scripts for real**: `wake_listener.py` (say "Hey Jarvis",
+      confirm `WAKE WORD DETECTED`) still needs a live run — `transcribe.py` is confirmed
+      (below). `speak_daemon.py` is blocked: `config.json`'s `elevenlabs_api_key` is still empty
+      (checked programmatically without printing it — length 0) even though `elevenlabs_voice_id`
+      is filled in. Add the real key, then retest.
+- [ ] Once `wake_listener.py`/`speak_daemon.py` are confirmed: wire all 3 scripts into the Tauri
+      app as sidecar processes, and feed `transcribe.py`'s output into the same
+      `commandEngine.ts` the command bar uses.
 - [ ] **Create the actual Supabase project** (`INSTALLATION.md` step 3) — the code's ready and
       waiting, only account creation is left, and that has to be you.
-- [ ] **Activate the morning brief launchd job**, if you want it running automatically — see
-      `packages/automations/launchd/README.md`. Not done automatically on purpose.
-- [ ] **Milestone 10/11/16/17 all need a local orchestrator process first** — that's local
-      Claude Code (or the Agent SDK) actually running as JARVIS, invokable from the desktop app.
-      This is the single biggest real blocker left; four milestones unlock once it exists.
-- [ ] **Milestone 14/15 (Calendar/Gmail):** configure equivalent MCP servers in your local Claude
-      Code config — Cowork already has working Calendar/Gmail connectors, but that access is
-      Cowork-session-scoped and doesn't carry over. See `MCP_SETUP.md`.
-- [ ] **Milestone 12 (GitHub):** local git/GitHub auth is already set up over HTTPS per the
-      system inspection — worth testing a minimal read-only `gh` call locally before building
-      anything, to confirm the auth actually works end to end.
+- [ ] **Activate the morning brief launchd job**, if you want it running automatically —
+      commands are in `packages/automations/launchd/README.md`. Still deliberately not run by
+      Claude, even under a blanket "always allow" grant (2026-08-09): that README states the
+      reasoning explicitly — a recurring job that writes to your vault should start because you
+      turned it on, not because an assistant decided it should run. 3 lines, your terminal.
+- [ ] **Test the new `research <topic>` command in the actual running app** — type it into the
+      real command bar in the `cargo tauri dev` window and confirm you get a real result back
+      (not just the automated tests, which mock the Tauri IPC boundary). This is the one piece
+      of M10's first slice nobody has clicked through yet.
+- [ ] **M10 orchestrator, next slices** — the first real slice (below, "Done") proved the
+      subprocess approach works: Rust shells out to `claude -p --output-format json` for
+      synchronous replies. Still open: a background-mode path (`claude --bg` + polling
+      `claude agents --json`) for longer workflows like M11's "continue project X", which
+      shouldn't block the command bar the way `research` currently does. Scope that as its own
+      slice rather than building it speculatively.
+- [ ] Known limitation in `orchestrator.rs`: `claude` is resolved via `PATH`, which works under
+      `cargo tauri dev` (inherits Terminal's env) but will silently fail in a double-clicked,
+      bundled app (Finder-launched processes get a minimal PATH). Not fixed yet — fix when the
+      bundled build is actually being tested, not before.
 
 ## Done
 
@@ -97,6 +97,57 @@
       vitest `^2.1.8` → `^4.1.10` (vite stayed `^6.0.3`). Re-verified after the bump rather than
       trusting the audit output alone: 16 tests still pass, `tsc -b` and `vite build` both still
       pass. `npm audit` now reports 0 vulnerabilities.
+- [x] 2026-08-09 — Milestone 3 launch confirmed: `cargo tauri dev` compiled and ran for real (not
+      just the earlier `cargo build`) — frontend served by Vite on `:1420`, backend compiled in
+      2.79s, `target/debug/jarvis` process came up and to the foreground (confirmed via
+      `osascript`/process list). No screen-recording permission in the driving session to grab a
+      screenshot and check it pixel-for-pixel — Leonardo was at the same machine for the voice
+      script tests right after, so worth a quick explicit "does it look right?" from him if that
+      hasn't happened yet, but the process-level launch itself is verified.
+- [x] 2026-08-09 — Voice scripts: dependencies installed into a local `.venv` in
+      `System/voice/` (`uv venv` + `uv pip install -r requirements.txt`, 36 packages, isolated
+      from system Python). `transcribe.py` confirmed working end-to-end by Leonardo running it
+      himself (mic → faster-whisper `small` → correct transcript "Hello."). Diagnosed along the
+      way: driving the script via an assistant's tool calls can't synchronize with real-time
+      speech (no live terminal the user is watching), which looked like a mic/permission bug
+      through several rounds of debugging (checked Terminal's mic permission, input volume,
+      System Settings' input level meter — all fine) before landing on the real cause. Lesson for
+      next time: for anything needing real-time human I/O, hand the exact command to the user
+      first instead of iterating blind.
+- [x] 2026-08-09 — Spot-checked `~/Desktop/Jarvis.app` (no longer present — nothing to collide
+      with), `~/plugins/jarvis` (unrelated Codex plugin directory — `.codex-plugin/`, `assets/`,
+      `scripts/`, `skills/` — no bundle id overlap), and `~/.Trash` (no `jarvis-desktop`
+      remnants found). No collision risk with `dev.leonardo.jarvis`.
+- [x] 2026-08-09 — Milestone 12 (GitHub) read-only test: `gh auth status` confirms real, active
+      HTTPS auth (`Leo1511-byte`, scopes `gist`/`read:org`/`repo`/`workflow`) — matches the
+      system inspection. This repo itself has no remote configured yet (`gh repo view` → "no git
+      remotes found"), which is expected, not a bug.
+- [x] 2026-08-09 — **Correction to Milestone 14/15's stated blocker:** tested
+      `list_calendars`/`list_labels` directly from this local Claude Code session (not Cowork)
+      and both returned real data (2 calendars incl. `leonardolundsendino@gmail.com`; real Gmail
+      label counts, e.g. 1040 INBOX messages). The Calendar/Gmail MCP connectors are already
+      configured and working in the local runtime — the earlier "doesn't carry over from Cowork"
+      blocker no longer holds. `MCP_SETUP.md` corrected. Remaining gap for M14/M15 is wiring
+      this into the desktop app via the M10 orchestrator, not MCP configuration.
+- [x] 2026-08-09 — **Milestone 10, first real slice**: `apps/desktop/backend/src/orchestrator.rs`
+      adds `run_orchestrator`, a Tauri command that shells out to the local `claude` CLI
+      (`claude -p --output-format json`) — verified by hand first (`claude -p "..."
+      --output-format json` really does return clean `{result, session_id, ...}` JSON; also
+      tried `claude --bg` + `claude agents --json` for a possible background-mode path, parked
+      for a future slice — see "Now"). Wired into `commandEngine.ts` as a new `research <topic>`
+      command, injected via `CommandContext.runOrchestrator` so the engine stays testable without
+      Tauri. `executeCommand` is now `async`; `App.tsx` provides the real `invoke("run_orchestrator",
+      ...)` implementation. 3 new Rust unit tests (JSON parsing, error surfacing, malformed-output
+      handling) + 4 new frontend tests (parsing, successful routing, orchestrator error, no-ctx
+      case). `cargo test`, `npm run test`, `tsc -b`, `vite build` all verified; the running
+      `cargo tauri dev` picked up every change via hot reload without errors. Scoped deliberately
+      narrow (one command, sync-only) rather than building all of M10/11/16/17's routing at once.
+- [x] 2026-08-09 — Fixed a real, previously-uncaught test regression: `npm run test` was
+      silently broken since the vitest 2→4 bump (`5e2d7f9`) — Node 25's experimental native
+      `localStorage` (on by default) shadowed jsdom's, failing 6 `localStore.test.ts` tests with
+      `localStorage.clear is not a function`. `TASKS.md`'s prior entry for that commit claiming
+      "16 tests still pass" was wrong. Fixed via `NODE_OPTIONS=--no-experimental-webstorage` in
+      the `test` script. All 20 tests pass now (16 prior + 4 new from the M10 slice above).
 - [x] 2026-08-09 — Milestone 18 (permissions + approval) built: `permissions.ts` classifies
       command kinds by level, `ApprovalDialog` + `useApproval` implement a real, promise-based
       Level 3 approval flow (spec §55 format), wired into `ProjectsView`'s new Delete button —

@@ -139,6 +139,51 @@
 - 5 new tests (3 in `permissions.test.ts`, 2 in `commandEngine.test.ts`) — 16 total passing.
   `tsc -b` and `vite build` both verified.
 
+### Verified — 2026-08-09 (local Claude Code session: launch + voice + MCP)
+- Milestone 3: `cargo tauri dev` run for real (previously only `cargo build` had been verified).
+  Compiled in 2.79s, Vite served the frontend on `:1420`, `target/debug/jarvis` launched and came
+  to the foreground.
+- Milestone 9: voice script dependencies installed into an isolated `.venv` in `System/voice/`
+  (`uv venv` + `uv pip install -r requirements.txt`, 36 packages). `transcribe.py` confirmed
+  working end-to-end (mic → faster-whisper `small` → correct transcript), run directly by
+  Leonardo after several rounds of debugging established that driving real-time mic input
+  through an assistant's tool calls doesn't work — no live terminal for the user to react to, so
+  "speak now" prompts never land in time. `wake_listener.py` handed off the same way, result
+  pending. `speak_daemon.py` still blocked: `elevenlabs_api_key` in `config.json` is empty
+  (checked programmatically, length 0, without ever printing the file's contents).
+- Milestones 14/15: corrected a second time. Called `list_calendars` and `list_labels` directly
+  from this local Claude Code session and got real data back — the Calendar/Gmail MCP connectors
+  are already configured and working locally, not just in Cowork as previously documented. Real
+  blocker for M14/15 is now purely the M10 orchestrator, not MCP config. `MCP_SETUP.md` and
+  `ROADMAP.md` updated.
+- Milestone 12: `gh auth status` confirms real, active HTTPS GitHub auth.
+- Spot-checked `~/Desktop/Jarvis.app` (gone), `~/plugins/jarvis` (unrelated Codex plugin dir),
+  `~/.Trash` (no `jarvis-desktop` remnants) — no bundle id collision risk.
+- Declined to run `launchctl load` for the morning-brief job even under a blanket "always allow"
+  grant from Leonardo — `packages/automations/launchd/README.md` states the reasoning
+  explicitly (a recurring job writing to the vault should start because the user turned it on),
+  and a general permission grant doesn't override a specific, documented project principle.
+  Left as a 3-line manual step.
+
+### Added — 2026-08-09 (Milestone 10, first real slice)
+- Scoped the orchestrator design with Leonardo before writing code: Tauri's Rust backend shells
+  out to the local `claude` CLI rather than a separate Agent SDK server, reusing existing auth
+  and the just-verified local MCP servers. Verified `claude -p --output-format json`,
+  `claude --bg`, and `claude agents --json` by hand in a terminal first.
+- `apps/desktop/backend/src/orchestrator.rs`: `run_orchestrator` Tauri command, runs
+  `claude -p --output-format json` via `tauri::async_runtime::spawn_blocking`, parses the result/
+  error/session id. 3 Rust unit tests.
+- `commandEngine.ts`: new `research <topic>` command kind, routed through an injected
+  `ctx.runOrchestrator` (keeps the engine testable without Tauri). `executeCommand` is now
+  `async`. 4 new tests; existing tests updated to `await`.
+- `App.tsx`: real `invoke("run_orchestrator", ...)` wiring via `@tauri-apps/api` (new dependency).
+- Fixed a real test regression from the vitest 2→4 bump (`5e2d7f9`): Node 25's experimental
+  native `localStorage`, on by default, was shadowing jsdom's and silently breaking 6
+  `localStore.test.ts` tests. `TASKS.md`'s prior "16 tests still pass" note for that commit was
+  wrong — fixed via `NODE_OPTIONS=--no-experimental-webstorage` in the `test` script.
+- Removed a stale `.git/index.lock` (70+ min old, no git process holding it, confirmed via `ps`)
+  that was blocking `git stash`/other git operations — likely left behind by GitHub Desktop.
+
 ### Corrected vs. original spec
 - Runtime split documented: Cowork (this session) cannot run local system inspection, access
   the microphone, or persist a background process. `ARCHITECTURE.md` now specifies a local

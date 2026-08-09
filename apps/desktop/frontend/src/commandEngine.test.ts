@@ -41,12 +41,19 @@ describe("parseCommand", () => {
       name: "Ape War",
     });
   });
+
+  it("parses research commands", () => {
+    expect(parseCommand("research quantum computing")).toEqual({
+      kind: "research",
+      topic: "quantum computing",
+    });
+  });
 });
 
 describe("executeCommand", () => {
-  it("calls setTheme and returns a short confirmation", () => {
+  it("calls setTheme and returns a short confirmation", async () => {
     const setTheme = vi.fn();
-    const response = executeCommand(
+    const response = await executeCommand(
       { kind: "switch-theme", theme: "obsidian" },
       { setTheme }
     );
@@ -54,20 +61,50 @@ describe("executeCommand", () => {
     expect(response).toContain("obsidian");
   });
 
-  it("never claims an unbuilt feature works", () => {
-    const response = executeCommand(
+  it("never claims an unbuilt feature works", async () => {
+    const response = await executeCommand(
       { kind: "unknown", raw: "deploy to production" },
       { setTheme: vi.fn() }
     );
     expect(response).toMatch(/not implemented/i);
   });
 
-  it("redirects delete-project to the real approval-gated UI instead of acting", () => {
-    const response = executeCommand(
+  it("redirects delete-project to the real approval-gated UI instead of acting", async () => {
+    const response = await executeCommand(
       { kind: "delete-project", name: "Ape War" },
       { setTheme: vi.fn() }
     );
     expect(response).toMatch(/level 3/i);
     expect(response).toContain("Ape War");
+  });
+
+  it("routes research through the injected orchestrator and returns its result", async () => {
+    const runOrchestrator = vi.fn().mockResolvedValue("Found 3 relevant papers.");
+    const response = await executeCommand(
+      { kind: "research", topic: "quantum computing" },
+      { setTheme: vi.fn(), runOrchestrator }
+    );
+    expect(runOrchestrator).toHaveBeenCalledWith(
+      expect.stringContaining("quantum computing")
+    );
+    expect(response).toBe("Found 3 relevant papers.");
+  });
+
+  it("reports an honest error if the orchestrator call fails", async () => {
+    const runOrchestrator = vi.fn().mockRejectedValue(new Error("claude not found"));
+    const response = await executeCommand(
+      { kind: "research", topic: "quantum computing" },
+      { setTheme: vi.fn(), runOrchestrator }
+    );
+    expect(response).toMatch(/orchestrator error/i);
+    expect(response).toContain("claude not found");
+  });
+
+  it("says research is unavailable without an orchestrator connection", async () => {
+    const response = await executeCommand(
+      { kind: "research", topic: "quantum computing" },
+      { setTheme: vi.fn() }
+    );
+    expect(response).toMatch(/isn't available/i);
   });
 });

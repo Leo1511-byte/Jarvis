@@ -37,6 +37,9 @@ __pycache__/
 .vscode/
 .idea/
 
+# Claude Code local settings (machine-specific permission grants, not shared config)
+.claude/settings.local.json
+
 # Tauri / Rust
 target/
 apps/desktop/backend/target/

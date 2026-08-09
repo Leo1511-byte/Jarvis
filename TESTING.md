@@ -3,21 +3,40 @@
 This documents the test plan so it's applied as each milestone ships, rather than retrofitted
 at the end.
 
-## Actual coverage so far (2026-08-09, Milestone 19 check-in)
+## Actual coverage so far (2026-08-09, updated post-launch-verification)
 
-- **Automated:** 16 frontend unit tests passing (`npm run test` in `apps/desktop/frontend`) —
-  `commandEngine.test.ts`, `permissions.test.ts`, `localStore.test.ts`. `tsc -b` and
-  `vite build` re-verified after every change that touched the frontend.
+- **Automated:** 20 frontend unit tests passing (`npm run test` in `apps/desktop/frontend`) —
+  `commandEngine.test.ts`, `permissions.test.ts`, `localStore.test.ts`. 3 Rust unit tests
+  passing (`cargo test` in `apps/desktop/backend`) covering `orchestrator.rs`'s JSON parsing.
+  `tsc -b` and `vite build` re-verified after every change that touched the frontend.
+  **Correction:** the earlier "16 tests passing" claim after the vitest 2→4 bump was wrong —
+  Node 25's experimental native `localStorage` (enabled by default) was shadowing jsdom's,
+  breaking 6 of `localStore.test.ts`'s tests (`localStorage.clear is not a function`). It wasn't
+  caught at the time because the failure only reproduces with `vitest run` invoked plainly, and
+  apparently wasn't re-run cleanly after that commit. Fixed by adding
+  `NODE_OPTIONS=--no-experimental-webstorage` to the `test` script in `package.json`. Lesson:
+  re-run the actual test command after any tooling bump, don't trust a prior "it passed" note.
 - **Manually verified against real systems, not mocks:** Tauri backend compiled to a real
-  Mach-O arm64 binary (local Claude Code); `morning_brief.py` run against the actual vault and
-  produced a correct `Briefs/2026-08-09.md`; the 3 vault scripts from Milestone 6
-  (`what_open.py`, `connect_this.py`, `orphan_scan.py`) run-tested against real seeded content.
-- **Written but unverified:** the 3 voice scripts (M9) — syntax-checked only, no microphone in
-  the sandbox that wrote them.
-- **Not applicable yet:** M12/14/15/16/17's own test rows below — those milestones are
-  architecture-only (see `ROADMAP.md`), there's no implementation to test.
-- **Not started:** performance benchmarking (app startup, command latency) — meaningless before
-  M3's visual launch is confirmed by a human, which hasn't happened yet.
+  Mach-O arm64 binary and **launched for real** via `cargo tauri dev` — Vite served on `:1420`,
+  backend compiled, `target/debug/jarvis` process came up and to the foreground; `morning_brief.py`
+  run against the actual vault and produced a correct `Briefs/2026-08-09.md`; the 3 vault scripts
+  from Milestone 6 (`what_open.py`, `connect_this.py`, `orphan_scan.py`) run-tested against real
+  seeded content; `transcribe.py` (M9) run end-to-end by Leonardo (mic → whisper → correct
+  transcript); Calendar/Gmail MCP connectors (M14/15) called directly and returned real data;
+  `gh auth status` (M12) confirmed real GitHub auth.
+- **Written but unverified:** `wake_listener.py` and `speak_daemon.py` (M9) — the latter blocked
+  on an empty `elevenlabs_api_key`.
+- **M10 first slice:** the `research <topic>` command (Rust `run_orchestrator`, shelling out to
+  `claude -p --output-format json`) has automated coverage for its JSON parsing (Rust unit
+  tests) and for `commandEngine.ts`'s routing (mocked `runOrchestrator`), and the manual CLI
+  behavior it wraps was verified directly (`claude -p ... --output-format json`, `claude --bg`,
+  `claude agents --json` all exercised by hand before writing the Rust code around them). What's
+  **not yet verified**: an actual "research topic" typed into the running app's command bar,
+  end to end through the real webview IPC bridge — that needs a human at the actual window, see
+  `TASKS.md`.
+- **Not applicable yet:** M16/17's own test rows below — those milestones are architecture-only
+  beyond M10's first slice (see `ROADMAP.md`), there's no further implementation to test.
+- **Not started:** performance benchmarking (app startup, command latency).
 
 ## Required tests, by milestone
 

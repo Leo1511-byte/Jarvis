@@ -14,6 +14,7 @@ export type Command =
   | { kind: "system-status" }
   | { kind: "help" }
   | { kind: "delete-project"; name: string }
+  | { kind: "research"; topic: string }
   | { kind: "unknown"; raw: string };
 
 const THEME_ALIASES: Record<string, Theme> = {
@@ -80,11 +81,23 @@ export function parseCommand(input: string): Command {
     return { kind: "help" };
   }
 
+  // "research <topic>" -- Milestone 10/16's first real slice: routes
+  // through the local orchestrator (the `claude` CLI, shelled out to from
+  // the Rust backend) instead of being answered by pattern-matching here.
+  const researchMatch = input.trim().match(/^research\s+(.+)$/i);
+  if (researchMatch) {
+    return { kind: "research", topic: researchMatch[1].trim() };
+  }
+
   return { kind: "unknown", raw: input };
 }
 
 export interface CommandContext {
   setTheme: (theme: Theme) => void;
+  /** Milestone 10: runs a prompt through the local orchestrator (Tauri ->
+   * `claude` CLI) and resolves with its text result. Injected rather than
+   * imported directly so commandEngine.ts stays testable without Tauri. */
+  runOrchestrator?: (prompt: string) => Promise<string>;
 }
 
 /**
@@ -92,7 +105,10 @@ export interface CommandContext {
  * Per spec §33, this should stay short — full detail belongs on screen,
  * not crammed into the spoken/echoed response.
  */
-export function executeCommand(command: Command, ctx: CommandContext): string {
+export async function executeCommand(
+  command: Command,
+  ctx: CommandContext
+): Promise<string> {
   switch (command.kind) {
     case "switch-theme":
       ctx.setTheme(command.theme);
@@ -100,9 +116,20 @@ export function executeCommand(command: Command, ctx: CommandContext): string {
     case "system-status":
       return "Nothing is wired to real status yet — every integration on the System Status panel reads NOT WIRED YET, honestly.";
     case "help":
-      return "Right now I can only switch themes (e.g. \"switch to neon void\") and report status. Everything else in the spec isn't built yet — see ROADMAP.md.";
+      return "I can switch themes (e.g. \"switch to neon void\"), report status, and answer \"research <topic>\" via the local orchestrator. Everything else in the spec isn't built yet — see ROADMAP.md.";
     case "delete-project":
       return `"Delete project ${command.name}" is a Level 3 action and needs a real approval dialog, not a typed command — use the Delete button in the Projects view instead.`;
+    case "research":
+      if (!ctx.runOrchestrator) {
+        return "Research isn't available outside the desktop app (no orchestrator connection).";
+      }
+      try {
+        return await ctx.runOrchestrator(
+          `Research: ${command.topic}. Write findings as a new note in the Obsidian vault's Notes/ folder, then reply with one sentence summarizing what you found and the note's file path.`
+        );
+      } catch (e) {
+        return `Orchestrator error: ${e instanceof Error ? e.message : String(e)}`;
+      }
     case "unknown":
       return `Not implemented yet: "${command.raw}". See ROADMAP.md for what's actually built.`;
   }

@@ -2,7 +2,13 @@
 
 ## Today
 
-One assistant: Claude, acting as Jarvis, directly. No orchestrator/specialist split exists.
+One assistant: Claude, acting as Jarvis, directly. No specialist split exists yet, but as of
+2026-08-09 the desktop app has its first real connection to a local orchestrator: the command
+bar's `research <topic>` command routes through `apps/desktop/backend/src/orchestrator.rs`,
+which shells out to the local `claude` CLI (`claude -p --output-format json`) and returns its
+answer. It's synchronous and single-purpose (no routing table, no specialists) — see `ROADMAP.md`
+Milestone 10 for what's real vs. still ahead (background-mode long-running tasks, the
+"continue project X" workflow below, actual specialist routing).
 
 ## Target (Milestone 10/17)
 
