@@ -1,0 +1,45 @@
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.pfx
+tokens/
+credentials/
+secrets/
+*.credentials.json
+*password*
+oauth_client_secret*
+System/voice/config.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Dependencies / build output
+node_modules/
+dist/
+build/
+.next/
+target/
+*.log
+.turbo/
+
+# Local dev
+.env.local
+.venv/
+__pycache__/
+*.pyc
+
+# Editor
+.vscode/
+.idea/
+
+# Tauri
+src-tauri/target/
+
+# Database
+*.sqlite
+*.db
