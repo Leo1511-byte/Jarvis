@@ -1,22 +1,15 @@
 import { useState } from "react";
 import "./App.css";
 import { useTheme } from "./hooks/useTheme";
-import { JarvisCore, type CoreState } from "./components/JarvisCore";
+import { type CoreState } from "./components/JarvisCore";
 import { CommandBar } from "./components/CommandBar";
 import { Sidebar } from "./components/Sidebar";
-import { StatusPanel } from "./components/StatusPanel";
 import { ThemeSwitcher } from "./components/ThemeSwitcher";
-import { VoiceSettings } from "./components/VoiceSettings";
 import { parseCommand, executeCommand } from "./commandEngine";
-
-// Manual override for exploring the core's states — the command engine
-// below also drives coreState for real when a command actually runs.
-const DEMO_STATES: CoreState[] = ["idle", "wake-word-active", "listening", "processing", "success"];
-
-interface LogEntry {
-  you: string;
-  jarvis: string;
-}
+import { DashboardView, type LogEntry } from "./views/DashboardView";
+import { ProjectsView } from "./views/ProjectsView";
+import { TasksView } from "./views/TasksView";
+import { NotBuiltView } from "./views/NotBuiltView";
 
 export default function App() {
   const { theme, setTheme } = useTheme();
@@ -33,6 +26,19 @@ export default function App() {
     window.setTimeout(() => setCoreState("idle"), 1200);
   }
 
+  function renderActive() {
+    switch (active) {
+      case "Dashboard":
+        return <DashboardView coreState={coreState} onDemoState={setCoreState} log={log} />;
+      case "Projects":
+        return <ProjectsView />;
+      case "Tasks":
+        return <TasksView />;
+      default:
+        return <NotBuiltView section={active} />;
+    }
+  }
+
   return (
     <div className="app-shell">
       <Sidebar active={active} onSelect={setActive} />
@@ -43,54 +49,7 @@ export default function App() {
           <ThemeSwitcher theme={theme} onChange={setTheme} />
         </header>
 
-        <div className="core-row">
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
-            <JarvisCore state={coreState} />
-            <select
-              value={coreState}
-              onChange={(e) => setCoreState(e.target.value as CoreState)}
-              style={{
-                background: "var(--bg-panel)",
-                color: "var(--text-dim)",
-                border: "1px solid var(--border)",
-                borderRadius: 6,
-                fontFamily: "var(--font-mono)",
-                fontSize: 11,
-                padding: "4px 8px",
-              }}
-            >
-              {DEMO_STATES.map((s) => (
-                <option key={s} value={s}>
-                  demo: {s}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="panel-grid">
-          <div className="panel">
-            <h3 className="panel-title">Active Project</h3>
-            <p className="empty-state">No projects yet — Milestone 8 builds the project system.</p>
-          </div>
-          <div className="panel">
-            <h3 className="panel-title">Command Log</h3>
-            {log.length === 0 ? (
-              <p className="empty-state">Try the command bar above — "help", "status", or "switch to neon void".</p>
-            ) : (
-              <ul className="status-list">
-                {log.map((entry, i) => (
-                  <li key={i} className="status-row" style={{ flexDirection: "column", alignItems: "flex-start", gap: 4 }}>
-                    <span style={{ color: "var(--text-dim)" }}>You: {entry.you}</span>
-                    <span>Jarvis: {entry.jarvis}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-          <StatusPanel />
-          <VoiceSettings />
-        </div>
+        {renderActive()}
       </main>
     </div>
   );

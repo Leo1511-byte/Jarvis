@@ -13,6 +13,7 @@ export type Command =
   | { kind: "switch-theme"; theme: Theme }
   | { kind: "system-status" }
   | { kind: "help" }
+  | { kind: "delete-project"; name: string }
   | { kind: "unknown"; raw: string };
 
 const THEME_ALIASES: Record<string, Theme> = {
@@ -55,6 +56,22 @@ export function parseCommand(input: string): Command {
     return { kind: "system-status" };
   }
 
+  // "delete project <name>" / "remove project <name>" -- recognized so it
+  // classifies correctly under permissions.ts, but the command bar does not
+  // execute this itself (see executeCommand below): a typed/spoken delete
+  // has no confirmation surface here, and Level 3 actions require a real
+  // approval dialog, not a one-line echoed response. The Projects view's
+  // delete button is the actual, approval-gated path.
+  // Matched case-insensitively against normalized text, but the captured
+  // name comes from the original (trimmed) input so casing is preserved --
+  // project names are looked up/displayed with their real casing.
+  if (/^(?:delete|remove) project\s+.+$/.test(text)) {
+    const nameMatch = input.trim().match(/^(?:delete|remove) project\s+(.+)$/i);
+    if (nameMatch) {
+      return { kind: "delete-project", name: nameMatch[1].trim() };
+    }
+  }
+
   if (
     text === "help" ||
     text === "what can you do" ||
@@ -84,6 +101,8 @@ export function executeCommand(command: Command, ctx: CommandContext): string {
       return "Nothing is wired to real status yet — every integration on the System Status panel reads NOT WIRED YET, honestly.";
     case "help":
       return "Right now I can only switch themes (e.g. \"switch to neon void\") and report status. Everything else in the spec isn't built yet — see ROADMAP.md.";
+    case "delete-project":
+      return `"Delete project ${command.name}" is a Level 3 action and needs a real approval dialog, not a typed command — use the Delete button in the Projects view instead.`;
     case "unknown":
       return `Not implemented yet: "${command.raw}". See ROADMAP.md for what's actually built.`;
   }

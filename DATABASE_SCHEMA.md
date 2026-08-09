@@ -1,7 +1,12 @@
-# Database Schema (proposed — not yet provisioned)
+# Database Schema
 
-No Supabase project exists yet. This is the draft schema from the spec (§14), trimmed to what
-Milestone 7/8 actually need first — not every table up front (spec principle #20).
+## Status (2026-08-09)
+
+The schema below is **real, written SQL** — `packages/database/migrations/0001_init.sql` — not
+just a sketch. It has never been run, because no Supabase project exists yet (Cowork can't
+create one on your behalf). Run it via the Supabase SQL editor once you've created a project —
+see `INSTALLATION.md` step 3. The client code (`apps/desktop/frontend/src/lib/store/`) already
+targets this exact shape and is ready the moment the project exists.
 
 ## Ownership rule
 
@@ -46,7 +51,8 @@ settings (
 **Supabase Cloud (free tier)**, not self-hosted/Docker Postgres — Docker isn't installed on
 this machine and disk is tight (~22 GiB free). See `ARCHITECTURE.md` for the reasoning.
 
-## Explicitly not doing yet
+## Explicitly not done yet
 
-Provisioning the actual Supabase project, writing migrations, or wiring a client — that starts
-with Milestone 7, not before.
+The actual Supabase project doesn't exist. Until it does, the app runs on a local-storage
+adapter (`localStore.ts`) implementing the identical `JarvisStore` interface — see
+`ARCHITECTURE.md` and `ROADMAP.md` Milestone 8.

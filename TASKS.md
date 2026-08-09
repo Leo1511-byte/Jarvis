@@ -25,6 +25,8 @@
 - [ ] `npm audit` flags a moderate-severity esbuild advisory in the vitest/vite dev toolchain
       (dev-server only, not shipped in the production build). Not fixed yet — would need a
       vitest major-version bump. Low priority but noted rather than ignored.
+- [ ] **Create the actual Supabase project** (`INSTALLATION.md` step 3) — the code's ready and
+      waiting, only account creation is left, and that has to be you.
 
 ## Done
 
@@ -61,15 +63,26 @@
       `VOICE_SETUP.md`. 3 Python scripts written and syntax-checked (not run — no audio hardware
       available). Frontend `VoiceSettings` panel built: real device enumeration, real permission
       status, persisted toggles — `npm run test`/`build` both verified passing.
+- [x] 2026-08-09 — Milestone 7 (Supabase) code written: client, store implementation, migration
+      SQL. No project provisioned yet (needs you — see "Now" above).
+- [x] 2026-08-09 — Milestone 8 (Projects + Tasks) built: real CRUD views backed by a local-
+      storage adapter matching the Supabase schema exactly. Sidebar nav now actually routes
+      between views. 11 tests passing, build verified.
+- [x] 2026-08-09 — Milestone 18 (permissions + approval) built: `permissions.ts` classifies
+      command kinds by level, `ApprovalDialog` + `useApproval` implement a real, promise-based
+      Level 3 approval flow (spec §55 format), wired into `ProjectsView`'s new Delete button —
+      the store's `deleteProject` (both `localStore` and `supabaseStore`) is only called after
+      the user clicks Approve. `commandEngine.ts` recognizes `delete project <name>` but
+      deliberately does not execute it from the command bar, since a typed/spoken command has no
+      real confirmation surface — it redirects to the UI instead of faking one. 16 tests passing
+      (`npm run test`), `tsc -b` and `vite build` both verified.
 
 ## Blocked
 
-- Milestone 3 (desktop UI): blocked on relocating the repo and re-checking free disk space
-  (~22 GiB at inspection time) before the Rust toolchain install.
-- Milestone 6 (Obsidian memory): blocked on actually building the vault structure — nothing
-  beyond `.obsidian/` exists there yet.
-- Milestones 7+: no longer blocked on the stack decision (made), but each still starts only
-  when its turn in `ROADMAP.md` comes up.
+- Milestone 7's Supabase project: blocked on you creating an account (Claude doesn't create
+  accounts on your behalf).
+- Milestone 3's visual confirmation: blocked on you actually running `cargo tauri dev` and
+  looking at the window.
 
 ## Backlog (unscoped, from the original spec — do not start yet)
 

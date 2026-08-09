@@ -190,6 +190,21 @@
   border-bottom: none;
 }
 
+.jc-btn-inline {
+  background: transparent;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.jc-btn-inline:hover {
+  background: var(--accent-soft);
+}
+
 .voice-field select {
   background: var(--bg);
   color: var(--text);

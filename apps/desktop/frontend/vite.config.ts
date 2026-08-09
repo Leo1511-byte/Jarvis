@@ -1,4 +1,5 @@
-import { defineConfig } from "vite";
+/// <reference types="vitest/config" />
+import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 
 // Tauri expects a fixed dev server port and relative asset paths.
@@ -14,5 +15,8 @@ export default defineConfig({
   build: {
     target: "esnext",
     outDir: "dist",
+  },
+  test: {
+    environment: "jsdom",
   },
 });

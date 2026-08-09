@@ -45,3 +45,10 @@ apps/desktop/backend/gen/
 # Database
 *.sqlite
 *.db
+
+# Vite leftover temp config (written when vite.config.ts is loaded as ESM)
+vite.config.ts.timestamp-*.mjs
+
+# TypeScript incremental build cache — machine-specific, not meaningful to commit
+tsconfig.tsbuildinfo
+apps/desktop/frontend/tsconfig.tsbuildinfo

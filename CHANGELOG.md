@@ -70,6 +70,40 @@
   toggle is explicitly disabled with a tooltip explaining why, rather than looking functional
   when it isn't. `npm run test`/`build` verified passing.
 
+### Added — 2026-08-09 (Milestones 7 + 8)
+- `packages/database/migrations/0001_init.sql`: real schema (projects, tasks,
+  task_dependencies, activity_events, settings) with RLS enabled.
+- `apps/desktop/frontend/src/lib/supabaseClient.ts`, `store/supabaseStore.ts`: real Supabase
+  client and store implementation, matching the migration exactly. Untested — no project
+  provisioned (account creation isn't something Claude does for you).
+- `store/localStore.ts`: the store that's actually active right now, backed by localStorage.
+  6 tests passing.
+- `store/index.ts`: `getStore()` picks Supabase or local automatically based on whether
+  `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` are set.
+- `ProjectsView.tsx`, `TasksView.tsx`: real CRUD UI. Sidebar nav (`App.tsx`) now actually routes
+  between Dashboard/Projects/Tasks instead of always showing the dashboard regardless of
+  selection — that gap existed since Milestone 3 and is fixed now.
+- `INSTALLATION.md`, `DATABASE_SCHEMA.md` updated with the exact steps to provision Supabase.
+
+### Added — 2026-08-09 (Milestone 18)
+- `apps/desktop/frontend/src/permissions.ts`: `PermissionLevel` (1/2/3) and `permissionLevelFor`,
+  classifying command kinds per spec §54. Unknown kinds default to the strictest level.
+- `store/types.ts`, `localStore.ts`, `supabaseStore.ts`: added `deleteProject`, the first Level 3
+  action wired end-to-end. `localStore` cascades to delete the project's tasks, matching the
+  migration's `on delete cascade`.
+- `components/ApprovalDialog.tsx` + `.css`: real modal implementing spec §55's
+  ACTION/CONTEXT/REASON/RISK format with Approve/Deny — no default action, no auto-approve.
+- `hooks/useApproval.ts`: promise-based approval flow (`requestApproval` resolves once the user
+  responds) so call sites can `await` a real decision instead of assuming yes.
+- `ProjectsView.tsx`: added a Delete button per project, gated through `useApproval` — the store's
+  `deleteProject` only runs after the user clicks Approve in the dialog.
+- `commandEngine.ts`: added `delete-project` parsing (`"delete project <name>"` /
+  `"remove project <name>"`), but `executeCommand` deliberately does not perform the deletion —
+  it tells the user to use the Projects view instead, since a typed command has no real
+  confirmation surface to gate a Level 3 action behind.
+- 5 new tests (3 in `permissions.test.ts`, 2 in `commandEngine.test.ts`) — 16 total passing.
+  `tsc -b` and `vite build` both verified.
+
 ### Corrected vs. original spec
 - Runtime split documented: Cowork (this session) cannot run local system inspection, access
   the microphone, or persist a background process. `ARCHITECTURE.md` now specifies a local

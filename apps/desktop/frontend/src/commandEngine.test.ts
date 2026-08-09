@@ -30,6 +30,17 @@ describe("parseCommand", () => {
     });
     expect(parseCommand("")).toEqual({ kind: "unknown", raw: "" });
   });
+
+  it("recognizes delete-project intent without executing it", () => {
+    expect(parseCommand("delete project Ape War")).toEqual({
+      kind: "delete-project",
+      name: "Ape War",
+    });
+    expect(parseCommand("remove project Ape War")).toEqual({
+      kind: "delete-project",
+      name: "Ape War",
+    });
+  });
 });
 
 describe("executeCommand", () => {
@@ -49,5 +60,14 @@ describe("executeCommand", () => {
       { setTheme: vi.fn() }
     );
     expect(response).toMatch(/not implemented/i);
+  });
+
+  it("redirects delete-project to the real approval-gated UI instead of acting", () => {
+    const response = executeCommand(
+      { kind: "delete-project", name: "Ape War" },
+      { setTheme: vi.fn() }
+    );
+    expect(response).toMatch(/level 3/i);
+    expect(response).toContain("Ape War");
   });
 });
