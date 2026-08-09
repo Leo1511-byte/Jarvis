@@ -2,11 +2,19 @@
 
 ## Now
 
+- [ ] **Coordination note:** this repo is being edited by two Claude sessions right now (this
+      Cowork session and your local Claude Code in Terminal). Let one finish a milestone before
+      the other touches the repo again, or expect merge conflicts.
+- [ ] Run `apps/desktop/backend/README.md`'s verification steps locally (Rust install,
+      `cargo tauri dev`) — the frontend is verified but the Tauri shell isn't, and Milestone 3
+      doesn't actually close until it launches for real.
 - [ ] Relocate this repo out of the Claude session artifacts folder to somewhere durable, e.g.
-      `~/Developer/jarvis` (flagged as a risk in the inspection report).
-- [ ] Spot-check `~/Desktop/Jarvis.app`, `~/plugins/jarvis`, the `jarvis.ios` container, and the
-      `jarvis-desktop` remnants in `~/.Trash` for naming collisions before Milestone 3 names
-      anything "Jarvis" on disk.
+      `~/Developer/jarvis` (flagged as a risk in the inspection report). Do this before more
+      frontend/backend work piles up here.
+- [ ] Spot-check `~/Desktop/Jarvis.app` (confirmed: unrelated third-party iOS chat app,
+      bundle id `jarvis.ios`), `~/plugins/jarvis`, and the `jarvis-desktop` remnants in
+      `~/.Trash` for anything that could collide with this app's bundle id
+      (`dev.leonardo.jarvis`, set in `tauri.conf.json`) or Dock name.
 - [ ] Before Milestone 6: actually build the `Inbox/`/`Daily/`/`Notes/`/`Briefs/`/`System/`
       structure in `~/Documents/Obsidian Vault` — it doesn't exist yet, despite earlier docs
       implying it did.
@@ -25,6 +33,12 @@
       corrected accordingly.
 - [x] 2026-08-09 — Stack decided from real hardware/disk data: Tauri, Supabase Cloud,
       launchd/cron instead of n8n initially, local Claude Code confirmed as orchestrator.
+- [x] 2026-08-09 — Frontend scaffold built: Vite+React+TS, 4-theme token system, animated
+      `JarvisCore` (10 states), sidebar nav shell, disabled command bar, honest "not wired yet"
+      status panel. `npm run build` verified passing.
+- [x] 2026-08-09 — Tauri backend config written (`Cargo.toml`, `tauri.conf.json`, `main.rs`) —
+      unverified, no Rust toolchain in the sandbox that wrote it. See its README for the real
+      verification steps.
 
 ## Blocked
 

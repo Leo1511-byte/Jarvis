@@ -23,6 +23,18 @@
   GitHub auth is HTTPS not SSH, two coexisting Claude Code installs, unverified mic permission
   state, repo currently sitting inside a Claude session artifacts folder (needs relocating).
 
+### Added — 2026-08-09 (Milestone 3/4)
+- `apps/desktop/frontend`: Vite + React + TypeScript app. Builds clean (`npm run build`
+  verified in-session). Theme token system (`src/theme.css`) implementing Crimson Command,
+  Neon Void, Holographic Core, and Obsidian, persisted via `localStorage`. `JarvisCore`
+  component with all 10 spec states (idle through offline) as CSS animations, respecting
+  `prefers-reduced-motion`. Sidebar nav shell (12 sections, no routing yet), disabled command
+  bar placeholder, status panel that honestly reports "NOT WIRED YET" instead of faking
+  connection state.
+- `apps/desktop/backend`: Tauri v2 config (`Cargo.toml`, `tauri.conf.json`, `main.rs`).
+  **Not compiled or verified** — written without a Rust toolchain available; see its README for
+  the real verification steps before trusting it.
+
 ### Corrected vs. original spec
 - Runtime split documented: Cowork (this session) cannot run local system inspection, access
   the microphone, or persist a background process. `ARCHITECTURE.md` now specifies a local

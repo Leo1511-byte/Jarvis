@@ -7,9 +7,9 @@ test and update `TASKS.md`/`CHANGELOG.md` at the end of each.
 |---|---|---|---|
 | 1 | System inspection | **Done — 2026-08-09** | You, via local Claude Code |
 | 2 | Architecture + repository | Done (stack decision made from real data) | Cowork |
-| 3 | Basic Jarvis desktop UI | Not started | Local Claude Code |
-| 4 | Theme system + Jarvis Core animation | Not started | — |
-| 5 | Command engine | Not started | — |
+| 3 | Basic Jarvis desktop UI | **Frontend built and verified (`npm run build` succeeds); Tauri backend scaffolded but unverified — no Rust in the sandbox that wrote it, see `apps/desktop/backend/README.md`** | Cowork (frontend) / you (Rust build) |
+| 4 | Theme system + Jarvis Core animation | **Done in the frontend** — 4 themes as CSS tokens (`src/theme.css`), animated `JarvisCore` component with all 10 states, `prefers-reduced-motion` respected, theme persists via localStorage | Cowork |
+| 5 | Command engine | Not started — command bar is a disabled visual placeholder | — |
 | 6 | Obsidian memory | Partially exists (see `OBSIDIAN_SETUP.md`) | — |
 | 7 | Supabase | Not started | — |
 | 8 | Projects + tasks | Not started | — |

@@ -1,0 +1,179 @@
+.jarvis-core {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  user-select: none;
+}
+
+.jarvis-core-svg {
+  width: 180px;
+  height: 180px;
+  overflow: visible;
+}
+
+.core-ring {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  opacity: 0.5;
+  transform-origin: 100px 100px;
+}
+
+.core-ring-mid {
+  opacity: 0.35;
+}
+
+.core-ring-inner {
+  opacity: 0.6;
+}
+
+.core-nucleus {
+  fill: var(--accent);
+  filter: drop-shadow(0 0 12px var(--accent-glow));
+}
+
+/* IDLE — slow, barely-there breathing */
+.jarvis-core[data-state="idle"] .core-ring-outer {
+  animation: spin-slow 40s linear infinite;
+}
+.jarvis-core[data-state="idle"] .core-ring-mid {
+  animation: spin-slow-reverse 30s linear infinite;
+}
+.jarvis-core[data-state="idle"] .core-nucleus {
+  animation: breathe 4s ease-in-out infinite;
+}
+
+/* WAKE WORD ACTIVE — a touch more alert, steady glow */
+.jarvis-core[data-state="wake-word-active"] .core-ring-inner {
+  animation: spin-slow 12s linear infinite;
+}
+.jarvis-core[data-state="wake-word-active"] .core-nucleus {
+  animation: breathe 2s ease-in-out infinite;
+}
+
+/* LISTENING — faster pulse */
+.jarvis-core[data-state="listening"] .core-nucleus {
+  animation: pulse 1s ease-in-out infinite;
+}
+.jarvis-core[data-state="listening"] .core-ring-inner {
+  animation: spin-slow 6s linear infinite;
+}
+
+/* PROCESSING / WORKING — active spin */
+.jarvis-core[data-state="processing"] .core-ring-outer,
+.jarvis-core[data-state="working"] .core-ring-outer {
+  animation: spin 3s linear infinite;
+}
+.jarvis-core[data-state="processing"] .core-ring-mid,
+.jarvis-core[data-state="working"] .core-ring-mid {
+  animation: spin-reverse 2s linear infinite;
+}
+.jarvis-core[data-state="processing"] .core-ring-inner,
+.jarvis-core[data-state="working"] .core-ring-inner {
+  animation: spin 1.4s linear infinite;
+}
+
+/* WAITING FOR APPROVAL — amber, gentle pulse, deliberately distinct */
+.jarvis-core[data-state="waiting-for-approval"] .core-ring,
+.jarvis-core[data-state="waiting-for-approval"] .core-nucleus {
+  stroke: var(--warning);
+  fill: var(--warning);
+  filter: drop-shadow(0 0 12px var(--warning));
+}
+.jarvis-core[data-state="waiting-for-approval"] .core-nucleus {
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+/* SPEAKING — rhythmic pulse on the nucleus */
+.jarvis-core[data-state="speaking"] .core-nucleus {
+  animation: pulse 0.6s ease-in-out infinite;
+}
+
+/* SUCCESS */
+.jarvis-core[data-state="success"] .core-ring,
+.jarvis-core[data-state="success"] .core-nucleus {
+  stroke: var(--success);
+  fill: var(--success);
+  filter: drop-shadow(0 0 14px var(--success));
+}
+
+/* ERROR */
+.jarvis-core[data-state="error"] .core-ring,
+.jarvis-core[data-state="error"] .core-nucleus {
+  stroke: var(--error);
+  fill: var(--error);
+  filter: drop-shadow(0 0 14px var(--error));
+}
+.jarvis-core[data-state="error"] .core-nucleus {
+  animation: shake 0.4s ease-in-out 2;
+}
+
+/* OFFLINE — dim, static, no glow */
+.jarvis-core[data-state="offline"] .core-ring,
+.jarvis-core[data-state="offline"] .core-nucleus {
+  stroke: var(--text-dim);
+  fill: var(--text-dim);
+  filter: none;
+  opacity: 0.3;
+}
+
+.jarvis-core-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: var(--text-dim);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes spin-reverse {
+  to {
+    transform: rotate(-360deg);
+  }
+}
+@keyframes spin-slow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes spin-slow-reverse {
+  to {
+    transform: rotate(-360deg);
+  }
+}
+@keyframes breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.06);
+    opacity: 0.85;
+  }
+}
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.18);
+  }
+}
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-3px);
+  }
+  75% {
+    transform: translateX(3px);
+  }
+}

@@ -37,8 +37,10 @@ __pycache__/
 .vscode/
 .idea/
 
-# Tauri
-src-tauri/target/
+# Tauri / Rust
+target/
+apps/desktop/backend/target/
+apps/desktop/backend/gen/
 
 # Database
 *.sqlite

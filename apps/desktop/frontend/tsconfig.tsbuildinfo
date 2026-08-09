@@ -1,0 +1,1 @@
+{"root":["./src/App.tsx","./src/main.tsx","./src/vite-env.d.ts","./src/components/CommandBar.tsx","./src/components/JarvisCore.tsx","./src/components/Sidebar.tsx","./src/components/StatusPanel.tsx","./src/components/ThemeSwitcher.tsx","./src/hooks/useTheme.ts"],"version":"5.9.3"}
