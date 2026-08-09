@@ -35,6 +35,28 @@
   **Not compiled or verified** — written without a Rust toolchain available; see its README for
   the real verification steps before trusting it.
 
+### Added — 2026-08-09 (Milestone 3 verification + Milestone 6)
+- Local Claude Code compiled the Tauri backend: `apps/desktop/backend/target/debug/jarvis` is a
+  real Mach-O arm64 binary. It fixed a redundant `[lib]` block in `Cargo.toml` and relative
+  frontend paths in `tauri.conf.json`, and generated app icons (checked: not the Marvel/Iron Man
+  image flagged earlier).
+- Repo relocated to `~/Developer/jarvis`.
+- Milestone 6 (Obsidian memory) built and verified in `~/Documents/Obsidian Vault`: `JARVIS.md`,
+  `System/memory.md`, all 3 scripts (run-tested against real seeded content, not just written),
+  `Inbox/`/`Daily/`/`Notes/`/`Briefs/` populated. Ran the literal spec §12 connection test.
+
+### Added — 2026-08-09 (Milestone 5)
+- `apps/desktop/frontend/src/commandEngine.ts`: real parser (`parseCommand`) and executor
+  (`executeCommand`) — theme switching and status are real actions, everything else honestly
+  returns "not implemented yet" instead of a fabricated response.
+- 5 unit tests in `commandEngine.test.ts`, passing.
+- `CommandBar` enabled and wired to the engine; `App.tsx` shows a live command log and drives
+  the Jarvis Core through processing/success/error states from real command execution.
+- `COMMANDS.md` rewritten to separate what's actually working (desktop command bar + the
+  pre-existing Obsidian-skill trigger phrases) from the spec's target command list.
+- Noted: `npm audit` reports a moderate esbuild advisory in the vitest/vite dev toolchain
+  (dev-server only) — not fixed, tracked in `TASKS.md`.
+
 ### Corrected vs. original spec
 - Runtime split documented: Cowork (this session) cannot run local system inspection, access
   the microphone, or persist a background process. `ARCHITECTURE.md` now specifies a local

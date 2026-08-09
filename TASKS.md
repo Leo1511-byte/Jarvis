@@ -2,22 +2,23 @@
 
 ## Now
 
-- [ ] **Coordination note:** this repo is being edited by two Claude sessions right now (this
-      Cowork session and your local Claude Code in Terminal). Let one finish a milestone before
-      the other touches the repo again, or expect merge conflicts.
-- [ ] Run `apps/desktop/backend/README.md`'s verification steps locally (Rust install,
-      `cargo tauri dev`) — the frontend is verified but the Tauri shell isn't, and Milestone 3
-      doesn't actually close until it launches for real.
-- [ ] Relocate this repo out of the Claude session artifacts folder to somewhere durable, e.g.
-      `~/Developer/jarvis` (flagged as a risk in the inspection report). Do this before more
-      frontend/backend work piles up here.
+- [ ] **Coordination note:** this repo is being edited by two Claude sessions (this Cowork
+      session and your local Claude Code in Terminal) — both have made real progress
+      independently (repo relocation + Rust build by local Claude Code; Milestone 6 by Cowork).
+      No conflicts so far, but let one finish a logical chunk before the other edits again.
+- [ ] Run `cargo tauri dev` yourself at least once to see the actual window open — it's compiled
+      (`apps/desktop/backend/target/debug/jarvis` exists and runs), but nobody has visually
+      confirmed the app launches and looks right yet.
 - [ ] Spot-check `~/Desktop/Jarvis.app` (confirmed: unrelated third-party iOS chat app,
       bundle id `jarvis.ios`), `~/plugins/jarvis`, and the `jarvis-desktop` remnants in
       `~/.Trash` for anything that could collide with this app's bundle id
-      (`dev.leonardo.jarvis`, set in `tauri.conf.json`) or Dock name.
-- [ ] Before Milestone 6: actually build the `Inbox/`/`Daily/`/`Notes/`/`Briefs/`/`System/`
-      structure in `~/Documents/Obsidian Vault` — it doesn't exist yet, despite earlier docs
-      implying it did.
+      (`dev.leonardo.jarvis`).
+- [ ] Milestone 5 shipped with only 2 real actions (theme switch, status). Extending it further
+      means building the backend each new command needs first — resist adding command phrases
+      that "help" would list but that don't actually do anything (spec principle #6).
+- [ ] `npm audit` flags a moderate-severity esbuild advisory in the vitest/vite dev toolchain
+      (dev-server only, not shipped in the production build). Not fixed yet — would need a
+      vitest major-version bump. Low priority but noted rather than ignored.
 
 ## Done
 
@@ -36,9 +37,20 @@
 - [x] 2026-08-09 — Frontend scaffold built: Vite+React+TS, 4-theme token system, animated
       `JarvisCore` (10 states), sidebar nav shell, disabled command bar, honest "not wired yet"
       status panel. `npm run build` verified passing.
-- [x] 2026-08-09 — Tauri backend config written (`Cargo.toml`, `tauri.conf.json`, `main.rs`) —
-      unverified, no Rust toolchain in the sandbox that wrote it. See its README for the real
-      verification steps.
+- [x] 2026-08-09 — Tauri backend config written (`Cargo.toml`, `tauri.conf.json`, `main.rs`).
+      Local Claude Code then fixed two issues (redundant `[lib]` block, relative frontend
+      paths), generated real app icons, and compiled it — `target/debug/jarvis` is a genuine
+      Mach-O arm64 binary. Milestone 3 build is verified; visual launch still isn't.
+- [x] 2026-08-09 — Repo relocated by local Claude Code to `~/Developer/jarvis`, out of the
+      Cowork session artifacts folder.
+- [x] 2026-08-09 — Milestone 6 (Obsidian memory) built for real in `~/Documents/Obsidian
+      Vault`: `JARVIS.md`, `System/memory.md`, `System/scripts/{what_open,connect_this,
+      orphan_scan}.py`, and `Inbox/`/`Daily/`/`Notes/`/`Briefs/` populated with real seed
+      content. All 3 scripts run-tested against that content before being marked done.
+- [x] 2026-08-09 — Milestone 5 (command engine) built: `commandEngine.ts` parses text into a
+      typed `Command`, `executeCommand` runs it. 5 unit tests pass (`npm run test`). Wired into
+      the now-enabled `CommandBar` and `App.tsx`, with a live command log. `tsc -b` and
+      `vite build` both verified passing.
 
 ## Blocked
 

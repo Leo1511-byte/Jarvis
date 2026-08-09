@@ -41,23 +41,21 @@ locking in a structure right now, before Milestone 6 actually starts building it
 guessing. The target structure (`Inbox/`, `Daily/`, `Notes/`, `Briefs/`, `System/`) stays the
 plan; it just needs to actually be created in `~/Documents/Obsidian Vault` when M6 starts.
 
-## What gets added, once Milestone 6 actually starts
+## Milestone 6: done, 2026-08-09
 
-The spec's memory *files* are still a genuinely useful concept. All of these are **new files,
-none exist yet** — the earlier version of this doc incorrectly implied some already did:
+Built for real in `~/Documents/Obsidian Vault` and verified by running each script against
+seeded content (not just written and assumed to work):
 
-| Spec file | Plan |
+| File/folder | Status |
 |---|---|
-| `MASTER_CONTEXT.md` | New: `System/MASTER_CONTEXT.md` — stable cross-session facts |
-| `CURRENT_STATE.md` | New: `System/memory.md` — running log, per the Jarvis skill's description (create it for real) |
-| `DECISIONS.md` | New: `System/DECISIONS.md` — architecture/project decisions with reasons |
-| `LESSONS.md` | New: `System/LESSONS.md` |
-| `AGENT_RULES.md` | New: `JARVIS.md` at vault root — identity, guardrails, trigger phrases. Becomes source of truth for behavior once written; if it and this doc ever disagree, `JARVIS.md` wins |
-| `SYSTEM_STATE.md` | Deferred until there's more than one integration to track |
-| `ACTIVE_PROJECT.md` | Deferred until the project system (Milestone 8) exists |
+| `JARVIS.md` (vault root) | Built — identity, vault map, guardrails, trigger phrases. Source of truth per the guardrail in the file itself |
+| `System/memory.md` | Built — running dated log, seeded with today's real decisions |
+| `System/scripts/what_open.py` | Built and run-tested — correctly found 4 open tasks across `Daily/`+`Notes/` |
+| `System/scripts/orphan_scan.py` | Built and run-tested — correctly reported no orphans once notes were cross-linked |
+| `System/scripts/connect_this.py` | Built and run-tested — correctly scored and ranked link candidates by shared tags/keywords |
+| `Inbox/`, `Daily/`, `Notes/`, `Briefs/` | Created with real seed content (one Inbox item, one Daily note, two linked Notes). `Briefs/` stays empty until Milestone 13 wires the morning-brief automation |
+| `System/JARVIS_CONNECTION_TEST.md` | Ran the literal spec §12 test: wrote "Jarvis memory online.", read it, modified it, read it again. Confirmed |
 
-## Action
-
-None yet. This is a plan, not a migration script. `JARVIS.md`, `System/memory.md`,
-`DECISIONS.md`, and `LESSONS.md` get created when Milestone 6 actually starts, in
-`~/Documents/Obsidian Vault` — not `/Users/leonardo/obsidian`.
+Not built yet, deferred to when they're actually needed rather than created speculatively:
+`MASTER_CONTEXT.md`, `DECISIONS.md`, `LESSONS.md`, `SYSTEM_STATE.md`, `ACTIVE_PROJECT.md`.
+`System/voice/` is explicitly Milestone 9's job, not this one.

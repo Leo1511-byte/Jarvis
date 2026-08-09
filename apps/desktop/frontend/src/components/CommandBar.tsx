@@ -2,11 +2,12 @@ import { useState } from "react";
 import "./CommandBar.css";
 
 /**
- * Visual shell only. Not wired to the command engine yet (Milestone 5) —
- * submitting currently does nothing but echo, on purpose, rather than
- * pretending to understand a command it can't act on.
+ * Wired to the real command engine (Milestone 5) via onSubmit — this
+ * component itself just handles the input field, submit, and its own
+ * empty-string guard, and defers to whatever parseCommand/executeCommand
+ * results the caller passes back in.
  */
-export function CommandBar() {
+export function CommandBar({ onSubmit }: { onSubmit: (text: string) => void }) {
   const [value, setValue] = useState("");
 
   return (
@@ -14,6 +15,9 @@ export function CommandBar() {
       className="command-bar"
       onSubmit={(e) => {
         e.preventDefault();
+        const trimmed = value.trim();
+        if (!trimmed) return;
+        onSubmit(trimmed);
         setValue("");
       }}
     >
@@ -22,10 +26,9 @@ export function CommandBar() {
       </span>
       <input
         className="command-bar-input"
-        placeholder="Ask Jarvis anything… (command engine not wired yet — Milestone 5)"
+        placeholder='Ask Jarvis anything… (try "switch to neon void" or "help")'
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        disabled
       />
       <kbd className="command-bar-kbd">⌘K</kbd>
     </form>
