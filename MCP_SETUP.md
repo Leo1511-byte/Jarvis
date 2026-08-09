@@ -10,7 +10,7 @@ carry over.
 |---|---|---|
 | Filesystem / Obsidian | Read/write the vault | Scoped to `/Users/leonardo/obsidian` only, not the whole home directory |
 | Supabase | Structured state queries | Least-privilege service role, not the admin key, once provisioned |
-| GitHub | Repo/issue/PR read, gated writes | Read by default; push/create requires Level 3 approval |
+| GitHub | Repo/issue/PR read, gated writes | **Read path done a different way, 2026-08-09** — no MCP server configured or needed; `check my github`/`check my prs` route through the orchestrator, which tells the local `claude` CLI to use its already-authenticated `gh` command directly. Write actions (create PR, comment, merge) would still be Level 3 and aren't built |
 | Google Calendar | Schedule read, gated writes | **Verified working locally, 2026-08-09** — `list_calendars` called directly from this local Claude Code session, returned real data |
 | Gmail | Search/read/draft, gated sends | **Verified working locally, 2026-08-09** — `list_labels` called directly from this local Claude Code session, returned real data |
 
@@ -25,9 +25,12 @@ messages). So Milestones 14/15 are *not* blocked on MCP configuration. What's st
 routing — nothing in the JARVIS desktop app can invoke these yet, since that needs the M10
 orchestrator process to exist first.
 
-Filesystem/Obsidian, Supabase, and GitHub servers are not yet configured/provisioned — GitHub's
-underlying `gh` auth was verified working (`gh auth status`, 2026-08-09) but no MCP server wraps
-it yet.
+Filesystem/Obsidian and Supabase servers are not yet configured/provisioned. GitHub turned out
+not to need an MCP server at all — `gh auth status` confirmed real local auth, and the
+orchestrator's `claude` process already has bash/tool access to call `gh` directly, so
+`check my github` (M12) is done without one. Worth remembering as a general pattern: an MCP
+server is only needed when the underlying capability isn't already reachable some other way the
+orchestrator has access to.
 
 **Prior correction, 2026-08-09 (kept for history):** earlier drafts of this doc implied
 Calendar/Gmail access still needed you to authorize a connector. Checked directly — both were

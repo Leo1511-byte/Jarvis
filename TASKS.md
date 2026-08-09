@@ -21,21 +21,17 @@
       Claude, even under a blanket "always allow" grant (2026-08-09): that README states the
       reasoning explicitly — a recurring job that writes to your vault should start because you
       turned it on, not because an assistant decided it should run. 3 lines, your terminal.
-- [ ] **Test all four orchestrator-routed commands in the actual running app** — `research
-      <topic>`, `continue project <name>`, `check my calendar`, `check my email` — type each into
-      the real command bar in the `cargo tauri dev` window and confirm you get a real result back
-      (not just the automated tests, which mock the Tauri IPC boundary). Nobody has clicked
-      through any of the three added 2026-08-09 (calendar/email/continue-project) yet.
+- [ ] **Test all five orchestrator-routed commands in the actual running app** — `research
+      <topic>`, `continue project <name>`, `check my calendar`, `check my email`, `check my
+      github` — type each into the real command bar in the `cargo tauri dev` window and confirm
+      you get a real result back (not just the automated tests, which mock the Tauri IPC
+      boundary). Nobody has clicked through any of the four added 2026-08-09 yet.
 - [ ] **Background-mode path for the orchestrator** — every command today (`research`,
       `continue-project`, `check-calendar`, `check-email`) blocks the command bar's `processing`
       state until the whole synchronous `claude -p` call finishes. Fine for quick reads, wrong
       for `continue project`'s full spec §62 workflow on a big task. `claude --bg` + polling
       `claude agents --json` were verified callable by hand but not built into `orchestrator.rs` —
       scope as its own slice, not sync-mode's problem to solve.
-- [ ] **M12 (GitHub) still needs its own command-bar entry point** — `gh` CLI auth is verified,
-      but unlike Calendar/Gmail there's no GitHub MCP server configured locally yet, so there's
-      nothing for a `check my prs` / `check my issues` command to call yet. Needs that MCP server
-      set up locally first.
 - [ ] Known limitation in `orchestrator.rs`: `claude` is resolved via `PATH`, which works under
       `cargo tauri dev` (inherits Terminal's env) but will silently fail in a double-clicked,
       bundled app (Finder-launched processes get a minimal PATH). Not fixed yet — fix when the
@@ -168,6 +164,13 @@
       "specialists" honestly as prompt templates over one orchestrator call rather than separate
       agent processes, which is what M17 actually turned out to need. `COMMANDS.md`, `ROADMAP.md`
       updated to match. `tsc -b`/`vite build` verified.
+- [x] 2026-08-09 — Milestone 12 (GitHub) closed the same way: `check my github` / `check my prs` /
+      `check my pull requests` / `check my issues` route through the orchestrator with a prompt
+      telling the local `claude` CLI to use its already-authenticated `gh` command directly — no
+      GitHub MCP server needed, since the orchestrator's `claude` process already has bash/tool
+      access. Level 1, explicitly read-only. 4 more tests (2 parsing + 2 execution, one asserting
+      the prompt mentions both "Read-only" and "gh") — 31 total passing. `tsc -b`/`vite build`
+      verified.
 - [x] 2026-08-09 — Milestone 18 (permissions + approval) built: `permissions.ts` classifies
       command kinds by level, `ApprovalDialog` + `useApproval` implement a real, promise-based
       Level 3 approval flow (spec §55 format), wired into `ProjectsView`'s new Delete button —

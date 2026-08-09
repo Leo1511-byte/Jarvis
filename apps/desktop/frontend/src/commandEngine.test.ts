@@ -68,6 +68,13 @@ describe("parseCommand", () => {
     expect(parseCommand("check my inbox")).toEqual({ kind: "check-email" });
     expect(parseCommand("check my mail")).toEqual({ kind: "check-email" });
   });
+
+  it("parses github-check commands in their common phrasings", () => {
+    expect(parseCommand("check my github")).toEqual({ kind: "check-github" });
+    expect(parseCommand("check my prs")).toEqual({ kind: "check-github" });
+    expect(parseCommand("check my pull requests")).toEqual({ kind: "check-github" });
+    expect(parseCommand("check my issues")).toEqual({ kind: "check-github" });
+  });
 });
 
 describe("executeCommand", () => {
@@ -156,6 +163,17 @@ describe("executeCommand", () => {
     );
     expect(runOrchestrator).toHaveBeenCalledWith(expect.stringContaining("Read-only"));
     expect(response).toBe("Nothing urgent.");
+  });
+
+  it("routes check-github through the orchestrator with a read-only prompt", async () => {
+    const runOrchestrator = vi.fn().mockResolvedValue("2 PRs open, nothing urgent.");
+    const response = await executeCommand(
+      { kind: "check-github" },
+      { setTheme: vi.fn(), runOrchestrator }
+    );
+    expect(runOrchestrator).toHaveBeenCalledWith(expect.stringContaining("Read-only"));
+    expect(runOrchestrator).toHaveBeenCalledWith(expect.stringContaining("gh"));
+    expect(response).toBe("2 PRs open, nothing urgent.");
   });
 
   it("reports orchestrator errors consistently across every routed command", async () => {

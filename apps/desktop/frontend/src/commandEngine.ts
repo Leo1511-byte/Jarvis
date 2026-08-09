@@ -18,6 +18,7 @@ export type Command =
   | { kind: "continue-project"; name: string }
   | { kind: "check-calendar" }
   | { kind: "check-email" }
+  | { kind: "check-github" }
   | { kind: "unknown"; raw: string };
 
 const THEME_ALIASES: Record<string, Theme> = {
@@ -117,6 +118,15 @@ export function parseCommand(input: string): Command {
     return { kind: "check-email" };
   }
 
+  // "check my github" / "check my prs" / "check my issues" -- Milestone 12.
+  // No GitHub MCP server is configured locally (unlike Calendar/Gmail), but
+  // none is needed: the local `claude` CLI already has bash/tool access,
+  // and `gh auth status` is verified working (see TASKS.md), so the
+  // orchestrator prompt just asks it to use `gh` directly.
+  if (/^check (?:my )?(?:github|prs?|pull requests?|issues?)$/.test(text)) {
+    return { kind: "check-github" };
+  }
+
   return { kind: "unknown", raw: input };
 }
 
@@ -144,7 +154,7 @@ export async function executeCommand(
     case "system-status":
       return "Nothing is wired to real status yet — every integration on the System Status panel reads NOT WIRED YET, honestly.";
     case "help":
-      return "I can switch themes (e.g. \"switch to neon void\"), report status, \"research <topic>\", \"continue project <name>\", \"check my calendar\", and \"check my email\" — the last four via the local orchestrator. Everything else in the spec isn't built yet — see ROADMAP.md.";
+      return "I can switch themes (e.g. \"switch to neon void\"), report status, \"research <topic>\", \"continue project <name>\", \"check my calendar\", \"check my email\", and \"check my github\" — the last five via the local orchestrator. Everything else in the spec isn't built yet — see ROADMAP.md.";
     case "delete-project":
       return `"Delete project ${command.name}" is a Level 3 action and needs a real approval dialog, not a typed command — use the Delete button in the Projects view instead.`;
     case "research":
@@ -173,6 +183,13 @@ export async function executeCommand(
         `Check my email inbox using the Gmail MCP tools already configured locally for anything ` +
           `urgent or unread that needs my attention, then reply with 2-3 sentences summarizing it. ` +
           `Read-only — don't send, draft, or label anything.`
+      );
+    case "check-github":
+      return runOrchestratorOrExplain(
+        ctx,
+        `Check GitHub for any open PRs or issues assigned to me, using the gh CLI (already ` +
+          `authenticated locally), then reply with 2-3 sentences summarizing what needs attention. ` +
+          `Read-only — don't create, comment on, merge, or close anything.`
       );
     case "unknown":
       return `Not implemented yet: "${command.raw}". See ROADMAP.md for what's actually built.`;

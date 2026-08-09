@@ -12,6 +12,7 @@ describe("permissionLevelFor", () => {
     expect(permissionLevelFor("research")).toBe(1);
     expect(permissionLevelFor("check-calendar")).toBe(1);
     expect(permissionLevelFor("check-email")).toBe(1);
+    expect(permissionLevelFor("check-github")).toBe(1);
   });
 
   it("classifies workspace-modifying commands as level 2", () => {

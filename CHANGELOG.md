@@ -31,6 +31,12 @@
   a real regression fix (Node 25's native `localStorage` breaking 6 tests since the vitest 2→4
   bump). Re-verified the frontend side independently before committing rather than trusting the
   docs' claims at face value. Added `.claude/settings.local.json` to `.gitignore`.
+- Milestone 12 (GitHub) closed the same way as 14/15: `check my github` / `check my prs` /
+  `check my pull requests` / `check my issues` route through the orchestrator with a prompt
+  telling `claude` to use its already-authenticated `gh` command directly — no GitHub MCP server
+  needed. Level 1, explicitly read-only ("don't create, comment on, merge, or close anything").
+  4 new tests — 31 total passing. `MCP_SETUP.md` updated with the general lesson: an MCP server
+  is only needed when the orchestrator can't already reach a capability some other way.
 
 ### Added — 2026-08-09
 - Initial repo scaffold: `apps/`, `packages/{ui,core,agents,memory,tools,voice,permissions,

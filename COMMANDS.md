@@ -29,14 +29,18 @@ a working state, not assume these resolve like the local commands above:**
   locally (verified 2026-08-09). Explicitly prompted read-only.
 - `check my email` / `check my inbox` / `check my mail` — same pattern via the Gmail MCP server,
   also explicitly prompted read-only.
+- `check my github` / `check my prs` / `check my pull requests` / `check my issues` — same
+  pattern again, but via the `gh` CLI directly rather than an MCP server (none is configured
+  locally for GitHub; none was needed, since the orchestrator's `claude` process already has its
+  own bash/tool access and `gh auth status` is verified working).
 
-All four are Level 1 (research/calendar/email — explicitly read-only) or Level 2
+All five are Level 1 (research/calendar/email/github — explicitly read-only) or Level 2
 (continue-project — writes, but not sensitive in the delete/send/deploy/purchase sense) per
 `permissions.ts`. None are Level 3, so none go through `ApprovalDialog` — see `SECURITY.md` for
 what does.
 
 Parser + executor: `apps/desktop/frontend/src/commandEngine.ts`, tested in
-`commandEngine.test.ts` (`npm run test`, 18 tests covering this file alone). Same engine sits
+`commandEngine.test.ts` (`npm run test`, 20 tests covering this file alone). Same engine sits
 behind both typed and spoken input once wake-word/STT are wired to the app (Milestone 9's
 remaining gap) — no separate command behaviors per spec §32.
 
