@@ -18,13 +18,16 @@ first time any of it has actually been written.
 
 ## Voice chosen (2026-08-09)
 
-ElevenLabs voice ID `enzbGixeo55iqn1QxbbC` is JARVIS's voice. Set as the default in
-`config.example.json` and as `speak_daemon.py`'s fallback if `config.json` ever omits it — so a
-fresh `config.json` copy already speaks in the right voice as soon as an API key is added, no
-extra step needed. This is a voice selection, not a credential — safe to commit, unlike the API
-key next to it in `config.json` (which stays gitignored and unread by Claude, per the guardrails
-in `JARVIS.md`). Not yet verified against the real ElevenLabs API — that needs your key and a
-speaker, neither available here.
+**"Jon - Calm Presence"** (ElevenLabs voice ID `enzbGixeo55iqn1QxbbC`) is JARVIS's voice —
+already in Leonardo's ElevenLabs voice library (confirmed by opening ElevenLabs' Voice Lab
+directly via the Claude in Chrome extension and copying the ID off that exact voice card, not
+just trusting the ID he provided at face value). Set as the default in `config.example.json` and
+as `speak_daemon.py`'s fallback if `config.json` ever omits it — so a fresh `config.json` copy
+already speaks in the right voice as soon as an API key is added, no extra step needed. This is a
+voice selection, not a credential — safe to commit, unlike the API key next to it in
+`config.json` (which stays gitignored and unread by Claude, per the guardrails in `JARVIS.md`).
+Still not verified end-to-end against the real ElevenLabs *text-to-speech* API or through a
+speaker — that needs `config.json` with a real key, run locally.
 
 ## What's built now (unverified — no microphone or audio hardware in the Cowork sandbox that wrote this)
 
