@@ -16,6 +16,16 @@ first time any of it has actually been written.
 | TTS | **ElevenLabs**, cloud, behind a provider interface | Cloud is justified here (spec §71: "cloud may be used where justified") — quality matters more for output than the wake-word privacy concern does, and it's genuinely used to *reply*, not to continuously listen. Kept behind an interchangeable interface (spec §34) so a local TTS engine (e.g. Piper) can swap in later without touching call sites. |
 | Command routing | Same `commandEngine.ts` as typed input (spec §32) | STT output gets handed to the exact same `parseCommand`/`executeCommand` pair the command bar uses — no separate voice-only behavior. |
 
+## Voice chosen (2026-08-09)
+
+ElevenLabs voice ID `enzbGixeo55iqn1QxbbC` is JARVIS's voice. Set as the default in
+`config.example.json` and as `speak_daemon.py`'s fallback if `config.json` ever omits it — so a
+fresh `config.json` copy already speaks in the right voice as soon as an API key is added, no
+extra step needed. This is a voice selection, not a credential — safe to commit, unlike the API
+key next to it in `config.json` (which stays gitignored and unread by Claude, per the guardrails
+in `JARVIS.md`). Not yet verified against the real ElevenLabs API — that needs your key and a
+speaker, neither available here.
+
 ## What's built now (unverified — no microphone or audio hardware in the Cowork sandbox that wrote this)
 
 In `~/Documents/Obsidian Vault/System/voice/`:
