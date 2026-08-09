@@ -1,7 +1,23 @@
 # Testing
 
-No code exists yet to test. This documents the test plan so it's applied as each milestone
-ships, rather than retrofitted at the end.
+This documents the test plan so it's applied as each milestone ships, rather than retrofitted
+at the end.
+
+## Actual coverage so far (2026-08-09, Milestone 19 check-in)
+
+- **Automated:** 16 frontend unit tests passing (`npm run test` in `apps/desktop/frontend`) —
+  `commandEngine.test.ts`, `permissions.test.ts`, `localStore.test.ts`. `tsc -b` and
+  `vite build` re-verified after every change that touched the frontend.
+- **Manually verified against real systems, not mocks:** Tauri backend compiled to a real
+  Mach-O arm64 binary (local Claude Code); `morning_brief.py` run against the actual vault and
+  produced a correct `Briefs/2026-08-09.md`; the 3 vault scripts from Milestone 6
+  (`what_open.py`, `connect_this.py`, `orphan_scan.py`) run-tested against real seeded content.
+- **Written but unverified:** the 3 voice scripts (M9) — syntax-checked only, no microphone in
+  the sandbox that wrote them.
+- **Not applicable yet:** M12/14/15/16/17's own test rows below — those milestones are
+  architecture-only (see `ROADMAP.md`), there's no implementation to test.
+- **Not started:** performance benchmarking (app startup, command latency) — meaningless before
+  M3's visual launch is confirmed by a human, which hasn't happened yet.
 
 ## Required tests, by milestone
 

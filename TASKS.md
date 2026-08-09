@@ -29,6 +29,15 @@
       waiting, only account creation is left, and that has to be you.
 - [ ] **Activate the morning brief launchd job**, if you want it running automatically — see
       `packages/automations/launchd/README.md`. Not done automatically on purpose.
+- [ ] **Milestone 10/11/16/17 all need a local orchestrator process first** — that's local
+      Claude Code (or the Agent SDK) actually running as JARVIS, invokable from the desktop app.
+      This is the single biggest real blocker left; four milestones unlock once it exists.
+- [ ] **Milestone 14/15 (Calendar/Gmail):** configure equivalent MCP servers in your local Claude
+      Code config — Cowork already has working Calendar/Gmail connectors, but that access is
+      Cowork-session-scoped and doesn't carry over. See `MCP_SETUP.md`.
+- [ ] **Milestone 12 (GitHub):** local git/GitHub auth is already set up over HTTPS per the
+      system inspection — worth testing a minimal read-only `gh` call locally before building
+      anything, to confirm the auth actually works end to end.
 
 ## Done
 
@@ -75,6 +84,16 @@
       `Briefs/2026-08-09.md`. `launchd` plist + activation README written; not loaded (needs your
       `launchctl` command, on principle). Corrected `AUTOMATIONS.md`'s inaccurate claim that a
       Cowork scheduled task already handled this.
+- [x] 2026-08-09 — Milestones 10, 11, 12, 14, 15, 16, 17, 19, 20: honest architecture pass.
+      `ROADMAP.md` updated with real design decisions and specific blockers for each instead of
+      "Not started" with no explanation. Notably corrected `MCP_SETUP.md`: Calendar and Gmail
+      MCP connectors are already connected at the Cowork account level (checked directly,
+      2026-08-09) — the real blocker for M14/M15 is that Cowork's connectors don't transfer to
+      the local runtime that will actually run as JARVIS, not that you still need to authorize
+      anything. `TESTING.md` updated with an actual coverage summary instead of an empty test
+      plan. No new application code — building routing/integration code against a local
+      orchestrator process that doesn't exist yet (M10/M11/M16/M17) would be untestable and
+      would repeat the exact "renders but isn't connected" mistake the spec warns against.
 - [x] 2026-08-09 — Milestone 18 (permissions + approval) built: `permissions.ts` classifies
       command kinds by level, `ApprovalDialog` + `useApproval` implement a real, promise-based
       Level 3 approval flow (spec §55 format), wired into `ProjectsView`'s new Delete button —

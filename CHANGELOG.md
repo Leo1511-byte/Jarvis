@@ -85,6 +85,20 @@
   selection — that gap existed since Milestone 3 and is fixed now.
 - `INSTALLATION.md`, `DATABASE_SCHEMA.md` updated with the exact steps to provision Supabase.
 
+### Added — 2026-08-09 (Milestones 10, 11, 12, 14, 15, 16, 17, 19, 20 — architecture pass)
+- `ROADMAP.md`: replaced bare "Not started" rows with real design decisions and specific
+  blockers for each remaining milestone, distinguishing "blocked on a local orchestrator process
+  that doesn't exist yet" (M10, M11, M16, M17) from "blocked on local MCP config, not
+  authorization" (M14, M15) from "blocked on you confirming M3's visual launch" (M20).
+- `MCP_SETUP.md` corrected: Calendar and Gmail MCP connectors are already connected at the
+  Cowork account level (checked directly) — the real gap is that Cowork's connectors don't
+  transfer to the local runtime that will actually run as JARVIS, not missing authorization.
+- `TESTING.md`: added an actual coverage summary (16 tests passing, what's verified against real
+  systems vs. syntax-checked only vs. not applicable yet) instead of leaving it as an empty plan.
+- No new application code in this pass, deliberately — routing/integration code for M10/M11/
+  M16/M17 needs a local orchestrator process to run against; writing it now would be untestable
+  and would repeat the "renders but isn't connected" mistake called out by spec principle #6.
+
 ### Added — 2026-08-09 (Milestone 13)
 - `~/Documents/Obsidian Vault/System/scripts/morning_brief.py`: generates `Briefs/YYYY-MM-DD.md`
   from today's Daily note, open tasks across `Daily/`/`Notes/`/`Inbox/`, Inbox backlog count, and
