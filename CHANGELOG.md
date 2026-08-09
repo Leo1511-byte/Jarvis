@@ -13,6 +13,16 @@
   `TESTING.md`, `TROUBLESHOOTING.md`, `SYSTEM_INSPECTION_PROMPT.md`.
 - Git repository initialized.
 
+### Added — 2026-08-09 (later)
+- Milestone 1 (system inspection) completed via local Claude Code; report saved to
+  `~/Documents/Obsidian Vault/System/SYSTEM_INSPECTION_REPORT.md`.
+- Stack decided from real data: Tauri (Rust install pending, Milestone 3), Supabase Cloud,
+  launchd/cron instead of n8n initially, local Claude Code confirmed as orchestrator.
+- Vault path corrected to `~/Documents/Obsidian Vault`, confirmed by Leonardo.
+- Risks logged: tight disk (~22 GiB free), prior unrelated "Jarvis"-named app remnants on disk,
+  GitHub auth is HTTPS not SSH, two coexisting Claude Code installs, unverified mic permission
+  state, repo currently sitting inside a Claude session artifacts folder (needs relocating).
+
 ### Corrected vs. original spec
 - Runtime split documented: Cowork (this session) cannot run local system inspection, access
   the microphone, or persist a background process. `ARCHITECTURE.md` now specifies a local

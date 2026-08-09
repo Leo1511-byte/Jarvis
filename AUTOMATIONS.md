@@ -5,13 +5,15 @@
 A Cowork scheduled task generates the morning brief into `Briefs/` around 7am, using the vault
 read procedure from the existing Jarvis skill. That's the only automation that currently exists.
 
-## What n8n is for (Milestone 13, not yet installed)
+## Decided (2026-08-09): start without n8n
 
-Automations better run outside the app on a schedule: gathering data for the morning brief,
-calendar sync, task reminders, weekly project review, email summaries, scheduled research.
-Per spec principle #46, n8n isn't used for anything simpler and safer done locally — the
-morning brief staying a Cowork scheduled task rather than moving to n8n is a live example of
-that judgment call, and it should stay that way unless there's a concrete reason to move it.
+Inspection found n8n not installed, and it normally wants either Docker (also not installed)
+or a persistent Node process — both a stretch on a 90%-full disk. Plan instead: plain
+Node/Python scripts triggered by macOS `launchd`/cron for the "runs on a schedule" cases
+(morning brief gathering, weekly review, calendar sync, reminders). Per spec principle #46,
+n8n isn't used for anything simpler and safer done locally — this is that judgment call in
+practice, not a rejection of n8n. Revisit if script-based scheduling gets unwieldy (Milestone 13
+in `ROADMAP.md` stays the checkpoint for that decision).
 
 ## Interface (once automations exist beyond the one above)
 

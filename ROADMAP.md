@@ -5,8 +5,8 @@ test and update `TASKS.md`/`CHANGELOG.md` at the end of each.
 
 | # | Milestone | Status | Owner |
 |---|---|---|---|
-| 1 | System inspection | **Blocked — needs you** | You, via `SYSTEM_INSPECTION_PROMPT.md` in local Claude Code |
-| 2 | Architecture + repository | In progress (this scaffold) | Cowork |
+| 1 | System inspection | **Done — 2026-08-09** | You, via local Claude Code |
+| 2 | Architecture + repository | Done (stack decision made from real data) | Cowork |
 | 3 | Basic Jarvis desktop UI | Not started | Local Claude Code |
 | 4 | Theme system + Jarvis Core animation | Not started | — |
 | 5 | Command engine | Not started | — |
@@ -28,6 +28,9 @@ test and update `TASKS.md`/`CHANGELOG.md` at the end of each.
 
 ## Sequencing note
 
-Milestones 1–2 happen once. Milestone 3 onward requires a decision on where JARVIS actually
-runs (see `ARCHITECTURE.md` — open decision), which depends on Milestone 1's real hardware/tool
-inventory. Don't start 3 before 1 is done for real.
+Milestones 1–2 are done (2026-08-09). Stack is decided: Tauri, Supabase Cloud, no n8n initially
+(launchd/cron scripts instead), local Claude Code as orchestrator, vault at
+`~/Documents/Obsidian Vault` — see `ARCHITECTURE.md`. Before Milestone 3 starts: relocate this
+repo out of the Claude session artifacts folder to somewhere durable (e.g. `~/Developer/jarvis`),
+and recheck disk space (~22 GiB free at inspection time) since the Rust toolchain install is
+next.

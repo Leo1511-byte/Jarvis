@@ -41,7 +41,12 @@ settings (
 `automation_runs`, `notifications`, `memory_index`, `project_context`, `integration_status`,
 `research_jobs`.
 
+## Decided (2026-08-09)
+
+**Supabase Cloud (free tier)**, not self-hosted/Docker Postgres — Docker isn't installed on
+this machine and disk is tight (~22 GiB free). See `ARCHITECTURE.md` for the reasoning.
+
 ## Explicitly not doing yet
 
-Provisioning a Supabase project, writing migrations, or wiring a client — all blocked on the
-stack decision in `ARCHITECTURE.md`, which is blocked on `SYSTEM_INSPECTION_PROMPT.md`.
+Provisioning the actual Supabase project, writing migrations, or wiring a client — that starts
+with Milestone 7, not before.
