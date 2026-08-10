@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Added — 2026-08-10 (Milestone 7 fully provisioned)
+- Real Supabase project created by Leonardo (`Leo1511-byte's Project`, free tier, AWS
+  eu-central-1). Migration `packages/database/migrations/0001_init.sql` run successfully in the
+  SQL editor: 5 tables (`projects`/`tasks`/`task_dependencies`/`activity_events`/`settings`) +
+  RLS policies with permissive single-user access.
+- `apps/desktop/frontend/.env.local` filled in with the real `VITE_SUPABASE_URL` and
+  `VITE_SUPABASE_ANON_KEY`. Store will switch from local storage to Supabase automatically on
+  next app launch — not yet re-verified live.
+- `ROADMAP.md`, `TASKS.md` updated: Milestone 7 marked done.
+
 ### Added — 2026-08-10 (Milestone 9 fully confirmed live)
 - `wake_listener.py` fixed and confirmed detecting "Hey Jarvis" live (score 0.92): switched
   openWakeWord to `inference_framework="onnx"` (the default `tflite` backend has no reliable

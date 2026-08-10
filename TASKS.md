@@ -12,8 +12,11 @@
 - [ ] Optional, not blocking: if Leonardo upgrades his ElevenLabs plan, switch `config.json`'s
       `tts_engine` from `macos_say` to `elevenlabs` for higher-quality voice output (the
       "Jon - Calm Presence" voice ID is already saved and ready).
-- [ ] **Create the actual Supabase project** (`INSTALLATION.md` step 3) — the code's ready and
-      waiting, only account creation is left, and that has to be you.
+- [ ] **Verify Supabase writes land for real**: relaunch `npm run dev`/`cargo tauri dev` now that
+      `.env.local` is filled in, create a test project in the app, and check the `projects` table
+      in Supabase's table editor to confirm `getStore()` actually switched over from local
+      storage. Migration ran successfully (2026-08-10) but the app hasn't been relaunched against
+      it yet.
 - [ ] **Activate the morning brief launchd job**, if you want it running automatically —
       commands are in `packages/automations/launchd/README.md`. Still deliberately not run by
       Claude, even under a blanket "always allow" grant (2026-08-09): that README states the
@@ -194,10 +197,18 @@
       needed) and `elevenlabs` (kept intact for once the plan is upgraded). Confirmed working —
       Leonardo heard real audio. `transcribe.py` was already confirmed in a prior session.
 
+- [x] 2026-08-10 — **Milestone 7 (Supabase) fully done.** Leonardo created the real project
+      (`Leo1511-byte's Project`, free tier, AWS eu-central-1, ref `nriarfrgmjsygswlweed`). Ran
+      the migration in the Supabase SQL editor via the Claude in Chrome extension (pasted via
+      clipboard to avoid the Monaco editor's auto-bracket-closing mangling typed SQL) — "Success.
+      No rows returned", all 5 tables + RLS policies created, confirmed by the "Untitled query"
+      now showing under Private queries. Copied the real Project URL and legacy `anon` public key
+      (safe for client-side use by design) from Settings → API Keys and filled in
+      `apps/desktop/frontend/.env.local`.
+
 ## Blocked
 
-- Milestone 7's Supabase project: blocked on you creating an account (Claude doesn't create
-  accounts on your behalf).
+(none currently — Milestone 7's Supabase account/project blocker was resolved 2026-08-10)
 
 ## Backlog (unscoped, from the original spec — do not start yet)
 
