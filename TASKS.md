@@ -2,21 +2,16 @@
 
 ## Now
 
-- [ ] **Fixed, needs live confirmation:** JARVIS talking in a loop and reporting things Leonardo
-      never said. Root cause: `wait_while_speaking()` in `listen_loop.py` only ran once, before
-      opening the mic stream for wake-word listening — once inside that stream, nothing re-checked
-      `speaking.flag` for as long as the stream stayed open. Since listen_loop.py reopens the mic
-      almost immediately after finishing a transcript (well before speak_daemon.py's up-to-2s poll
-      notices the queued response and starts `say`), the mic was very often already open and
-      listening *while* JARVIS was mid-reply. openWakeWord isn't robust enough to never
-      false-positive on arbitrary speech, so JARVIS's own voice could trigger a false wake,
-      record 5s of itself still talking, transcribe that back as a "command," get routed through
-      the new `ask` fallback, get spoken again — repeating indefinitely, each time reporting a
-      mangled version of what it just said as if Leonardo had said it. Fixed by checking
-      `speaking.flag` inside `wake_callback` itself (runs per ~80ms audio chunk, not once
-      per stream) so prediction is skipped for the entire duration JARVIS is talking, no matter
-      when the mic stream happened to open relative to the flag. Needs a live mic test to confirm
-      — same reason live voice bugs generally do; can't be verified from a sandboxed tool call.
+- [x] 2026-08-10 — **Fixed and live-confirmed: JARVIS talking in a loop / reporting things
+      Leonardo never said.** Root cause: `wait_while_speaking()` in `listen_loop.py` only ran
+      once, before opening the mic stream for wake-word listening — once inside that stream,
+      nothing re-checked `speaking.flag` for as long as the stream stayed open, so JARVIS's own
+      TTS output could false-trigger its own wake word, get recorded and transcribed back as a
+      fake command, and loop indefinitely. Fixed by checking `speaking.flag` inside
+      `wake_callback` itself (runs per ~80ms audio chunk, not once per stream). Also widened
+      `speak_daemon.py`'s post-playback tail from 0.4s to 1.2s (echo/Bluetooth-buffer margin).
+      Leonardo confirmed live after restarting the voice listener: **"the voice is perfect."**
+      Milestone 9 is now fully closed, no open voice bugs.
 - [ ] **Coordination note:** this repo is being edited by two Claude sessions (this Cowork
       session and your local Claude Code in Terminal) — both have made real progress
       independently (repo relocation + Rust build by local Claude Code; Milestone 6 by Cowork).
