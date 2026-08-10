@@ -47,6 +47,24 @@
       Claude, even under a blanket "always allow" grant (2026-08-09): that README states the
       reasoning explicitly — a recurring job that writes to your vault should start because you
       turned it on, not because an assistant decided it should run. 3 lines, your terminal.
+- [x] 2026-08-10 — **First real live click-through, via screenshots Leonardo sent from the actual
+      running app.** Findings: (1) the `ask` fallback works well live — "Thank you very much" got
+      a real conversational reply, and a mis-phrased "continue with Ape War Game project" (doesn't
+      match `continue-project`'s strict "continue project <name>" pattern) correctly fell through
+      to `ask`, which found the real `~/Unity/Ape War` project on disk and asked for confirmation
+      instead of guessing — exactly the safe behavior it was designed for. (2) `check-calendar`/
+      `check-email` ARE reaching the orchestrator correctly, but both hit a real MCP permission
+      wall: `.claude/settings.local.json` only had `list_calendars`/`list_labels` pre-approved
+      from earlier interactive testing, not the tools actually needed to read events/messages
+      (confirmed live: the Gmail failure named `mcp__claude_ai_Gmail__search_threads` exactly).
+      Added `search_threads`/`get_thread`/`get_message` (Gmail, confirmed names) and
+      `list_events`/`search_events`/`get_event` (Calendar, informed guess based on typical
+      naming — NOT confirmed, needs retest) to the gitignored settings file. (3) `check-github`
+      and `continue-project` still aren't actually verified — Leonardo's phrasing ("Check my git
+      hub", "continue with Ape War Game project") didn't match either command's strict pattern, so
+      both silently fell through to `ask` instead, which handled them gracefully but means the
+      dedicated command paths are still unexercised. Retry needed with the exact phrases: "check
+      my github" and "continue project Ape War".
 - [ ] **Test all five orchestrator-routed commands in the actual running app** — `research
       <topic>`, `continue project <name>`, `check my calendar`, `check my email`, `check my
       github` — type each into the real command bar in the `cargo tauri dev` window and confirm
