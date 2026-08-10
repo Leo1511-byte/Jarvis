@@ -65,6 +65,21 @@
       both silently fell through to `ask` instead, which handled them gracefully but means the
       dedicated command paths are still unexercised. Retry needed with the exact phrases: "check
       my github" and "continue project Ape War".
+- [x] 2026-08-10 — **M7 (Supabase), M14 (Calendar), M15 (Email) all confirmed live**, via
+      screenshots from the actual running app. `check my calendar` returned a real, correct
+      "completely clear Aug 10–12" result. `check my email` returned a real, detailed inbox
+      summary (~201 unread, mostly promotional, one real item worth a look — a GitHub
+      unrecognized-location sign-in alert from 2026-08-09 coinciding with the new Supabase OAuth
+      app authorization; flagged to Leonardo to confirm that was him, not treated as a security
+      incident since it lines up with his own actions that day). Confirms the Gmail/Calendar MCP
+      permission fix from the previous entry worked, including the guessed Calendar tool names.
+      Projects view: created a real project ("Ape War Game") that persisted and displays with a
+      Status/Created/Delete card — `SupabaseStore` confirmed working end-to-end from the actual
+      UI, not just direct REST calls. `check my github` still not verified — typed as "check my
+      git hub" (with a space) again, which doesn't match the command's `github` (no space)
+      pattern, so it fell through to `ask` again (which behaved safely, asking what kind of
+      GitHub info was wanted rather than guessing). Still need: exact phrase "check my github",
+      and "continue project Ape War Game" (matching the real created project name) for M10.
 - [ ] **Test all five orchestrator-routed commands in the actual running app** — `research
       <topic>`, `continue project <name>`, `check my calendar`, `check my email`, `check my
       github` — type each into the real command bar in the `cargo tauri dev` window and confirm
