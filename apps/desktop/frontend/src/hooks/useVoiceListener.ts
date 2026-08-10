@@ -31,15 +31,27 @@ export function useVoiceListener(enabled: boolean, callbacks: VoiceCallbacks) {
     let cancelled = false;
 
     (async () => {
-      unlisten = await listen<VoiceEvent>("voice-event", (e) => {
-        const payload = e.payload;
-        if (payload.event === "wake") callbacksRef.current.onWake?.();
-        else if (payload.event === "transcript") callbacksRef.current.onTranscript(payload.text);
-        else if (payload.event === "error") callbacksRef.current.onError?.(payload.message);
-      });
-      if (cancelled) return;
-      await invoke("start_voice_listener");
-      await invoke("start_speak_daemon");
+      try {
+        unlisten = await listen<VoiceEvent>("voice-event", (e) => {
+          const payload = e.payload;
+          if (payload.event === "wake") callbacksRef.current.onWake?.();
+          else if (payload.event === "transcript") callbacksRef.current.onTranscript(payload.text);
+          else if (payload.event === "error") callbacksRef.current.onError?.(payload.message);
+        });
+        if (cancelled) return;
+        await invoke("start_voice_listener");
+        await invoke("start_speak_daemon");
+      } catch (e) {
+        // A spawn failure (bad venv path, missing config, etc.) previously
+        // vanished as an unhandled promise rejection -- surface it the same
+        // way a listen_loop.py-reported error would, so it's visible without
+        // opening devtools (found live, 2026-08-10: toggling voice on
+        // produced no visible effect and no running process, with nothing
+        // in the Tauri dev log either).
+        callbacksRef.current.onError?.(
+          `Failed to start voice listener: ${e instanceof Error ? e.message : String(e)}`
+        );
+      }
     })();
 
     return () => {

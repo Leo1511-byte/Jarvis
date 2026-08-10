@@ -134,7 +134,15 @@ export default function App() {
     onTranscript: (text) => {
       handleCommand(text, true);
     },
-    onError: () => setCoreState("error"),
+    onError: (message) => {
+      // Voice start/runtime failures used to vanish silently (no process,
+      // no log line, nothing on screen -- hit live 2026-08-10). Now they
+      // land in the Command Log like everything else, so a failure is
+      // readable without opening devtools.
+      setLog((prev) => [...prev, { you: "(voice)", jarvis: message }].slice(-6));
+      setCoreState("error");
+      window.setTimeout(() => setCoreState("idle"), 1200);
+    },
   });
 
   function renderActive() {
