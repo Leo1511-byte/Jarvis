@@ -5,12 +5,19 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 export type VoiceEvent =
   | { event: "wake"; score: number }
   | { event: "transcript"; text: string }
-  | { event: "error"; message: string };
+  | { event: "error"; message: string }
+  | { event: "status"; message: string };
 
 export interface VoiceCallbacks {
   onWake?: () => void;
   onTranscript: (text: string) => void;
   onError?: (message: string) => void;
+  /** Rust-originated lifecycle notifications (crash detected, restarting,
+   * reconnected, gave up after too many crashes) -- see voice.rs's crash
+   * recovery. Distinct from onError since these aren't necessarily bad
+   * news (a successful auto-reconnect is worth telling the user about,
+   * not flashing as an error). */
+  onStatus?: (message: string) => void;
 }
 
 /**
@@ -37,6 +44,7 @@ export function useVoiceListener(enabled: boolean, callbacks: VoiceCallbacks) {
           if (payload.event === "wake") callbacksRef.current.onWake?.();
           else if (payload.event === "transcript") callbacksRef.current.onTranscript(payload.text);
           else if (payload.event === "error") callbacksRef.current.onError?.(payload.message);
+          else if (payload.event === "status") callbacksRef.current.onStatus?.(payload.message);
         });
         if (cancelled) {
           // Cleanup already ran before this async listen() resolved --

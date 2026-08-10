@@ -22,16 +22,6 @@
       prompt explicitly told to describe rather than take action for anything consequential
       (this command bar/voice path has no approval-dialog surface). Level 1 in `permissions.ts`.
       5 new tests, 38 total passing. `tsc -b`/`vite build` verified.
-- [ ] **New reliability gap found 2026-08-10, not yet fixed — needs `cargo`, real Rust work:**
-      `listen_loop.py`'s main loop only catches `KeyboardInterrupt`; any other exception (a
-      whisper hiccup, a mic disconnect, an unhandled edge case) kills the process outright, and
-      `voice.rs`'s `start_voice_listener` has no restart or health-check logic — once the child
-      process dies, voice goes silently dead with no indication in the app itself (only a
-      traceback in whatever terminal is running `cargo tauri dev`) until the Microphone/Wake
-      word toggles are manually switched off and back on. Worth a local Claude Code pass:
-      catch broad exceptions inside `listen_loop.py`'s loop and emit a proper `{"event":"error"}`
-      instead of crashing where recoverable, and/or have `voice.rs` detect an unexpectedly-dead
-      child and auto-restart it (with backoff, to avoid a crash loop).
 - [ ] Optional, not blocking: if Leonardo upgrades his ElevenLabs plan, switch `config.json`'s
       `tts_engine` from `macos_say` to `elevenlabs` for higher-quality voice output (the
       "Jon - Calm Presence" voice ID is already saved and ready).
@@ -235,6 +225,21 @@
       now showing under Private queries. Copied the real Project URL and legacy `anon` public key
       (safe for client-side use by design) from Settings → API Keys and filled in
       `apps/desktop/frontend/.env.local`.
+
+- [x] 2026-08-10 — **Voice crash-recovery gap fixed** (found by the Cowork-side session
+      without `cargo`, handed off via `HANDOFF_VOICE_CRASH_RECOVERY.md`, picked up and fixed by
+      local Claude Code): `listen_loop.py`'s per-cycle work is now wrapped in broad exception
+      handling — logs the traceback, emits `{"event":"error"}`, backs off 1s, and keeps looping
+      instead of the whole process dying. `voice.rs` gained a per-process monitor thread (one
+      for the listener, one for the speak daemon) that polls `Child::try_wait()` every 2s; if a
+      child exited without an explicit stop call, it clears the stale handle and auto-restarts
+      with linear backoff, capped at 5 attempts before giving up and saying so. A new `Status`
+      voice-event reports "crashed, restarting" / "reconnected" / "gave up" to the Command Log
+      instead of voice just going silently dark. 2 new Rust tests (`parses_a_status_event`,
+      `backoff_grows_then_caps_at_four_times_base`) — 22 Rust total, 38 frontend (unchanged),
+      all passing. Not independently re-verified live (would need to actually crash the process
+      mid-session) — the fix follows the exact mechanism `HANDOFF_VOICE_CRASH_RECOVERY.md`
+      described and reuses the existing spawn/event-parsing code already confirmed live.
 
 ## Blocked
 

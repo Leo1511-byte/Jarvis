@@ -143,6 +143,13 @@ export default function App() {
       setCoreState("error");
       window.setTimeout(() => setCoreState("idle"), 1200);
     },
+    onStatus: (message) => {
+      // Rust-side crash-recovery notifications (voice.rs's monitor
+      // threads): "crashed, restarting", "reconnected", or "gave up".
+      // Logged like any other voice event -- not forced into the error
+      // visual state, since a successful reconnect isn't bad news.
+      setLog((prev) => [...prev, { you: "(voice)", jarvis: message }].slice(-6));
+    },
   });
 
   function renderActive() {

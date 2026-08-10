@@ -2,6 +2,36 @@
 
 ## Unreleased
 
+### Fixed — 2026-08-10 (voice crash-recovery gap, handed off from the Cowork session)
+- `HANDOFF_VOICE_CRASH_RECOVERY.md` (written by the Cowork-side session, which has no `cargo`
+  to fix Rust changes) described a real gap: `listen_loop.py`'s main loop only caught
+  `KeyboardInterrupt`, so any other exception killed the process outright, and `voice.rs` had
+  no crash detection or restart logic — voice went silently dead until the Microphone/Wake
+  word toggles were manually cycled.
+- `listen_loop.py`: the per-cycle body (wait-for-speaking, wake detection, recording,
+  transcription) is now wrapped in broad `except Exception` handling — logs the full traceback
+  to stderr, emits `{"event":"error"}` so the frontend sees it, sleeps 1s as backoff, and loops
+  again. `KeyboardInterrupt` is a `BaseException`, not `Exception`, so both the deliberate
+  wake-signal use and a real Ctrl+C/process kill still work exactly as before.
+- `voice.rs`: added `listener_restarts`/`speak_daemon_restarts` counters and
+  `listener_monitor_started`/`speak_daemon_monitor_started` flags to `VoiceState`, plus a
+  per-process background monitor thread (started lazily on first `start_voice_listener`/
+  `start_speak_daemon` call) that polls `Child::try_wait()` every 2s. An unexpectedly-dead
+  child gets its stale `Mutex` handle cleared and is auto-restarted with linear backoff
+  (1s, 2s, 3s, 4s, capped), up to 5 attempts before giving up. An explicit stop call clears the
+  handle synchronously first, so intentional stops are never mistaken for crashes.
+- New `VoiceEvent::Status` variant (Rust) / `{ event: "status" }` (frontend) for these
+  Rust-originated lifecycle notifications, separate from Python-reported `Error` events since a
+  successful reconnect isn't bad news. `useVoiceListener`'s `VoiceCallbacks` gains `onStatus`;
+  `App.tsx` logs status messages to the Command Log without forcing the error visual state.
+- 2 new Rust tests (`parses_a_status_event`, `backoff_grows_then_caps_at_four_times_base`) —
+  22 Rust total. 38 frontend tests unchanged (this slice is Rust + one new frontend event
+  variant with no new frontend logic to unit test beyond the existing plumbing). `cargo build`/
+  `cargo test`, `tsc -b`/`vite build` all clean; relaunched `cargo tauri dev` with the fix
+  loaded.
+- `ROADMAP.md`, `TASKS.md` updated; `HANDOFF_VOICE_CRASH_RECOVERY.md` deleted per its own
+  instructions once the fix landed.
+
 ### Fixed — 2026-08-10 (JARVIS never asked Claude anything outside 9 fixed commands)
 - Reported live by Leonardo: JARVIS wasn't "asking Claude back" for what he said. Root cause:
   `commandEngine.ts`'s `parseCommand` had no general fallback — anything not matching one of
