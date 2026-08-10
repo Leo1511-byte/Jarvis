@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### Added — 2026-08-10 (Milestone 7 backend write path confirmed)
+- Killed a stale Vite dev server left holding port 1420 from an earlier session, relaunched
+  `cargo tauri dev` clean: frontend on :1420, Rust compiled, `target/debug/jarvis` running with
+  no errors.
+- Verified the real Supabase write path end-to-end via direct REST calls that mirror
+  `SupabaseStore.createProject`/`listProjects`/`deleteProject` exactly (same table, same anon
+  key from `.env.local`, same RLS policy): insert succeeded, select read the row back, delete
+  cleaned it up. Confirms schema + RLS + anon key are all correctly wired — `getStore()` will
+  resolve to `SupabaseStore` since `isSupabaseConfigured()` is true.
+- Not verified: an actual UI click-through, since this session has no WindowServer/screen-
+  recording access to see or interact with its own launched window (same limitation noted at
+  Milestone 3). Left `cargo tauri dev` running for Leonardo to do the 10-second manual check.
+- `ROADMAP.md`, `TASKS.md` updated to reflect exactly what was and wasn't verified.
+
 ### Added — 2026-08-10 (Milestone 7 fully provisioned)
 - Real Supabase project created by Leonardo (`Leo1511-byte's Project`, free tier, AWS
   eu-central-1). Migration `packages/database/migrations/0001_init.sql` run successfully in the

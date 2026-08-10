@@ -12,11 +12,13 @@
 - [ ] Optional, not blocking: if Leonardo upgrades his ElevenLabs plan, switch `config.json`'s
       `tts_engine` from `macos_say` to `elevenlabs` for higher-quality voice output (the
       "Jon - Calm Presence" voice ID is already saved and ready).
-- [ ] **Verify Supabase writes land for real**: relaunch `npm run dev`/`cargo tauri dev` now that
-      `.env.local` is filled in, create a test project in the app, and check the `projects` table
-      in Supabase's table editor to confirm `getStore()` actually switched over from local
-      storage. Migration ran successfully (2026-08-10) but the app hasn't been relaunched against
-      it yet.
+- [ ] **Last step for Supabase writes — needs you at the actual window:** local Claude Code
+      relaunched `cargo tauri dev` clean (2026-08-10) and confirmed via direct REST calls that
+      `SupabaseStore`'s exact insert/select/delete queries all work against the real `projects`
+      table (RLS + anon key both correct) — see `ROADMAP.md` M7. What's left is purely the
+      click-through: this session has no WindowServer/screen access to do it itself. The dev
+      window should already be open — type a name into Projects, click Add, and check it shows
+      up in Supabase's table editor. Should take 10 seconds if the backend proof above holds.
 - [ ] **Activate the morning brief launchd job**, if you want it running automatically —
       commands are in `packages/automations/launchd/README.md`. Still deliberately not run by
       Claude, even under a blanket "always allow" grant (2026-08-09): that README states the
