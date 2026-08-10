@@ -11,6 +11,10 @@ fn main() {
         .manage(voice::VoiceState::default())
         .invoke_handler(tauri::generate_handler![
             orchestrator::run_orchestrator,
+            orchestrator::run_orchestrator_background,
+            orchestrator::poll_orchestrator_background,
+            orchestrator::fetch_orchestrator_background_result,
+            orchestrator::stop_orchestrator_background,
             voice::start_voice_listener,
             voice::stop_voice_listener,
             voice::start_speak_daemon,

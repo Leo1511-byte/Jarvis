@@ -50,7 +50,35 @@ implement the next step → test → update docs/changelog → report). It's Lev
 `permissions.ts` — writes to a project repo, traceable via the orchestrator's session id and the
 repo's own git history, but not gated per-action the way a delete is.
 
-Still open, not yet built: a background-mode path (`claude --bg` + polling `claude agents
---json`, both verified callable by hand per `TASKS.md`) for workflows too long to hold the
-command bar's `processing` state on — `continue project` today blocks the UI until the whole
-orchestrator turn finishes, which is fine for small steps and increasingly wrong for large ones.
+## Background mode, 2026-08-10
+
+`continue-project` now runs in the background instead of blocking the command bar:
+`orchestrator.rs` gained `run_orchestrator_background` (`claude --bg <prompt>`, returns
+immediately), `poll_orchestrator_background` (`claude agents --json --all`, polled every 5s by
+the frontend), `fetch_orchestrator_background_result`, and `stop_orchestrator_background`. The
+other four commands (`research`/`check-calendar`/`check-email`/`check-github`) stay synchronous
+on purpose — they're quick reads, and a background job for each would just add polling overhead
+for no benefit.
+
+Three things learned by hand in a terminal while building this (not just assumed from the
+2026-08-09 smoke test) that shaped the design:
+- `--bg` and `-p`/`--output-format` conflict — `--bg`'s launch confirmation is plain text
+  (`backgrounded · <id>`), parsed with a small string function, not JSON.
+- `claude agents --json --all` gives a job's status (`state: "done"` once finished) and its full
+  session UUID, but **no field ever carries the actual result text** — confirmed even after
+  `claude stop`.
+- The only clean way found to retrieve the result: resume the finished session with
+  `--fork-session` (so it doesn't disturb the still-alive background session) and ask it to
+  repeat its last answer, with `--output-format json` same as the synchronous path — reuses the
+  already-tested `parse_claude_output`. This costs one extra small API call per completed job and
+  asks the model to *reproduce* text rather than reading it back byte-exact — a real limitation,
+  not hidden. (`claude logs <id>` was tried first and rejected: it's a raw ANSI terminal capture
+  with cursor-positioning escapes and redrawn spinner frames, built for a human's terminal, not
+  for parsing.)
+
+10 new Rust unit tests cover the parsing logic, using **real captured output** from those
+terminal experiments as fixtures rather than guessed JSON shapes. Not yet verified: an actual
+`continue project <name>` run clicked through the live app window — same GUI-access gap noted
+elsewhere for this session (no WindowServer access to its own launched window). The background
+plumbing itself (launch → poll → fetch → stop) was exercised by hand end-to-end in a terminal
+with a real (trivial) background job before being translated into Rust.

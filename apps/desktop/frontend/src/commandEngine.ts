@@ -136,6 +136,15 @@ export interface CommandContext {
    * `claude` CLI) and resolves with its text result. Injected rather than
    * imported directly so commandEngine.ts stays testable without Tauri. */
   runOrchestrator?: (prompt: string) => Promise<string>;
+  /** Milestone 10, background-mode slice: starts a long-running orchestrator
+   * turn (`claude --bg`) without blocking on it. Resolves once the job is
+   * *launched*, not once it's done -- executeCommand's own return stays a
+   * single immediate string like every other command. The caller (App.tsx)
+   * uses the returned ids to poll for completion and deliver the real
+   * result separately. Used by continue-project, the one command whose
+   * spec §62 workflow can genuinely take a while; the four read-only
+   * commands above stay on the synchronous path. */
+  runOrchestratorBackground?: (prompt: string) => Promise<{ jobId: string; sessionId: string }>;
 }
 
 /**
@@ -162,14 +171,27 @@ export async function executeCommand(
         ctx,
         `Research: ${command.topic}. Write findings as a new note in the Obsidian vault's Notes/ folder, then reply with one sentence summarizing what you found and the note's file path.`
       );
-    case "continue-project":
-      return runOrchestratorOrExplain(
-        ctx,
+    case "continue-project": {
+      const prompt =
         `Continue working on the "${command.name}" project (spec §62 workflow): load its context ` +
-          `(roadmap, tasks, recent activity), inspect the actual repo state, decide the next concrete ` +
-          `step, implement it, test it, update docs/changelog to match, then reply with 2-3 sentences ` +
-          `summarizing what you did.`
-      );
+        `(roadmap, tasks, recent activity), inspect the actual repo state, decide the next concrete ` +
+        `step, implement it, test it, update docs/changelog to match, then reply with 2-3 sentences ` +
+        `summarizing what you did.`;
+      if (!ctx.runOrchestratorBackground) {
+        // Honest fallback: no background-mode connection available (e.g. in
+        // tests), so behave like the other four commands rather than fail.
+        return runOrchestratorOrExplain(ctx, prompt);
+      }
+      try {
+        const job = await ctx.runOrchestratorBackground(prompt);
+        return (
+          `Started continuing "${command.name}" as a background job (${job.jobId}) -- this can ` +
+          `take a while, I'll let you know when it's done.`
+        );
+      } catch (e) {
+        return `Orchestrator error: ${e instanceof Error ? e.message : String(e)}`;
+      }
+    }
     case "check-calendar":
       return runOrchestratorOrExplain(
         ctx,

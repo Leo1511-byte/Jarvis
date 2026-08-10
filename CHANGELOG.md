@@ -2,6 +2,39 @@
 
 ## Unreleased
 
+### Added — 2026-08-10 (Milestone 10 background-mode path)
+- `orchestrator.rs`: 4 new Tauri commands — `run_orchestrator_background` (`claude --bg
+  <prompt>`, returns immediately with a job id + session id), `poll_orchestrator_background`
+  (`claude agents --json --all`, returns `running`/`done`/`failed`/`not_found`),
+  `fetch_orchestrator_background_result` (fetches the real result once done), and
+  `stop_orchestrator_background` (`claude stop <id>`, cleanup).
+- Real CLI behavior verified by hand in a terminal before writing any of this (a genuine
+  trivial background job, "reply with the word pong", launched/polled/fetched/stopped end to
+  end): `--bg` conflicts with `-p`/`--output-format` so its launch confirmation is plain text,
+  not JSON; `claude agents --json --all` never exposes result text even after `claude stop`;
+  `claude logs <id>` is a raw ANSI terminal capture, not parseable output. The result is
+  fetched by resuming the finished session with `--fork-session` (doesn't disturb the still-
+  alive background session) and asking it to repeat its last answer with `--output-format
+  json` — reuses the already-tested `parse_claude_output`. Full design rationale and the
+  known cost/fidelity caveat of that approach are in `AGENT_SYSTEM.md`.
+- `commandEngine.ts`: `continue-project` now calls `ctx.runOrchestratorBackground` when
+  available and returns an immediate "started as a background job" response instead of
+  blocking; falls back to the old synchronous path when it isn't (e.g. in tests), so the
+  existing test for that path still passes unchanged. The other four orchestrator-routed
+  commands are untouched — they're quick reads, sync is still the right call for them.
+- `App.tsx`: `runOrchestratorBackground` + `pollBackgroundJob` — polls every 5s, and on
+  completion fetches the real result and appends a second Command Log entry, then stops the
+  background job for cleanup.
+- 10 new Rust unit tests for the parsing logic (`parse_bg_launch`, `find_session_id`,
+  `parse_bg_status`), using the **real captured output** from the hand-verification above as
+  fixtures rather than guessed JSON shapes. 20 Rust tests total, all passing. 2 new frontend
+  tests (background routing, background launch failure) — 33 frontend tests total, all
+  passing. `tsc -b`, `vite build`, and the live `cargo tauri dev` session all still clean.
+- Not verified: an actual `continue project <name>` clicked through the live app window —
+  this session has no WindowServer access to its own launched window (same gap noted at
+  Milestones 7 and 9).
+- `AGENT_SYSTEM.md`, `ROADMAP.md`, `TASKS.md` updated.
+
 ### Added — 2026-08-10 (Milestone 9 wired into Tauri)
 - New `apps/desktop/backend/src/voice.rs`: 5 Tauri commands —
   `start_voice_listener`/`stop_voice_listener` spawn/kill a new `listen_loop.py` (combines

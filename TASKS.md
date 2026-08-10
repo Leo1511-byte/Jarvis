@@ -34,13 +34,18 @@
       <topic>`, `continue project <name>`, `check my calendar`, `check my email`, `check my
       github` — type each into the real command bar in the `cargo tauri dev` window and confirm
       you get a real result back (not just the automated tests, which mock the Tauri IPC
-      boundary). Nobody has clicked through any of the four added 2026-08-09 yet.
-- [ ] **Background-mode path for the orchestrator** — every command today (`research`,
-      `continue-project`, `check-calendar`, `check-email`) blocks the command bar's `processing`
-      state until the whole synchronous `claude -p` call finishes. Fine for quick reads, wrong
-      for `continue project`'s full spec §62 workflow on a big task. `claude --bg` + polling
-      `claude agents --json` were verified callable by hand but not built into `orchestrator.rs` —
-      scope as its own slice, not sync-mode's problem to solve.
+      boundary). Nobody has clicked through any of the four added 2026-08-09 yet. `continue
+      project` now takes the background path (see below) — expect an immediate "started as a
+      background job" response, then a second Command Log entry a bit later with the real result.
+- [ ] **Last step for background mode — needs you at the actual window:** local Claude Code
+      built the background-mode path for `continue-project` (2026-08-10) — see `AGENT_SYSTEM.md`
+      and `ROADMAP.md` M10. The underlying `claude --bg`/`claude agents --json --all`/fork-resume
+      sequence was verified by hand in a terminal with a real trivial background job (launch →
+      poll → fetch result → stop, all confirmed working), and 10 new Rust unit tests cover the
+      parsing logic using that real captured output as fixtures — 20 Rust tests total, all
+      passing, `cargo tauri dev` hot-reloads clean. What's not verified is clicking `continue
+      project <name>` in the actual live window and watching both Command Log entries appear —
+      same WindowServer-access gap as the Supabase/voice items above.
 - [ ] Known limitation in `orchestrator.rs`: `claude` is resolved via `PATH`, which works under
       `cargo tauri dev` (inherits Terminal's env) but will silently fail in a double-clicked,
       bundled app (Finder-launched processes get a minimal PATH). Not fixed yet — fix when the

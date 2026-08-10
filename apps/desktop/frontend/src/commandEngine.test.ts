@@ -135,7 +135,7 @@ describe("executeCommand", () => {
     expect(response).toMatch(/isn't available/i);
   });
 
-  it("routes continue-project through the orchestrator with the project name in the prompt", async () => {
+  it("falls back to the synchronous orchestrator for continue-project without a background connection", async () => {
     const runOrchestrator = vi.fn().mockResolvedValue("Shipped the next task, tests passing.");
     const response = await executeCommand(
       { kind: "continue-project", name: "Ape War" },
@@ -143,6 +143,31 @@ describe("executeCommand", () => {
     );
     expect(runOrchestrator).toHaveBeenCalledWith(expect.stringContaining("Ape War"));
     expect(response).toBe("Shipped the next task, tests passing.");
+  });
+
+  it("routes continue-project through background mode when available, returning immediately", async () => {
+    const runOrchestrator = vi.fn(); // must NOT be called -- background mode should take over
+    const runOrchestratorBackground = vi
+      .fn()
+      .mockResolvedValue({ jobId: "84f90224", sessionId: "84f90224-0afe-4cb9-904e-774c6780bb06" });
+    const response = await executeCommand(
+      { kind: "continue-project", name: "Ape War" },
+      { setTheme: vi.fn(), runOrchestrator, runOrchestratorBackground }
+    );
+    expect(runOrchestratorBackground).toHaveBeenCalledWith(expect.stringContaining("Ape War"));
+    expect(runOrchestrator).not.toHaveBeenCalled();
+    expect(response).toContain("84f90224");
+    expect(response).toMatch(/background job/i);
+  });
+
+  it("reports an honest error if starting a background continue-project job fails", async () => {
+    const runOrchestratorBackground = vi.fn().mockRejectedValue(new Error("claude --bg failed"));
+    const response = await executeCommand(
+      { kind: "continue-project", name: "Ape War" },
+      { setTheme: vi.fn(), runOrchestratorBackground }
+    );
+    expect(response).toMatch(/orchestrator error/i);
+    expect(response).toContain("claude --bg failed");
   });
 
   it("routes check-calendar through the orchestrator with a read-only prompt", async () => {

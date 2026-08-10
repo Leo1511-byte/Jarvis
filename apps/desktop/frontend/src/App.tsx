@@ -20,6 +20,15 @@ interface OrchestratorResponse {
   cost_usd: number;
 }
 
+interface BackgroundJob {
+  job_id: string;
+  session_id: string;
+}
+
+type BackgroundState = "running" | "done" | "failed" | "not_found";
+
+const BACKGROUND_POLL_MS = 5000;
+
 // Milestone 10: the desktop app's one real connection to the local
 // orchestrator (the `claude` CLI, shelled out to from the Rust backend --
 // see apps/desktop/backend/src/orchestrator.rs). Calls can take a while
@@ -37,10 +46,75 @@ export default function App() {
   const [coreState, setCoreState] = useState<CoreState>("idle");
   const [log, setLog] = useState<LogEntry[]>([]);
 
+  // Milestone 10, background-mode slice: polls `poll_orchestrator_background`
+  // every BACKGROUND_POLL_MS until the job is done (or fails/disappears),
+  // then fetches the real result and drops it into the Command Log --
+  // continue-project's immediate response is just "started", this is what
+  // delivers the actual answer once the workflow finishes.
+  function pollBackgroundJob(jobId: string, sessionId: string) {
+    const interval = window.setInterval(async () => {
+      let state: BackgroundState;
+      try {
+        state = await invoke<BackgroundState>("poll_orchestrator_background", { jobId });
+      } catch {
+        window.clearInterval(interval);
+        return;
+      }
+      if (state === "running") return;
+
+      window.clearInterval(interval);
+      if (state === "done") {
+        try {
+          const result = await invoke<OrchestratorResponse>("fetch_orchestrator_background_result", {
+            sessionId,
+          });
+          setLog((prev) =>
+            [...prev, { you: `(background job ${jobId} finished)`, jarvis: result.result }].slice(-6)
+          );
+          setCoreState("success");
+        } catch (e) {
+          setLog((prev) =>
+            [
+              ...prev,
+              {
+                you: `(background job ${jobId} finished)`,
+                jarvis: `Finished, but couldn't fetch the result: ${e instanceof Error ? e.message : String(e)}`,
+              },
+            ].slice(-6)
+          );
+          setCoreState("error");
+        }
+      } else {
+        setLog((prev) =>
+          [
+            ...prev,
+            {
+              you: `(background job ${jobId})`,
+              jarvis: state === "failed" ? "The background job failed." : "Lost track of the background job.",
+            },
+          ].slice(-6)
+        );
+        setCoreState("error");
+      }
+      window.setTimeout(() => setCoreState("idle"), 1200);
+      invoke("stop_orchestrator_background", { jobId }).catch(() => {});
+    }, BACKGROUND_POLL_MS);
+  }
+
+  async function runOrchestratorBackground(prompt: string): Promise<{ jobId: string; sessionId: string }> {
+    const job = await invoke<BackgroundJob>("run_orchestrator_background", { prompt });
+    pollBackgroundJob(job.job_id, job.session_id);
+    return { jobId: job.job_id, sessionId: job.session_id };
+  }
+
   async function handleCommand(text: string, speak = false) {
     setCoreState("processing");
     const command = parseCommand(text);
-    const response = await executeCommand(command, { setTheme, runOrchestrator });
+    const response = await executeCommand(command, {
+      setTheme,
+      runOrchestrator,
+      runOrchestratorBackground,
+    });
     setLog((prev) => [...prev, { you: text, jarvis: response }].slice(-6));
     setCoreState(command.kind === "unknown" ? "error" : "success");
     if (speak) {
