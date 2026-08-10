@@ -32,9 +32,11 @@ export function permissionLevelFor(kind: string): PermissionLevel {
     case "check-calendar":
     case "check-email":
     case "check-github":
-      // Read/search/summarize, explicitly scoped as read-only in the
-      // prompts commandEngine.ts sends the orchestrator -- Level 1 per
-      // the table above.
+    case "ask":
+      // Read/search/summarize, explicitly scoped as read-only (or, for
+      // "ask", read-only-by-prompt: told not to take action, only to
+      // describe and ask for confirmation) in what commandEngine.ts sends
+      // the orchestrator -- Level 1 per the table above.
       return 1;
     case "continue-project":
       // Writes code and docs in a project repo -- not sensitive in the

@@ -54,12 +54,26 @@ describe("parseCommand", () => {
     });
   });
 
-  it("returns unknown for anything unrecognized, honestly", () => {
+  it("falls back to ask for anything unrecognized, instead of doing nothing", () => {
+    // Hit live 2026-08-10: ordinary questions/conversation got a hardcoded
+    // "not implemented yet" instead of ever reaching Claude. "unknown" is
+    // now only for genuinely empty input -- everything else becomes "ask".
     expect(parseCommand("open ape war")).toEqual({
-      kind: "unknown",
-      raw: "open ape war",
+      kind: "ask",
+      text: "open ape war",
+    });
+    expect(parseCommand("what's the weather like")).toEqual({
+      kind: "ask",
+      text: "what's the weather like",
     });
     expect(parseCommand("")).toEqual({ kind: "unknown", raw: "" });
+  });
+
+  it("strips the wake phrase from ask commands too", () => {
+    expect(parseCommand("Hey Jarvis, what's the weather like")).toEqual({
+      kind: "ask",
+      text: "what's the weather like",
+    });
   });
 
   it("recognizes delete-project intent without executing it", () => {
@@ -240,5 +254,26 @@ describe("executeCommand", () => {
     );
     expect(response).toMatch(/orchestrator error/i);
     expect(response).toContain("no session");
+  });
+
+  it("routes ask through the orchestrator with the original message and an act-don't-do instruction", async () => {
+    const runOrchestrator = vi.fn().mockResolvedValue("It's sunny where you are, I think.");
+    const response = await executeCommand(
+      { kind: "ask", text: "what's the weather like" },
+      { setTheme: vi.fn(), runOrchestrator }
+    );
+    expect(runOrchestrator).toHaveBeenCalledWith(
+      expect.stringContaining("what's the weather like")
+    );
+    expect(runOrchestrator).toHaveBeenCalledWith(expect.stringContaining("not authorization"));
+    expect(response).toBe("It's sunny where you are, I think.");
+  });
+
+  it("says ask is unavailable without an orchestrator connection", async () => {
+    const response = await executeCommand(
+      { kind: "ask", text: "what's the weather like" },
+      { setTheme: vi.fn() }
+    );
+    expect(response).toMatch(/isn't available/i);
   });
 });

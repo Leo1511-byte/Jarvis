@@ -19,6 +19,7 @@ export type Command =
   | { kind: "check-calendar" }
   | { kind: "check-email" }
   | { kind: "check-github" }
+  | { kind: "ask"; text: string }
   | { kind: "unknown"; raw: string };
 
 const THEME_ALIASES: Record<string, Theme> = {
@@ -145,7 +146,14 @@ export function parseCommand(input: string): Command {
     return { kind: "check-github" };
   }
 
-  return { kind: "unknown", raw: input };
+  // Anything else -- hit live 2026-08-10: Leonardo asking JARVIS ordinary
+  // questions/conversation got a hardcoded "not implemented yet" instead
+  // of ever reaching Claude, since every case above is a rigid pattern
+  // match with no general fallback. Route it through the orchestrator as
+  // a direct message instead of silently doing nothing -- see the "ask"
+  // case in executeCommand for how this stays read-only-by-prompt rather
+  // than letting arbitrary spoken/typed text trigger real actions.
+  return { kind: "ask", text: stripWakePhrase(input).trim() };
 }
 
 export interface CommandContext {
@@ -179,9 +187,9 @@ export async function executeCommand(
       ctx.setTheme(command.theme);
       return `Switched to ${command.theme.replace("-", " ")}.`;
     case "system-status":
-      return "Nothing is wired to real status yet — every integration on the System Status panel reads NOT WIRED YET, honestly.";
+      return "Claude, Voice, Supabase, and GitHub are wired but not yet human-confirmed — see the System Status panel for exact per-system state. Obsidian isn't wired into the app directly.";
     case "help":
-      return "I can switch themes (e.g. \"switch to neon void\"), report status, \"research <topic>\", \"continue project <name>\", \"check my calendar\", \"check my email\", and \"check my github\" — the last five via the local orchestrator. Everything else in the spec isn't built yet — see ROADMAP.md.";
+      return "I can switch themes (e.g. \"switch to neon void\"), report status, \"research <topic>\", \"continue project <name>\", \"check my calendar\", \"check my email\", and \"check my github\" — the last five via the local orchestrator. Anything else, I'll just ask Claude directly and read back what it says.";
     case "delete-project":
       return `"Delete project ${command.name}" is a Level 3 action and needs a real approval dialog, not a typed command — use the Delete button in the Projects view instead.`;
     case "research":
@@ -230,6 +238,16 @@ export async function executeCommand(
         `Check GitHub for any open PRs or issues assigned to me, using the gh CLI (already ` +
           `authenticated locally), then reply with 2-3 sentences summarizing what needs attention. ` +
           `Read-only — don't create, comment on, merge, or close anything.`
+      );
+    case "ask":
+      return runOrchestratorOrExplain(
+        ctx,
+        `Leonardo just said: "${command.text}". This didn't match any of my built-in commands, ` +
+          `so treat it as a direct question or message for you to answer as JARVIS -- keep it ` +
+          `short since it may be read aloud. This is a conversational message, not authorization ` +
+          `to take action: if answering well would mean actually doing something (editing files, ` +
+          `sending something, running a command, etc.), describe what you'd do and ask me to ` +
+          `confirm separately rather than doing it now.`
       );
     case "unknown":
       return `Not implemented yet: "${command.raw}". See ROADMAP.md for what's actually built.`;
