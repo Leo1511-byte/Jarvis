@@ -2,6 +2,40 @@
 
 ## Unreleased
 
+### Added — 2026-08-10 (Milestone 9 wired into Tauri)
+- New `apps/desktop/backend/src/voice.rs`: 5 Tauri commands —
+  `start_voice_listener`/`stop_voice_listener` spawn/kill a new `listen_loop.py` (combines
+  `wake_listener.py` + `transcribe.py`'s already-verified logic into one continuous
+  wake-then-transcribe-then-loop-back process) via `std::process::Command`, forwarding its
+  line-delimited JSON stdout events to the frontend as a `voice-event` Tauri event.
+  `start_speak_daemon`/`stop_speak_daemon` spawn/kill `speak_daemon.py` the same way.
+  `queue_speech` writes text into `System/voice/queue/` for the daemon to pick up. Chose direct
+  process spawning over `tauri-plugin-shell`'s sidecar mechanism (built for cross-compiled
+  binaries, doesn't fit a project-local Python venv) — see `VOICE_SETUP.md`.
+- `main.rs`: registers `voice::VoiceState` and the 5 new commands alongside the existing
+  `run_orchestrator`.
+- New `System/voice/listen_loop.py` in the vault: continuous loop, one JSON event per stdout
+  line (`wake`/`transcript`/`error`). `wake_listener.py`/`transcribe.py` untouched, still
+  individually runnable.
+- Frontend: new `useVoiceListener` hook starts/stops the Rust-side processes as Voice
+  settings' "Microphone enabled" + "Wake word" toggles both go on, and listens for
+  `voice-event`. `App.tsx` feeds `transcript` events into the same `parseCommand`/
+  `executeCommand` the typed command bar uses, and queues the response to be spoken via
+  `queue_speech`. `VoiceSettings`/`DashboardView` now take `settings`/`update` as props
+  (lifted from a component-local hook call to App.tsx) so App.tsx can react to the same state.
+  The wake-word toggle is no longer permanently disabled — it's gated on "Microphone enabled"
+  instead.
+- 7 new Rust unit tests for `parse_voice_line` (wake/transcript/error events, blank lines,
+  malformed JSON, unrecognized event tags) — all pure-function, no mic needed. 10 Rust tests
+  total, all passing. 31 frontend tests, `tsc -b`, `vite build` all still pass. `cargo tauri
+  dev` hot-reloaded every change (backend and frontend) with no compile errors.
+- Not verified: `listen_loop.py` live. This session's sandboxed shell hangs on `import
+  sounddevice` (no CoreAudio access) the same way it has no WindowServer access for GUI
+  interaction (see M7 above) — syntax-checked only (`py_compile`, `ast.parse`). One manual
+  check left for Leonardo, documented in `VOICE_SETUP.md`/`TASKS.md`.
+- `ROADMAP.md`, `TASKS.md`, `VOICE_SETUP.md` updated to reflect exactly what was and wasn't
+  verified.
+
 ### Added — 2026-08-10 (Milestone 7 backend write path confirmed)
 - Killed a stale Vite dev server left holding port 1420 from an earlier session, relaunched
   `cargo tauri dev` clean: frontend on :1420, Rust compiled, `target/debug/jarvis` running with

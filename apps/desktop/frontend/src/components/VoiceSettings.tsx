@@ -1,4 +1,4 @@
-import { useVoiceSettings } from "../hooks/useVoiceSettings";
+import type { VoiceSettings as VoiceSettingsData } from "../hooks/useVoiceSettings";
 import { useAudioDevices, type MicPermissionState } from "../hooks/useAudioDevices";
 
 const PERMISSION_LABEL: Record<MicPermissionState, string> = {
@@ -10,14 +10,18 @@ const PERMISSION_LABEL: Record<MicPermissionState, string> = {
 
 /**
  * Real settings (persisted), real device list, real permission status
- * where the platform supports reporting it. What's NOT real: toggling
- * "wake word enabled" here does not start any listening -- there's no
- * backend wired to it yet (VOICE_SETUP.md). The toggle is honest about
- * that in its own label rather than implying it does something it
- * doesn't.
+ * where the platform supports reporting it. `settings`/`update` are
+ * lifted to App.tsx (Milestone 9 wiring) so the same toggle state also
+ * drives useVoiceListener's start/stop of the Rust-side voice process --
+ * both "Microphone enabled" and "Wake word" must be on for it to listen.
  */
-export function VoiceSettings() {
-  const { settings, update } = useVoiceSettings();
+export function VoiceSettings({
+  settings,
+  update,
+}: {
+  settings: VoiceSettingsData;
+  update: (patch: Partial<VoiceSettingsData>) => void;
+}) {
   const { inputs, outputs, permission } = useAudioDevices();
 
   return (
@@ -39,13 +43,17 @@ export function VoiceSettings() {
       </label>
 
       <label className="voice-toggle-row">
-        <span>Wake word ("Hey Jarvis") — not wired to a listener yet</span>
+        <span>Wake word ("Hey Jarvis")</span>
         <input
           type="checkbox"
           checked={settings.wakeWordEnabled}
           onChange={(e) => update({ wakeWordEnabled: e.target.checked })}
-          disabled
-          title="Requires the Python voice sidecar to be wired in first — see VOICE_SETUP.md"
+          disabled={!settings.micEnabled}
+          title={
+            settings.micEnabled
+              ? "Starts the wake-word listener — needs the Python venv set up, see VOICE_SETUP.md"
+              : "Enable the microphone above first"
+          }
         />
       </label>
 

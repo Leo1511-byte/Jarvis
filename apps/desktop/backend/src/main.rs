@@ -4,10 +4,19 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod orchestrator;
+mod voice;
 
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![orchestrator::run_orchestrator])
+        .manage(voice::VoiceState::default())
+        .invoke_handler(tauri::generate_handler![
+            orchestrator::run_orchestrator,
+            voice::start_voice_listener,
+            voice::stop_voice_listener,
+            voice::start_speak_daemon,
+            voice::stop_speak_daemon,
+            voice::queue_speech,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running jarvis");
 }

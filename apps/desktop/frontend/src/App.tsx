@@ -2,6 +2,8 @@ import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
 import { useTheme } from "./hooks/useTheme";
+import { useVoiceSettings } from "./hooks/useVoiceSettings";
+import { useVoiceListener } from "./hooks/useVoiceListener";
 import { type CoreState } from "./components/JarvisCore";
 import { CommandBar } from "./components/CommandBar";
 import { Sidebar } from "./components/Sidebar";
@@ -30,23 +32,49 @@ async function runOrchestrator(prompt: string): Promise<string> {
 
 export default function App() {
   const { theme, setTheme } = useTheme();
+  const { settings: voiceSettings, update: updateVoiceSettings } = useVoiceSettings();
   const [active, setActive] = useState("Dashboard");
   const [coreState, setCoreState] = useState<CoreState>("idle");
   const [log, setLog] = useState<LogEntry[]>([]);
 
-  async function handleCommand(text: string) {
+  async function handleCommand(text: string, speak = false) {
     setCoreState("processing");
     const command = parseCommand(text);
     const response = await executeCommand(command, { setTheme, runOrchestrator });
     setLog((prev) => [...prev, { you: text, jarvis: response }].slice(-6));
     setCoreState(command.kind === "unknown" ? "error" : "success");
+    if (speak) {
+      setCoreState("speaking");
+      invoke("queue_speech", { text: response }).catch(() => {});
+    }
     window.setTimeout(() => setCoreState("idle"), 1200);
   }
+
+  // Milestone 9 wired in: the wake-word listener + transcriber (Python,
+  // spawned by voice.rs) feeds its transcript into the exact same
+  // parseCommand/executeCommand path the typed command bar uses -- no
+  // separate voice-command logic, per spec §32. Only active while both
+  // "Microphone enabled" and "Wake word" are on in Voice settings.
+  useVoiceListener(voiceSettings.micEnabled && voiceSettings.wakeWordEnabled, {
+    onWake: () => setCoreState("listening"),
+    onTranscript: (text) => {
+      handleCommand(text, true);
+    },
+    onError: () => setCoreState("error"),
+  });
 
   function renderActive() {
     switch (active) {
       case "Dashboard":
-        return <DashboardView coreState={coreState} onDemoState={setCoreState} log={log} />;
+        return (
+          <DashboardView
+            coreState={coreState}
+            onDemoState={setCoreState}
+            log={log}
+            voiceSettings={voiceSettings}
+            onUpdateVoiceSettings={updateVoiceSettings}
+          />
+        );
       case "Projects":
         return <ProjectsView />;
       case "Tasks":

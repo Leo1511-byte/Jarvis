@@ -6,9 +6,15 @@
       session and your local Claude Code in Terminal) — both have made real progress
       independently (repo relocation + Rust build by local Claude Code; Milestone 6 by Cowork).
       No conflicts so far, but let one finish a logical chunk before the other edits again.
-- [ ] **Wire all 3 confirmed voice scripts into the Tauri app** as sidecar processes, and feed
-      `transcribe.py`'s output into the same `commandEngine.ts` the command bar uses. All three
-      scripts are now individually confirmed live (2026-08-10) — this is the real next step.
+- [ ] **Last step for voice — needs you at the actual mic:** local Claude Code wired all 3
+      voice scripts into the Tauri app as child processes (2026-08-10) — see `VOICE_SETUP.md`'s
+      "Wired into Tauri" section and `ROADMAP.md` M9. 7 new Rust tests pass, `cargo tauri dev`
+      hot-reloads clean, frontend tests/build all pass. What's not verified is the actual
+      wake-word-to-spoken-reply loop live: this session's sandboxed shell can't touch the mic
+      at all (`import sounddevice` just hangs — no CoreAudio access), so `listen_loop.py` (the
+      new script combining wake+transcribe) has only been syntax-checked. With `cargo tauri dev`
+      running, open Voice settings, turn on "Microphone enabled" then "Wake word", say "Hey
+      Jarvis" + a command, and confirm it shows up in the Command Log and gets spoken back.
 - [ ] Optional, not blocking: if Leonardo upgrades his ElevenLabs plan, switch `config.json`'s
       `tts_engine` from `macos_say` to `elevenlabs` for higher-quality voice output (the
       "Jon - Calm Presence" voice ID is already saved and ready).

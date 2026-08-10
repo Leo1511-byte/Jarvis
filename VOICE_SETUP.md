@@ -48,14 +48,55 @@ device selection (populated from `navigator.mediaDevices`, not hardcoded), push-
 shortcut, permission status display. All state-only right now — no live audio wired to Rust yet
 (see "Not built" below).
 
+## Wired into Tauri, 2026-08-10
+
+`apps/desktop/backend/src/voice.rs` spawns the Python scripts via `std::process::Command` —
+the same pattern `orchestrator.rs` already uses for the `claude` CLI — rather than Tauri's
+`tauri-plugin-shell` sidecar mechanism. That mechanism is built for cross-compiled standalone
+binaries bundled per target triple; these scripts run inside a project-local `uv` venv
+(`System/voice/.venv`), which doesn't fit that shape and would need PyInstaller-style freezing
+to work as a true "sidecar." Direct process spawning needed no new Cargo dependencies and
+matches the existing code style.
+
+- **`listen_loop.py`** (new) combines `wake_listener.py`'s detection and `transcribe.py`'s
+  recording+whisper into one continuous process, looping back to listening after each
+  transcript — chosen over wrapping the single-shot `wake_listener.py` in a shell loop because
+  it gives Rust one long-running child process to manage instead of having to re-spawn and
+  re-sequence two scripts per cycle. Emits one JSON object per line on stdout
+  (`{"event":"wake","score":...}` / `{"event":"transcript","text":...}` /
+  `{"event":"error","message":...}`); status/progress text goes to stderr so Rust's line
+  reader only ever has to handle JSON or blank lines. `wake_listener.py`/`transcribe.py` are
+  untouched and still individually runnable, per their own docstrings.
+- `voice.rs` exposes 5 Tauri commands: `start_voice_listener`/`stop_voice_listener` (spawn/kill
+  `listen_loop.py`, forwarding parsed events to the frontend as a `voice-event` Tauri event),
+  `start_speak_daemon`/`stop_speak_daemon` (spawn/kill `speak_daemon.py`), and `queue_speech`
+  (writes a `.txt` file into `System/voice/queue/` for the daemon to pick up — the Rust side of
+  the same queue/done pattern the daemon already implements).
+- Frontend: `useVoiceListener` (new hook) starts/stops the listener + speak daemon as the
+  Voice settings panel's "Microphone enabled" **and** "Wake word" toggles both go on, and
+  routes `transcript` events straight into `commandEngine.ts`'s `parseCommand`/`executeCommand`
+  — the exact same path the typed command bar uses, per spec §32, with no separate voice-only
+  command logic. The response is also queued to `speak_daemon` via `queue_speech` so it gets
+  spoken aloud. `JarvisCore`'s existing `listening`/`speaking` states (built in Milestone 4,
+  unused until now) get set on wake/response.
+- **Verified:** `cargo test` — 7 new Rust unit tests for `parse_voice_line` (wake/transcript
+  /error events, blank lines, malformed JSON, unrecognized event tags), all passing alongside
+  the 3 existing orchestrator tests. `cargo tauri dev` hot-reloaded every change (Rust and
+  frontend) with no compile errors. `npm run test` (31 tests), `tsc -b`, `vite build` all still
+  pass.
+- **Not verified:** `listen_loop.py` itself has not been run live. It recombines
+  already-verified logic from `wake_listener.py`/`transcribe.py` (each confirmed live
+  2026-08-10) but needs a real mic and a human saying "Hey Jarvis" in real time — the same
+  class of thing flagged in `TASKS.md`'s "lesson for next time" from the `transcribe.py`
+  session (driving real-time audio I/O blind from an assistant's tool calls doesn't work; the
+  session that wrote this wiring also found `import sounddevice` itself hangs indefinitely in
+  its sandboxed shell, consistent with no CoreAudio access there). Syntax-checked
+  (`python3 -m py_compile`, `ast.parse`) only. **Next step for you:** with `cargo tauri dev`
+  running, open Voice settings, turn on "Microphone enabled" then "Wake word", say "Hey Jarvis"
+  and a command, and confirm a transcript shows up in the Command Log and gets spoken back.
+
 ## Not built yet
 
-- **The actual Rust-side audio bridge.** The Python scripts above run standalone; nothing in
-  `apps/desktop/backend` calls them yet. Wiring options: (a) Tauri shells out to the Python
-  scripts as a sidecar process, or (b) rewrite the wake-word/STT loop in Rust using `cpal`. (a)
-  is faster to ship and matches the existing ElevenLabs bridge pattern; (b) is more "native" but
-  a bigger lift. Recommend (a) for V1.
-- Follow-up conversation mode, configurable timeout, spoken interruption ("Jarvis, stop") — all
-  depend on the above existing first.
-- Startup greeting, activation sound, speech speed/volume settings — small additions once the
-  rest works.
+- Follow-up conversation mode, configurable timeout, spoken interruption ("Jarvis, stop").
+- Startup greeting, activation sound, speech speed/volume settings.
+- Push-to-talk (the shortcut is displayed in settings but not bound to anything).

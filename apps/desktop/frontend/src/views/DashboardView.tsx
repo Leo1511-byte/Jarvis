@@ -1,6 +1,7 @@
 import { JarvisCore, type CoreState } from "../components/JarvisCore";
 import { StatusPanel } from "../components/StatusPanel";
 import { VoiceSettings } from "../components/VoiceSettings";
+import type { VoiceSettings as VoiceSettingsData } from "../hooks/useVoiceSettings";
 
 const DEMO_STATES: CoreState[] = ["idle", "wake-word-active", "listening", "processing", "success"];
 
@@ -13,10 +14,14 @@ export function DashboardView({
   coreState,
   onDemoState,
   log,
+  voiceSettings,
+  onUpdateVoiceSettings,
 }: {
   coreState: CoreState;
   onDemoState: (s: CoreState) => void;
   log: LogEntry[];
+  voiceSettings: VoiceSettingsData;
+  onUpdateVoiceSettings: (patch: Partial<VoiceSettingsData>) => void;
 }) {
   return (
     <>
@@ -66,7 +71,7 @@ export function DashboardView({
           )}
         </div>
         <StatusPanel />
-        <VoiceSettings />
+        <VoiceSettings settings={voiceSettings} update={onUpdateVoiceSettings} />
       </div>
     </>
   );
