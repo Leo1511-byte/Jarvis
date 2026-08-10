@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+### Fixed, not yet live-confirmed — 2026-08-10 (JARVIS talking in a loop, reporting things Leonardo never said)
+- Reported live by Leonardo. Root cause: `listen_loop.py`'s `wait_while_speaking()` guard was
+  only checked once, before opening the mic's `sd.RawInputStream` for wake-word listening — once
+  the stream was open, `wake_callback` fired on every audio chunk for as long as the stream
+  stayed open, with no re-check of `speaking.flag`. Since the loop reopens the mic almost
+  immediately after finishing a transcript — well before `speak_daemon.py`'s up-to-2s queue poll
+  notices the new response and starts `say` — the mic was frequently already open and listening
+  *during* JARVIS's own reply. openWakeWord isn't reliable enough to never false-positive on
+  arbitrary speech, so JARVIS's own voice could trigger a false wake, record 5s of itself still
+  talking, transcribe that back as a "command" via the `ask` fallback, and speak the response —
+  repeating indefinitely, each cycle reporting a garbled version of what it had just said as
+  something Leonardo supposedly said.
+- Fix: `wake_callback` now checks `SPEAKING_FLAG.exists()` and returns immediately (skipping
+  prediction) on every chunk, not just once at stream-open time — closes the gap regardless of
+  when the mic stream happened to open relative to the flag being set.
+- Python-only change (`System/voice/listen_loop.py`, in the Obsidian vault, not the git repo) —
+  made directly from the Cowork session since no Rust/cargo was needed. Not yet confirmed live;
+  needs a real mic session to verify the loop actually stops. See `TASKS.md`.
+
 ### Fixed — 2026-08-10 (voice crash-recovery gap, handed off from the Cowork session)
 - `HANDOFF_VOICE_CRASH_RECOVERY.md` (written by the Cowork-side session, which has no `cargo`
   to fix Rust changes) described a real gap: `listen_loop.py`'s main loop only caught
