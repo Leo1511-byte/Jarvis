@@ -139,6 +139,11 @@
   background: var(--bg-panel-raised);
 }
 
+.status-unverified {
+  color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 15%, transparent);
+}
+
 .theme-switcher {
   display: flex;
   gap: var(--space-2);
