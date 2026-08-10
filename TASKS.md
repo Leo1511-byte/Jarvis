@@ -6,26 +6,32 @@
       session and your local Claude Code in Terminal) — both have made real progress
       independently (repo relocation + Rust build by local Claude Code; Milestone 6 by Cowork).
       No conflicts so far, but let one finish a logical chunk before the other edits again.
-- [ ] **Last step for voice — needs `cargo tauri dev` launched from your own Terminal, not an
-      assistant's:** local Claude Code wired all 3 voice scripts into the Tauri app as child
-      processes (2026-08-10) — see `VOICE_SETUP.md`'s "Wired into Tauri" section and
-      `ROADMAP.md` M9. Live-tested with Leonardo the same day and found + fixed two real bugs
-      along the way: (1) a missing `capabilities/default.json` was silently blocking
-      `event.listen()` entirely (fixed); (2) with those fixed, `listen_loop.py` still hung
-      indefinitely at ~0% CPU with no mic-permission prompt ever appearing — because
-      `cargo tauri dev` had been launched via the assistant's sandboxed Bash tool, and every
-      child process it spawns inherits that sandbox's lack of real CoreAudio access (matches
-      this session's own `import sounddevice` hang, see `VOICE_SETUP.md`). **This is not fixable
-      from that side.** Quit any assistant-launched `cargo tauri dev`, then from a normal
-      Terminal window run:
-      ```
-      cd ~/Developer/jarvis/apps/desktop/backend && cargo tauri dev
-      ```
-      Python's stderr is no longer discarded (2026-08-10 fix), so if anything's still wrong
-      you'll see it directly in that Terminal window. Then: open Voice settings, turn on
-      "Microphone enabled" then "Wake word" (watch for a real macOS mic-permission prompt this
-      time), say "Hey Jarvis" + a command, and confirm it shows up in the Command Log and gets
-      spoken back.
+- [x] 2026-08-10 — **Voice fully confirmed live end-to-end.** Said "Hey Jarvis" for real from a
+      normal Terminal window (not an assistant's sandbox, which genuinely cannot reach
+      CoreAudio): wake word detected, recorded, transcribed, routed through `commandEngine.ts`,
+      spoken back. Five real bugs found and fixed along the way — see `VOICE_SETUP.md`'s
+      "Confirmed live" section for the full list (missing capabilities file, float32 JSON bug,
+      wake-phrase-inclusive transcripts, duplicate event listener, and a feedback loop where
+      JARVIS heard its own replies). 17 Rust + 35 frontend tests passing at that point.
+- [x] 2026-08-10 — **Fixed: JARVIS wasn't asking Claude anything outside 9 fixed commands.**
+      Reported live by Leonardo. Root cause: `commandEngine.ts`'s `parseCommand` had zero general
+      fallback — anything not matching a rigid pattern (switch-theme/status/help/research/
+      continue-project/check-calendar/check-email/check-github/delete-project) hit a hardcoded
+      "Not implemented yet" and never reached the orchestrator. Added a new `ask` command kind:
+      unrecognized input now routes through the orchestrator as a direct message, with the
+      prompt explicitly told to describe rather than take action for anything consequential
+      (this command bar/voice path has no approval-dialog surface). Level 1 in `permissions.ts`.
+      5 new tests, 38 total passing. `tsc -b`/`vite build` verified.
+- [ ] **New reliability gap found 2026-08-10, not yet fixed — needs `cargo`, real Rust work:**
+      `listen_loop.py`'s main loop only catches `KeyboardInterrupt`; any other exception (a
+      whisper hiccup, a mic disconnect, an unhandled edge case) kills the process outright, and
+      `voice.rs`'s `start_voice_listener` has no restart or health-check logic — once the child
+      process dies, voice goes silently dead with no indication in the app itself (only a
+      traceback in whatever terminal is running `cargo tauri dev`) until the Microphone/Wake
+      word toggles are manually switched off and back on. Worth a local Claude Code pass:
+      catch broad exceptions inside `listen_loop.py`'s loop and emit a proper `{"event":"error"}`
+      instead of crashing where recoverable, and/or have `voice.rs` detect an unexpectedly-dead
+      child and auto-restart it (with backoff, to avoid a crash loop).
 - [ ] Optional, not blocking: if Leonardo upgrades his ElevenLabs plan, switch `config.json`'s
       `tts_engine` from `macos_say` to `elevenlabs` for higher-quality voice output (the
       "Jon - Calm Presence" voice ID is already saved and ready).

@@ -2,6 +2,36 @@
 
 ## Unreleased
 
+### Fixed — 2026-08-10 (JARVIS never asked Claude anything outside 9 fixed commands)
+- Reported live by Leonardo: JARVIS wasn't "asking Claude back" for what he said. Root cause:
+  `commandEngine.ts`'s `parseCommand` had no general fallback — anything not matching one of
+  9 rigid patterns hit a hardcoded "Not implemented yet" and never reached the orchestrator,
+  affecting typed input equally, not just voice.
+- Added a new `ask` command kind: unrecognized (non-empty) input now routes through the
+  orchestrator as a direct message to Claude. Prompt explicitly scoped read-only-by-instruction
+  (told to describe rather than act on anything consequential) since this path has no
+  approval-dialog surface. Level 1 in `permissions.ts`, consistent with the other
+  orchestrator-routed read-only commands.
+- Fixed two now-stale hardcoded response strings found while in there: `system-status` claimed
+  everything reads "NOT WIRED YET" (no longer true after the StatusPanel fix below), and `help`
+  didn't mention the new fallback exists.
+- 5 new tests (38 total), `tsc -b`/`vite build` verified.
+
+### Fixed — 2026-08-10 (stale System Status panel)
+- `StatusPanel.tsx` hardcoded "NOT WIRED YET" for every system since Milestone 4 and was never
+  updated as Supabase/voice/orchestrator/GitHub actually got built and wired in. Added a real
+  "WIRED, UNVERIFIED" status for things that are genuinely coded and unit-tested but never
+  confirmed via a live human click/voice test — detected dynamically where possible (Tauri
+  runtime presence, Supabase env var presence) so it can't lie in a plain browser preview.
+  Obsidian correctly stays "not wired" — nothing in the app talks to it directly.
+
+### Found, documented, not yet fixed — 2026-08-10 (voice reliability gap)
+- `listen_loop.py`'s main loop only catches `KeyboardInterrupt`; any other exception kills the
+  process outright, and `voice.rs` has no restart/health-check logic — voice goes silently dead
+  until the Microphone/Wake word toggles are manually cycled. Needs a `cargo`-equipped session
+  to fix properly (broad exception handling in the Python loop, and/or crash detection +
+  auto-restart with backoff in `voice.rs`). Tracked in `TASKS.md`.
+
 ### Fixed — 2026-08-10 (voice feedback loop: JARVIS hearing itself speak)
 - Reported live by Leonardo: after any spoken error reply, JARVIS would "start listening to
   itself and reporting tons and tons of errors" -- a classic voice-assistant feedback loop.
