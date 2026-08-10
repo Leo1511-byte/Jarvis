@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+### Fixed — 2026-08-10 (voice feedback loop: JARVIS hearing itself speak)
+- Reported live by Leonardo: after any spoken error reply, JARVIS would "start listening to
+  itself and reporting tons and tons of errors" -- a classic voice-assistant feedback loop.
+  Root cause: `listen_loop.py`'s wake-word stream re-opens immediately after handling a
+  transcript, with no coordination with `speak_daemon.py` -- so the mic picks up JARVIS's own
+  TTS output through the speakers, which can re-trigger detection and cascade.
+- Fixed with a file-based mute flag in `System/voice/` (both scripts already live outside
+  this repo, in the Obsidian vault): `speak_daemon.py` touches `speaking.flag` before calling
+  `speak()` and removes it ~0.4s after playback ends (a short tail for room echo/speaker
+  decay); `listen_loop.py` now calls `wait_while_speaking()` at the top of every loop
+  iteration, blocking until the flag clears before reopening the wake-word stream. Both sides
+  guard against the other crashing mid-speech: `speak_daemon.py` clears any stale flag from a
+  previous run on startup, and `listen_loop.py` ignores a flag older than 30s (no real
+  utterance takes that long) rather than muting forever.
+- `listen_loop.py`'s module docstring updated: it's genuinely confirmed live now (wake
+  detection, transcription, and this fix all exercised for real), not just syntax-checked.
+
 ### Fixed — 2026-08-10 (voice loop end-to-end: wake phrase not stripped, duplicate event handling)
 - Live test with Leonardo: said "Hey Jarvis, status", got a spoken reply of "not implemented
   yet ... see ROADMAP.md" **twice**. Two separate real bugs, both fixed:

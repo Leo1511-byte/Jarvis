@@ -84,16 +84,27 @@ matches the existing code style.
   the 3 existing orchestrator tests. `cargo tauri dev` hot-reloaded every change (Rust and
   frontend) with no compile errors. `npm run test` (31 tests), `tsc -b`, `vite build` all still
   pass.
-- **Not verified:** `listen_loop.py` itself has not been run live. It recombines
-  already-verified logic from `wake_listener.py`/`transcribe.py` (each confirmed live
-  2026-08-10) but needs a real mic and a human saying "Hey Jarvis" in real time — the same
-  class of thing flagged in `TASKS.md`'s "lesson for next time" from the `transcribe.py`
-  session (driving real-time audio I/O blind from an assistant's tool calls doesn't work; the
-  session that wrote this wiring also found `import sounddevice` itself hangs indefinitely in
-  its sandboxed shell, consistent with no CoreAudio access there). Syntax-checked
-  (`python3 -m py_compile`, `ast.parse`) only. **Next step for you:** with `cargo tauri dev`
-  running, open Voice settings, turn on "Microphone enabled" then "Wake word", say "Hey Jarvis"
-  and a command, and confirm a transcript shows up in the Command Log and gets spoken back.
+- **Confirmed live, 2026-08-10** (Leonardo, `cargo tauri dev` run from his own Terminal — an
+  assistant's sandboxed shell genuinely cannot reach CoreAudio, confirmed not assumed): said
+  "Hey Jarvis" for real, wake word detected, recorded, transcribed, routed through
+  `commandEngine.ts`, spoken back via `say`. Four real bugs found and fixed along the way in
+  this one session:
+  1. Missing `apps/desktop/backend/capabilities/default.json` blocked `event.listen()`
+     entirely (Tauri's ACL system denies anything not explicitly granted).
+  2. openWakeWord's score is numpy `float32`, which `json.dumps()` can't serialize.
+  3. A wake-phrase-inclusive transcript ("hey jarvis status") matched no command pattern —
+     `commandEngine.ts`'s `normalize()` now strips a leading wake phrase.
+  4. A React 18 StrictMode dev-mode double-invoke leaked a duplicate `voice-event` listener,
+     so every transcript was handled (and spoken) twice.
+  5. **Feedback loop**: JARVIS's own spoken replies were picked up by the still-listening mic,
+     re-triggering detection and cascading into repeated errors. Fixed with a file-based mute
+     flag (`speaking.flag` in this directory) — `speak_daemon.py` sets it before speaking and
+     clears it (with a short tail for room echo) after; `listen_loop.py` waits for it to clear
+     before reopening the wake-word stream each loop, with a staleness timeout in case either
+     side crashes mid-speech.
+  All fixed, covered by tests where testable (10 Rust + 4 frontend for the parsing/routing
+  bugs; the feedback-loop fix is file-coordination between two long-running scripts that
+  needs a live mic to really exercise, same as the rest of this pipeline).
 
 ## Not built yet
 
