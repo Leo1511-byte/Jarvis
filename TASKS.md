@@ -6,14 +6,12 @@
       session and your local Claude Code in Terminal) — both have made real progress
       independently (repo relocation + Rust build by local Claude Code; Milestone 6 by Cowork).
       No conflicts so far, but let one finish a logical chunk before the other edits again.
-- [ ] **Run the remaining 2 voice scripts for real**: `wake_listener.py` (say "Hey Jarvis",
-      confirm `WAKE WORD DETECTED`) still needs a live run — `transcribe.py` is confirmed
-      (below). `speak_daemon.py` is blocked: `config.json`'s `elevenlabs_api_key` is still empty
-      (checked programmatically without printing it — length 0) even though `elevenlabs_voice_id`
-      is filled in. Add the real key, then retest.
-- [ ] Once `wake_listener.py`/`speak_daemon.py` are confirmed: wire all 3 scripts into the Tauri
-      app as sidecar processes, and feed `transcribe.py`'s output into the same
-      `commandEngine.ts` the command bar uses.
+- [ ] **Wire all 3 confirmed voice scripts into the Tauri app** as sidecar processes, and feed
+      `transcribe.py`'s output into the same `commandEngine.ts` the command bar uses. All three
+      scripts are now individually confirmed live (2026-08-10) — this is the real next step.
+- [ ] Optional, not blocking: if Leonardo upgrades his ElevenLabs plan, switch `config.json`'s
+      `tts_engine` from `macos_say` to `elevenlabs` for higher-quality voice output (the
+      "Jon - Calm Presence" voice ID is already saved and ready).
 - [ ] **Create the actual Supabase project** (`INSTALLATION.md` step 3) — the code's ready and
       waiting, only account creation is left, and that has to be you.
 - [ ] **Activate the morning brief launchd job**, if you want it running automatically —
@@ -180,14 +178,26 @@
       real confirmation surface — it redirects to the UI instead of faking one. 16 tests passing
       (`npm run test`), `tsc -b` and `vite build` both verified.
 
+- [x] 2026-08-10 — **Milestone 9 (voice) fully confirmed live**, closing out the last real gap.
+      `wake_listener.py`: two real bugs found and fixed via live user testing — openWakeWord's
+      default `tflite` backend has no reliable Apple Silicon wheel (switched to
+      `inference_framework="onnx"` + added `onnxruntime` to `requirements.txt`), and the pip
+      package doesn't bundle the actual model weight files (added an automatic
+      `download_models()` call before `Model()` init). Detected "Hey Jarvis" live, score 0.92.
+      `speak_daemon.py`: went through an API-key mixup (Key ID pasted instead of the actual
+      `sk_`-prefixed key), then a stale-daemon-process bug (config is only read at startup, so
+      fixing the key file didn't help until the process was restarted), then discovered
+      ElevenLabs' free API tier blocks TTS generation entirely regardless of voice — confirmed
+      via web search and hit live with both a Voice Library voice and a premade voice, both 402
+      `paid_plan_required`. Rewrote `speak_daemon.py` to support two engines via `config.json`'s
+      new `tts_engine` key: `macos_say` (default — free, offline, macOS's built-in `say`, no key
+      needed) and `elevenlabs` (kept intact for once the plan is upgraded). Confirmed working —
+      Leonardo heard real audio. `transcribe.py` was already confirmed in a prior session.
+
 ## Blocked
 
 - Milestone 7's Supabase project: blocked on you creating an account (Claude doesn't create
   accounts on your behalf).
-- Milestone 9's `speak_daemon.py`: blocked on adding a real key to `config.json`'s
-  `elevenlabs_api_key` (still empty as of 2026-08-09) — the file exists and the voice ID is set,
-  only the key itself is missing, and that's the one thing that shouldn't be typed into any
-  Claude chat.
 
 ## Backlog (unscoped, from the original spec — do not start yet)
 

@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+### Added — 2026-08-10 (Milestone 9 fully confirmed live)
+- `wake_listener.py` fixed and confirmed detecting "Hey Jarvis" live (score 0.92): switched
+  openWakeWord to `inference_framework="onnx"` (the default `tflite` backend has no reliable
+  Apple Silicon wheel) and added an automatic `download_models()` call (the pip package ships
+  code only, not the model weight files).
+- `speak_daemon.py` rewritten to support two TTS engines via `config.json`'s new `tts_engine`
+  key: `macos_say` (new default — free, fully offline, macOS's built-in `say` command, no API
+  key) and `elevenlabs` (original path, kept intact). Confirmed working live with real audio.
+- Root cause for the ElevenLabs path: its free API tier blocks TTS generation entirely
+  regardless of voice (402 `paid_plan_required`), confirmed both via web search and by hitting
+  it live with a Voice Library voice and a premade voice. Not just a Voice Library restriction
+  as ElevenLabs' own error message implies.
+- `config.json`/`config.example.json` updated with `tts_engine` and `macos_say_voice` keys and
+  comments documenting the free-tier limitation and how to switch back to ElevenLabs later.
+- `ROADMAP.md`, `TASKS.md` updated: Milestone 9 marked done, no longer a blocked item.
+
 ### Added — 2026-08-09 (Milestones 11, 14, 15, 16 built; 17 reframed)
 - `commandEngine.ts`: three new command kinds — `continue-project` (M11, spec §62's full
   workflow as a single orchestrator prompt), `check-calendar` (M14), `check-email` (M15) — plus
