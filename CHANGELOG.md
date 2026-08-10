@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### Fixed — 2026-08-10 (voice pipeline confirmed live, one real bug found and fixed)
+- Leonardo launched `cargo tauri dev` from his own Terminal per the previous fix's
+  instructions -- confirmed the sandboxed-launch theory: this time PortAudio initialized
+  fine, faster-whisper loaded, and **the wake word actually detected live** ("Hey Jarvis"
+  worked). It then crashed: `TypeError: Object of type float32 is not JSON serializable`.
+  openWakeWord's prediction scores are numpy `float32`, which `json.dumps()` can't
+  serialize -- `listen_loop.py`'s `wake_callback` now casts to a native Python `float`
+  before storing it, so the wake event's JSON line can actually be emitted.
+- This also confirms the Rust side of the pipeline (`voice.rs`'s line-by-line JSON parsing,
+  `App.tsx`'s `voice-event` handling) needed no changes -- the crash was entirely on the
+  Python side, before anything reached Rust.
+- Next: relaunch and confirm the full loop (wake -> record -> transcribe -> command ->
+  spoken reply) end to end.
+
 ### Changed — 2026-08-10 (voice process stderr no longer discarded)
 - `voice.rs`: `start_voice_listener`/`start_speak_daemon` previously ran with
   `.stderr(Stdio::null())`, silently discarding any progress/error output from the Python
