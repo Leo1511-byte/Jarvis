@@ -72,7 +72,11 @@ pub fn start_voice_listener(app: AppHandle, state: State<VoiceState>) -> Result<
     let mut child = Command::new(venv_python())
         .arg(voice_dir().join("listen_loop.py"))
         .stdout(Stdio::piped())
-        .stderr(Stdio::null())
+        // Inherited, not discarded: listen_loop.py's progress/error output
+        // (model loading, PortAudio errors, etc.) previously vanished
+        // entirely, which hid a real hang during live testing 2026-08-10 --
+        // now it shows up in whatever terminal launched `cargo tauri dev`.
+        .stderr(Stdio::inherit())
         .spawn()
         .map_err(|e| format!("failed to start voice listener (is the venv set up? see VOICE_SETUP.md): {e}"))?;
 
@@ -115,8 +119,8 @@ pub fn start_speak_daemon(state: State<VoiceState>) -> Result<(), String> {
 
     let child = Command::new(venv_python())
         .arg(voice_dir().join("speak_daemon.py"))
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
         .spawn()
         .map_err(|e| format!("failed to start speak daemon (is the venv set up? see VOICE_SETUP.md): {e}"))?;
 

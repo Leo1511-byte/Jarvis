@@ -6,15 +6,26 @@
       session and your local Claude Code in Terminal) — both have made real progress
       independently (repo relocation + Rust build by local Claude Code; Milestone 6 by Cowork).
       No conflicts so far, but let one finish a logical chunk before the other edits again.
-- [ ] **Last step for voice — needs you at the actual mic:** local Claude Code wired all 3
-      voice scripts into the Tauri app as child processes (2026-08-10) — see `VOICE_SETUP.md`'s
-      "Wired into Tauri" section and `ROADMAP.md` M9. 7 new Rust tests pass, `cargo tauri dev`
-      hot-reloads clean, frontend tests/build all pass. What's not verified is the actual
-      wake-word-to-spoken-reply loop live: this session's sandboxed shell can't touch the mic
-      at all (`import sounddevice` just hangs — no CoreAudio access), so `listen_loop.py` (the
-      new script combining wake+transcribe) has only been syntax-checked. With `cargo tauri dev`
-      running, open Voice settings, turn on "Microphone enabled" then "Wake word", say "Hey
-      Jarvis" + a command, and confirm it shows up in the Command Log and gets spoken back.
+- [ ] **Last step for voice — needs `cargo tauri dev` launched from your own Terminal, not an
+      assistant's:** local Claude Code wired all 3 voice scripts into the Tauri app as child
+      processes (2026-08-10) — see `VOICE_SETUP.md`'s "Wired into Tauri" section and
+      `ROADMAP.md` M9. Live-tested with Leonardo the same day and found + fixed two real bugs
+      along the way: (1) a missing `capabilities/default.json` was silently blocking
+      `event.listen()` entirely (fixed); (2) with those fixed, `listen_loop.py` still hung
+      indefinitely at ~0% CPU with no mic-permission prompt ever appearing — because
+      `cargo tauri dev` had been launched via the assistant's sandboxed Bash tool, and every
+      child process it spawns inherits that sandbox's lack of real CoreAudio access (matches
+      this session's own `import sounddevice` hang, see `VOICE_SETUP.md`). **This is not fixable
+      from that side.** Quit any assistant-launched `cargo tauri dev`, then from a normal
+      Terminal window run:
+      ```
+      cd ~/Developer/jarvis/apps/desktop/backend && cargo tauri dev
+      ```
+      Python's stderr is no longer discarded (2026-08-10 fix), so if anything's still wrong
+      you'll see it directly in that Terminal window. Then: open Voice settings, turn on
+      "Microphone enabled" then "Wake word" (watch for a real macOS mic-permission prompt this
+      time), say "Hey Jarvis" + a command, and confirm it shows up in the Command Log and gets
+      spoken back.
 - [ ] Optional, not blocking: if Leonardo upgrades his ElevenLabs plan, switch `config.json`'s
       `tts_engine` from `macos_say` to `elevenlabs` for higher-quality voice output (the
       "Jon - Calm Presence" voice ID is already saved and ready).

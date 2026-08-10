@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Changed — 2026-08-10 (voice process stderr no longer discarded)
+- `voice.rs`: `start_voice_listener`/`start_speak_daemon` previously ran with
+  `.stderr(Stdio::null())`, silently discarding any progress/error output from the Python
+  scripts. Found needed while diagnosing a real hang live: `listen_loop.py` sat at ~0% CPU in
+  a "sleeping" state for over a minute with no wake-word prompt from macOS ever appearing --
+  consistent with `import sounddevice` hanging on PortAudio init without real CoreAudio access,
+  the same failure mode hit earlier in this session's own sandboxed shell (`VOICE_SETUP.md`).
+  Root cause: `cargo tauri dev` was launched via the assistant's sandboxed Bash tool, so every
+  child process it spawns -- including `listen_loop.py` -- inherits that same restriction.
+  Not fixable from that side; the real fix is launching `cargo tauri dev` from a normal
+  Terminal window instead. Now `stderr` is inherited (voice listener) or both streams
+  inherited (speak daemon) so this kind of hang is visible in the terminal output instead of
+  invisible, whoever launches it next.
+- `cargo test` still 20/20 passing.
+
 ### Fixed — 2026-08-10 (missing Tauri capabilities file)
 - Found live with Leonardo: toggling voice on produced this error in the Command Log (visible
   thanks to the error-surfacing fix earlier today) --
