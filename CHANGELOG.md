@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+### Fixed — 2026-08-10 (voice loop end-to-end: wake phrase not stripped, duplicate event handling)
+- Live test with Leonardo: said "Hey Jarvis, status", got a spoken reply of "not implemented
+  yet ... see ROADMAP.md" **twice**. Two separate real bugs, both fixed:
+  1. `commandEngine.ts`'s `normalize()` didn't strip a leading wake phrase, so a transcript
+     like "hey jarvis status" (whisper sometimes includes it) never matched any command
+     pattern. Added a `WAKE_PHRASE` regex stripped in `normalize()`, plus a case-preserving
+     `stripWakePhrase()` used everywhere a name/topic is re-extracted from the original-cased
+     input (`delete-project`/`research`/`continue-project` previously would have kept failing
+     to match even after this fix, since they re-match against `input.trim()` directly).
+  2. `useVoiceListener.ts` leaked a duplicate `voice-event` listener under React 18
+     StrictMode's dev-mode double-invoke (mount -> cleanup -> mount again): if the effect's
+     cleanup ran before its async `listen()` call resolved, the old code just skipped setup
+     without unregistering the listener it had just received -- leaving two active listeners
+     both handling every event. Now the async callback unregisters immediately if it finds
+     itself already cancelled by the time `listen()` resolves.
+- 4 new frontend tests for the wake-phrase stripping (both the lowercase-`text` path and the
+  case-preserving `stripWakePhrase` path) -- 35 total, all passing. `tsc -b`/`vite build` clean.
+- Confirms the rest of the voice pipeline (wake detection, transcription, Rust event parsing/
+  forwarding) is working correctly live -- both bugs were purely in command-text matching and
+  listener registration, not the audio/transcription/IPC path itself.
+
 ### Fixed — 2026-08-10 (voice pipeline confirmed live, one real bug found and fixed)
 - Leonardo launched `cargo tauri dev` from his own Terminal per the previous fix's
   instructions -- confirmed the sandboxed-launch theory: this time PortAudio initialized

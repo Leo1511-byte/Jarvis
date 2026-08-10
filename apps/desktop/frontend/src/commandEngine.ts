@@ -32,8 +32,26 @@ const THEME_ALIASES: Record<string, Theme> = {
   obsidian: "obsidian",
 };
 
+const WAKE_PHRASE = /^(?:hey |ok |okay )?jarvis[,]?\s+/i;
+
 function normalize(input: string): string {
-  return input.trim().toLowerCase().replace(/[.!?]+$/, "");
+  const trimmed = input.trim().toLowerCase().replace(/[.!?]+$/, "");
+  // Voice transcripts sometimes include the wake phrase itself, not just
+  // the command after it -- hit live 2026-08-10: saying "Hey Jarvis,
+  // status" transcribed as "hey jarvis status" (or with the comma kept),
+  // which matched no pattern below and fell through to "not implemented
+  // yet". Strip a leading "(hey/ok/okay) jarvis" here so voice and typed
+  // input both parse the same way either way it comes in.
+  return trimmed.replace(WAKE_PHRASE, "");
+}
+
+/** Same wake-phrase strip as normalize(), but preserving original casing --
+ * used wherever a name/topic is re-extracted from the raw input instead of
+ * the lowercased `text` (delete-project/research/continue-project), so a
+ * voice command like "Hey Jarvis, continue project Ape War" still finds
+ * "Ape War" instead of failing to match at all. */
+function stripWakePhrase(input: string): string {
+  return input.trim().replace(WAKE_PHRASE, "");
 }
 
 export function parseCommand(input: string): Command {
@@ -71,7 +89,7 @@ export function parseCommand(input: string): Command {
   // name comes from the original (trimmed) input so casing is preserved --
   // project names are looked up/displayed with their real casing.
   if (/^(?:delete|remove) project\s+.+$/.test(text)) {
-    const nameMatch = input.trim().match(/^(?:delete|remove) project\s+(.+)$/i);
+    const nameMatch = stripWakePhrase(input).match(/^(?:delete|remove) project\s+(.+)$/i);
     if (nameMatch) {
       return { kind: "delete-project", name: nameMatch[1].trim() };
     }
@@ -88,7 +106,7 @@ export function parseCommand(input: string): Command {
   // "research <topic>" -- Milestone 10/16's first real slice: routes
   // through the local orchestrator (the `claude` CLI, shelled out to from
   // the Rust backend) instead of being answered by pattern-matching here.
-  const researchMatch = input.trim().match(/^research\s+(.+)$/i);
+  const researchMatch = stripWakePhrase(input).match(/^research\s+(.+)$/i);
   if (researchMatch) {
     return { kind: "research", topic: researchMatch[1].trim() };
   }
@@ -97,7 +115,7 @@ export function parseCommand(input: string): Command {
   // Project X" workflow, routed through the same orchestrator rather than
   // JARVIS inventing its own version of what a local Claude Code session
   // already does when asked directly.
-  const continueMatch = input.trim().match(/^continue project\s+(.+)$/i);
+  const continueMatch = stripWakePhrase(input).match(/^continue project\s+(.+)$/i);
   if (continueMatch) {
     return { kind: "continue-project", name: continueMatch[1].trim() };
   }

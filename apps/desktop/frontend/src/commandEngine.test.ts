@@ -23,6 +23,37 @@ describe("parseCommand", () => {
     expect(parseCommand("help")).toEqual({ kind: "help" });
   });
 
+  it("strips a leading wake phrase so voice transcripts parse like typed input", () => {
+    // Hit live 2026-08-10: saying "Hey Jarvis, status" transcribed with the
+    // wake phrase included, which previously fell through to "unknown".
+    expect(parseCommand("hey jarvis, status")).toEqual({ kind: "system-status" });
+    expect(parseCommand("hey jarvis status")).toEqual({ kind: "system-status" });
+    expect(parseCommand("Jarvis, status")).toEqual({ kind: "system-status" });
+    expect(parseCommand("ok jarvis help")).toEqual({ kind: "help" });
+    expect(parseCommand("hey jarvis, switch to neon void")).toEqual({
+      kind: "switch-theme",
+      theme: "neon-void",
+    });
+  });
+
+  it("strips the wake phrase before extracting a case-preserved name/topic", () => {
+    // These re-match against the original-cased input, not the lowercased
+    // `text` -- a separate code path that needed its own wake-phrase strip
+    // (see stripWakePhrase in commandEngine.ts).
+    expect(parseCommand("Hey Jarvis, continue project Ape War")).toEqual({
+      kind: "continue-project",
+      name: "Ape War",
+    });
+    expect(parseCommand("Hey Jarvis, research Quantum Computing")).toEqual({
+      kind: "research",
+      topic: "Quantum Computing",
+    });
+    expect(parseCommand("Hey Jarvis, delete project Ape War")).toEqual({
+      kind: "delete-project",
+      name: "Ape War",
+    });
+  });
+
   it("returns unknown for anything unrecognized, honestly", () => {
     expect(parseCommand("open ape war")).toEqual({
       kind: "unknown",

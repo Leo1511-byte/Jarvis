@@ -32,13 +32,24 @@ export function useVoiceListener(enabled: boolean, callbacks: VoiceCallbacks) {
 
     (async () => {
       try {
-        unlisten = await listen<VoiceEvent>("voice-event", (e) => {
+        const unlistenResult = await listen<VoiceEvent>("voice-event", (e) => {
           const payload = e.payload;
           if (payload.event === "wake") callbacksRef.current.onWake?.();
           else if (payload.event === "transcript") callbacksRef.current.onTranscript(payload.text);
           else if (payload.event === "error") callbacksRef.current.onError?.(payload.message);
         });
-        if (cancelled) return;
+        if (cancelled) {
+          // Cleanup already ran before this async listen() resolved --
+          // React 18 StrictMode double-invokes effects in dev (mount ->
+          // cleanup -> mount again), and the old code only skipped the
+          // rest of the setup here without unregistering the listener it
+          // just got, leaking it. Hit live 2026-08-10: every voice
+          // transcript was handled twice (spoken and logged twice) because
+          // two listeners ended up registered for the same "voice-event".
+          unlistenResult();
+          return;
+        }
+        unlisten = unlistenResult;
         await invoke("start_voice_listener");
         await invoke("start_speak_daemon");
       } catch (e) {
