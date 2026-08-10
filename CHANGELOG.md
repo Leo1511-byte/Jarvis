@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+### Fixed — 2026-08-10 (missing Tauri capabilities file)
+- Found live with Leonardo: toggling voice on produced this error in the Command Log (visible
+  thanks to the error-surfacing fix earlier today) --
+  `Failed to start voice listener: event.listen not allowed. Permissions associated with this
+  command: core:event:allow-listen, core:event:default`. Root cause: `apps/desktop/backend` had
+  **no `capabilities/` directory at all** -- the generated effective capabilities were `{}`.
+  Custom `#[tauri::command]`s (`run_orchestrator`, `start_voice_listener`, etc.) aren't
+  ACL-gated so they worked anyway, which is why this went unnoticed until the first call to
+  `@tauri-apps/api/event`'s `listen()` (added today for the voice pipeline).
+- Added `apps/desktop/backend/capabilities/default.json` granting `core:default` (the standard
+  Tauri v2 scaffold default, which bundles `core:event:default` along with window/webview/app/
+  path/image/resources/menu/tray) to the main window. Verified the fix is real, not cosmetic:
+  `cargo build` regenerates `target/debug/build/*/out/capabilities.json` from empty `{}` to the
+  actual granted permission set.
+- `cargo test` still 20/20 passing; relaunched `cargo tauri dev` clean with the fix in place.
+
 ### Added — 2026-08-10 (Milestone 10 background-mode path)
 - `orchestrator.rs`: 4 new Tauri commands — `run_orchestrator_background` (`claude --bg
   <prompt>`, returns immediately with a job id + session id), `poll_orchestrator_background`
