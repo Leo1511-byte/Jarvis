@@ -35,6 +35,7 @@ that exists today lives in `apps/desktop/frontend/src`.
 
 | Doc | Purpose |
 |---|---|
+| CLAUDE.md | Auto-loaded orientation for any Claude session working in this repo |
 | VISION.md | What JARVIS is for, who it's for, open questions |
 | ARCHITECTURE.md | System design, runtime split, stack decisions |
 | ROADMAP.md | Current milestone status (full history in `docs/archive/`) |
