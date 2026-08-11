@@ -6,6 +6,17 @@ going forward — see `ROADMAP.md` for current milestone status and `TASKS.md` f
 
 ## Unreleased
 
+### 2026-08-11 — Milestone 32 Rust half: verified live (`cargo build` clean, real click-through)
+- `cargo build` compiled clean on the first try — no fixes needed to `windows.rs`, `main.rs`, or
+  `capabilities/default.json`.
+- `cargo tauri dev` click-through confirmed: popping out Chat opens a real second OS window
+  titled "Chat" with no Sidebar and real persisted conversations; clicking the pop-out button
+  again focuses the existing window instead of duplicating it.
+- `core:default` permission grant on popped-out windows (`"view-*"` glob) is structurally correct
+  but not behaviorally exercised — no code currently calls `event:listen` from a popped-out
+  window. Multi-monitor placement untested (single-display dev machine). Full detail in
+  `docs/archive/HANDOFF_M32_MULTIWINDOW_RUST_VERIFICATION.md`.
+
 ### 2026-08-11 — Milestone 32: multi-window foundation (frontend done, Rust unverified)
 - New `windows.rs` (Rust, **never compiled — no `cargo` in this sandbox**): `open_view_window`
   Tauri command opens a view in its own labeled window (`view-<slug>`) or focuses it if already

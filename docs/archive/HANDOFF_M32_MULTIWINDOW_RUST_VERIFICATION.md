@@ -1,4 +1,10 @@
-# Handoff: Milestone 32 (multi-window) — Rust side needs `cargo`
+# Handoff: Milestone 32 (multi-window) — Rust side, verification status
+
+**Update 2026-08-11 (local Claude Code, real `cargo`): Rust half now built and live-verified.**
+See "Verification results" at the bottom. Original Cowork handoff (no `cargo`/`rustc` available)
+kept below for context.
+
+---
 
 Written 2026-08-11 by Cowork, which has no `cargo`/`rustc` in this sandbox (same limitation as
 the M27 and PATH-fix handoffs). The frontend half of Milestone 32 is built, tested, and
@@ -55,3 +61,45 @@ live-verified (see below); the Rust half is written but has never compiled.
 4. Drag the new window to a second monitor if one's available — confirms placement isn't
    artificially constrained to the main display.
 5. Update `ROADMAP.md`'s M32 row and this handoff's status once confirmed.
+
+## Verification results (2026-08-11, local Claude Code, real `cargo`)
+
+1. **`cargo build`: clean on the first try.** No fixes needed — `windows.rs`'s
+   `WebviewWindowBuilder`/`WebviewUrl` usage, `main.rs`'s `mod windows;` + handler registration,
+   and `capabilities/default.json`'s `"windows": ["main", "view-*"]` were all correct as written
+   against the installed Tauri 2.
+2. **`cargo tauri dev` + live click-through: confirmed.** Screen Recording permission wasn't
+   granted to this terminal at first (blocked screenshots) and Accessibility-based UI scripting
+   of the WKWebView's DOM content proved unreliable (its AX tree flapped between populated and
+   empty across queries — a known flakiness class with WKWebView content, not specific to this
+   app). Once Screen Recording was granted, coordinate-based clicking (calibrated against the
+   screen's logical point resolution, confirmed via `system_profiler`: 1470x956 points, 2x
+   Retina backing) worked reliably. Screenshots confirm: clicking the Chat pop-out button in the
+   Sidebar opens a real second OS window titled "Chat", showing just the Chat view (conversation
+   list + message pane, real persisted conversations loaded, e.g. "Um, so all of you are cold,
+   uh, c-") with no Sidebar. Clicking the same pop-out button again brings the existing Chat
+   window to the front (traffic lights become active/colored) rather than opening a duplicate —
+   confirmed via screenshot, only one Chat window ever existed.
+3. **`core:default` permissions on the popped-out window: not directly exercised, no negative
+   evidence either.** The only code in the whole frontend that calls `event:listen` is
+   `useVoiceListener.ts` (backed by `voice.rs`'s `voice-event` emit), and it's intentionally
+   disabled outside the main window per `App.tsx`'s standalone-view logic — so there is currently
+   no real UI path that calls `event:listen` from a popped-out window to observe pass/fail
+   against the `"view-*"` capability glob. What's confirmed instead: the glob syntax itself
+   (`"view-*"` matching label `"view-chat"`) is standard, well-documented Tauri capability
+   matching, not a novel pattern; and no ACL/permission-denied/capability errors appeared in the
+   Rust process's stdout/stderr at any point during window creation or interaction. If a future
+   milestone adds a second `event:listen` consumer that *does* run in popped-out windows (the
+   capabilities file's own description mentions an approval dialog use case, not yet built), that
+   would be the first real behavioral test of this glob — worth a quick recheck then.
+4. **Second monitor: not testable.** This Mac has exactly one display (`system_profiler
+   SPDisplaysDataType`: single "Color LCD" built-in, 2560x1664). Nothing in `windows.rs` (no
+   explicit position/screen constraint in the `WebviewWindowBuilder` call) suggests window
+   placement would be restricted to the main display, but this is an inference from the code,
+   not a live-verified fact.
+
+**Bottom line: the Rust half works.** Compile, launch, real second window, correct title/content/
+no-sidebar, and focus-not-duplicate are all live-confirmed. The capability-glob permission grant
+is structurally correct and produced no errors, but wasn't behaviorally exercised because no
+current code path calls `event:listen` from a popped-out window. Multi-monitor placement is
+untested for lack of a second display, not for any known bug.
