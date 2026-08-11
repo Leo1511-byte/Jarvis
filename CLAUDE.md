@@ -29,6 +29,11 @@ New ideas go straight into `TASKS.md`'s prioritized Backlog (tagged by which `VI
 they serve) instead of getting lost mid-conversation. An item only becomes a numbered milestone
 in `ROADMAP.md` once it's actually about to start.
 
+At the end of a session, once the session's work is actually done and verified, commit it and
+push to GitHub (`origin`) rather than leaving it as uncommitted local changes — land it, don't
+just describe it. Still follow the standard git safety rules (review `git status`/`git diff`
+first, no force-push, no skipped hooks).
+
 ## Known gotchas
 
 - New Tauri windows need their label covered by `capabilities/default.json`'s `"windows"` glob,
