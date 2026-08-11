@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### Added — 2026-08-11 (Milestone 25: Skills UI + manual invocation)
+- New "Agents" sidebar section is real now — `views/SkillsView.tsx` replaces its `NotBuiltView`
+  placeholder. Lists every Skill from Milestone 24's registry with its description, permission
+  level, and which Connections it uses, plus a Run button.
+- `check-calendar`/`check-email`/`check-github`/`check-memory` run immediately with their
+  canonical trigger phrase (the same text a person would type, e.g. "check my calendar");
+  `research`/`continue-project` get an inline input for the topic/project name first, then send
+  `research <topic>` / `continue project <name>`.
+- No new orchestration logic: `onRun` is the same `text => handleCommand(text)` wiring `ChatView`
+  already uses, so a Skill run here goes through `parseCommand`/`executeCommand` exactly like the
+  command bar, voice, or Chat — same permission level, same prompt, same everything.
+- `tsc -b`, `npm run test` (51 passing, unchanged — `SkillsView` isn't unit tested, same as the
+  other views), `vite build` all clean.
+
 ### Added — 2026-08-11 (Milestone 24: Skills data model — scope note included)
 - New `Skill` type and `listSkills`/`listSkillConnections` `JarvisStore` methods, implemented in
   both `LocalStore` (fixed built-in list, new `lib/store/builtinSkills.ts`) and `SupabaseStore`

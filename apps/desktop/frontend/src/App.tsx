@@ -18,6 +18,7 @@ import { TasksView } from "./views/TasksView";
 import { MemoryView } from "./views/MemoryView";
 import { ChatView } from "./views/ChatView";
 import { ConnectionsView } from "./views/ConnectionsView";
+import { SkillsView } from "./views/SkillsView";
 import { NotBuiltView } from "./views/NotBuiltView";
 
 // Synchronous orchestrator commands (research/check-calendar/check-email/
@@ -341,6 +342,14 @@ export default function App() {
         );
       case "Integrations":
         return <ConnectionsView />;
+      case "Agents":
+        return (
+          <SkillsView
+            onRun={(text) => {
+              handleCommand(text);
+            }}
+          />
+        );
       default:
         return <NotBuiltView section={active} />;
     }

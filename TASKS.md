@@ -2,6 +2,17 @@
 
 ## Now
 
+- [ ] 2026-08-11 — **Milestone 25 (Skills UI + manual invocation) built.** New "Agents" sidebar
+      section is real now (`SkillsView.tsx`, replacing its `NotBuiltView` placeholder) — lists
+      M24's six Skills with description, permission level, and which Connections each uses, plus
+      a Run button per skill. `check-calendar`/`check-email`/`check-github`/`check-memory` run
+      with one click (canonical trigger phrase, e.g. "check my calendar" — the exact text a
+      person would type); `research`/`continue-project` get an inline text input for the
+      topic/project name first. Zero new execution logic — `onRun` is the same
+      `text => handleCommand(text)` `ChatView` already uses, so running a Skill here goes through
+      `parseCommand`/`executeCommand` exactly like the command bar, voice, or Chat would (same
+      permission level, same prompt, same everything). `tsc -b`/`npm run test` (51 passing,
+      unchanged)/`vite build` all clean. Not yet seen live.
 - [ ] 2026-08-11 — **Milestone 24 (Skills data model) built — deliberately scoped down from
       the original plan's wording, flagged explicitly.** The plan called this "medium-high
       complexity — must not regress 42 passing tests or live-confirmed command behavior," which
