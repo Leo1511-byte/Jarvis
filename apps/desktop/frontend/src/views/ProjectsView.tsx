@@ -10,7 +10,13 @@ import { ApprovalDialog } from "../components/ApprovalDialog";
  * automatically). No mock/sample data: an empty list means you have
  * no projects yet, genuinely.
  */
-export function ProjectsView() {
+export function ProjectsView({
+  activeProjectId,
+  onSetActiveProjectId,
+}: {
+  activeProjectId: string | null;
+  onSetActiveProjectId: (id: string | null) => void;
+}) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(true);
@@ -56,6 +62,13 @@ export function ProjectsView() {
     setDeletingId(p.id);
     try {
       await store.deleteProject(p.id);
+      // A deleted project can't stay "the active project" -- clear the
+      // selection rather than leaving useActiveProject pointing at a
+      // dangling id (DashboardView/commandEngine's research context would
+      // otherwise silently resolve to nothing until the user noticed).
+      if (activeProjectId === p.id) {
+        onSetActiveProjectId(null);
+      }
       await refresh();
     } finally {
       setDeletingId(null);
@@ -91,36 +104,55 @@ export function ProjectsView() {
         <p className="empty-state">No projects yet. Add one above.</p>
       ) : (
         <div className="panel-grid">
-          {projects.map((p) => (
-            <div key={p.id} className="panel">
-              <h3 className="panel-title">{p.name}</h3>
-              <div className="status-row">
-                <span>Status</span>
-                <button
-                  className={"status-badge status-" + (p.status === "active" ? "connected" : "not-wired")}
-                  onClick={() => toggleStatus(p)}
-                  style={{ cursor: "pointer", border: "none" }}
-                >
-                  {p.status.toUpperCase()}
-                </button>
+          {projects.map((p) => {
+            const isActive = activeProjectId === p.id;
+            return (
+              <div
+                key={p.id}
+                className="panel"
+                style={isActive ? { borderColor: "var(--accent)" } : undefined}
+              >
+                <h3 className="panel-title">{p.name}</h3>
+                <div className="status-row">
+                  <span>Status</span>
+                  <button
+                    className={"status-badge status-" + (p.status === "active" ? "connected" : "not-wired")}
+                    onClick={() => toggleStatus(p)}
+                    style={{ cursor: "pointer", border: "none" }}
+                  >
+                    {p.status.toUpperCase()}
+                  </button>
+                </div>
+                <div className="status-row">
+                  <span>Created</span>
+                  <span>{new Date(p.createdAt).toLocaleDateString()}</span>
+                </div>
+                <div className="status-row">
+                  <span>JARVIS focus</span>
+                  <button
+                    type="button"
+                    className={"status-badge status-" + (isActive ? "connected" : "not-wired")}
+                    style={{ cursor: isActive ? "default" : "pointer", border: "none" }}
+                    disabled={isActive}
+                    onClick={() => onSetActiveProjectId(p.id)}
+                  >
+                    {isActive ? "ACTIVE" : "SET ACTIVE"}
+                  </button>
+                </div>
+                <div className="status-row">
+                  <button
+                    type="button"
+                    className="jc-btn-inline"
+                    style={{ borderColor: "var(--error)", color: "var(--error)" }}
+                    disabled={deletingId === p.id}
+                    onClick={() => handleDelete(p)}
+                  >
+                    {deletingId === p.id ? "Deleting…" : "Delete"}
+                  </button>
+                </div>
               </div>
-              <div className="status-row">
-                <span>Created</span>
-                <span>{new Date(p.createdAt).toLocaleDateString()}</span>
-              </div>
-              <div className="status-row">
-                <button
-                  type="button"
-                  className="jc-btn-inline"
-                  style={{ borderColor: "var(--error)", color: "var(--error)" }}
-                  disabled={deletingId === p.id}
-                  onClick={() => handleDelete(p)}
-                >
-                  {deletingId === p.id ? "Deleting…" : "Delete"}
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

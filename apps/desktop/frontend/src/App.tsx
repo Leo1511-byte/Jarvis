@@ -1,18 +1,39 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
 import { useTheme } from "./hooks/useTheme";
 import { useVoiceSettings } from "./hooks/useVoiceSettings";
 import { useVoiceListener } from "./hooks/useVoiceListener";
+import { useActiveProject } from "./hooks/useActiveProject";
 import { type CoreState } from "./components/JarvisCore";
 import { CommandBar } from "./components/CommandBar";
 import { Sidebar } from "./components/Sidebar";
 import { ThemeSwitcher } from "./components/ThemeSwitcher";
 import { parseCommand, executeCommand } from "./commandEngine";
+import { getStore, type Project } from "./lib/store";
 import { DashboardView, type LogEntry } from "./views/DashboardView";
 import { ProjectsView } from "./views/ProjectsView";
 import { TasksView } from "./views/TasksView";
 import { NotBuiltView } from "./views/NotBuiltView";
+
+// Synchronous orchestrator commands (research/check-calendar/check-email/
+// check-github/ask) measured 12-44s live via scripts/benchmark_orchestrator.sh
+// (2026-08-11), with zero feedback beyond the JarvisCore animation. For a
+// voice interaction especially, tens of seconds of silence reads as broken,
+// not working -- handleCommand below surfaces an interim status after this
+// delay if the real response hasn't landed yet. continue-project's
+// background-mode path resolves in ~1s (its own "started as a background
+// job" text is already the fast-feedback path), so this timer firing for it
+// would be rare and harmless, not double feedback.
+const THINKING_DELAY_MS = 6000;
+const ORCHESTRATOR_ROUTED_KINDS = new Set([
+  "research",
+  "continue-project",
+  "check-calendar",
+  "check-email",
+  "check-github",
+  "ask",
+]);
 
 interface OrchestratorResponse {
   result: string;
@@ -42,9 +63,38 @@ async function runOrchestrator(prompt: string): Promise<string> {
 export default function App() {
   const { theme, setTheme } = useTheme();
   const { settings: voiceSettings, update: updateVoiceSettings } = useVoiceSettings();
+  const { activeProjectId, setActiveProjectId } = useActiveProject();
   const [active, setActive] = useState("Dashboard");
   const [coreState, setCoreState] = useState<CoreState>("idle");
   const [log, setLog] = useState<LogEntry[]>([]);
+  const [activeProject, setActiveProject] = useState<Project | null>(null);
+  const [thinking, setThinking] = useState<string | null>(null);
+
+  // Resolves activeProjectId (just an id, from localStorage) down to the
+  // real project object -- both DashboardView's display and handleCommand's
+  // research-prompt context need the current name, and re-fetching here
+  // whenever the id changes means a rename or delete elsewhere is picked up
+  // without DashboardView/ProjectsView needing to coordinate directly.
+  useEffect(() => {
+    let cancelled = false;
+    if (!activeProjectId) {
+      setActiveProject(null);
+      return;
+    }
+    getStore()
+      .listProjects()
+      .then((projects) => {
+        if (!cancelled) {
+          setActiveProject(projects.find((p) => p.id === activeProjectId) ?? null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setActiveProject(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeProjectId]);
 
   // Milestone 10, background-mode slice: polls `poll_orchestrator_background`
   // every BACKGROUND_POLL_MS until the job is done (or fails/disappears),
@@ -110,11 +160,29 @@ export default function App() {
   async function handleCommand(text: string, speak = false) {
     setCoreState("processing");
     const command = parseCommand(text);
-    const response = await executeCommand(command, {
-      setTheme,
-      runOrchestrator,
-      runOrchestratorBackground,
-    });
+
+    let thinkingTimer: number | undefined;
+    if (ORCHESTRATOR_ROUTED_KINDS.has(command.kind)) {
+      thinkingTimer = window.setTimeout(() => {
+        setThinking(
+          "Still working on that — some commands take up to a minute. No news is good news."
+        );
+      }, THINKING_DELAY_MS);
+    }
+
+    let response: string;
+    try {
+      response = await executeCommand(command, {
+        setTheme,
+        runOrchestrator,
+        runOrchestratorBackground,
+        activeProject: activeProject ? { name: activeProject.name } : null,
+      });
+    } finally {
+      if (thinkingTimer !== undefined) window.clearTimeout(thinkingTimer);
+      setThinking(null);
+    }
+
     setLog((prev) => [...prev, { you: text, jarvis: response }].slice(-6));
     setCoreState(command.kind === "unknown" ? "error" : "success");
     if (speak) {
@@ -162,10 +230,14 @@ export default function App() {
             log={log}
             voiceSettings={voiceSettings}
             onUpdateVoiceSettings={updateVoiceSettings}
+            activeProject={activeProject}
+            thinking={thinking}
           />
         );
       case "Projects":
-        return <ProjectsView />;
+        return (
+          <ProjectsView activeProjectId={activeProjectId} onSetActiveProjectId={setActiveProjectId} />
+        );
       case "Tasks":
         return <TasksView />;
       default:

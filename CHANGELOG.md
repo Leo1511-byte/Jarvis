@@ -2,6 +2,34 @@
 
 ## Unreleased
 
+### Added — 2026-08-11 (active project selection + research linking, interim feedback for slow commands)
+- New `useActiveProject` hook (`apps/desktop/frontend/src/hooks/useActiveProject.ts`):
+  localStorage-persisted selection of which single project JARVIS treats as "the one we're
+  working on now" — distinct from each `Project.status` field, which is an independent per-project
+  lifecycle value, not a UI-level selection. Same persistence pattern as `useTheme`/`useVoiceSettings`.
+- `ProjectsView` gained a "Set Active" / "Active" control per project card; deleting the currently
+  active project clears the selection instead of leaving `useActiveProject` pointing at a dangling
+  id. `DashboardView`'s "Active Project" panel — previously hardcoded dead text since Milestone 3 —
+  now shows the real selected project's name and status.
+- `commandEngine.ts`'s `CommandContext` gained an optional `activeProject: { name: string } | null`
+  field. The `research` command's orchestrator prompt now asks Claude to mention the active
+  project by name in both the saved note and its reply when one is set — closes the gap
+  `ROADMAP.md`'s M16 row named explicitly ("research results linked back into a specific project").
+  No new folder-structure conventions invented; findings still land in the vault-wide `Notes/`
+  folder, just with real project context in the content itself.
+- `App.tsx`'s `handleCommand` now starts a 6-second timer for any orchestrator-routed command
+  (`research`/`continue-project`/`check-calendar`/`check-email`/`check-github`/`ask`); if it fires
+  before the real response lands, an interim "Still working on that…" line appears above the
+  Command Log, cleared the moment the actual response arrives. Motivated by real numbers, not a
+  guess: `scripts/benchmark_orchestrator.sh` measured synchronous commands taking 12–44 seconds
+  live (2026-08-11) with zero feedback beyond the `JarvisCore` animation — for voice especially,
+  tens of seconds of silence reads as broken, not working. Doesn't affect `continue-project`'s
+  background-mode path, which already responds in ~1s with its own immediate feedback.
+- 2 new `commandEngine.test.ts` tests (40 total, up from 38). `tsc -b`/`vite build` both clean.
+  Not yet live-confirmed in the running app — frontend-only change, verified via the automated
+  test suite and type/build checks, same as every other Cowork-side change this project makes
+  without `cargo`.
+
 ### Fixed, not yet live-confirmed — 2026-08-10 (JARVIS talking in a loop, reporting things Leonardo never said)
 - Reported live by Leonardo. Root cause: `listen_loop.py`'s `wait_while_speaking()` guard was
   only checked once, before opening the mic's `sd.RawInputStream` for wake-word listening — once

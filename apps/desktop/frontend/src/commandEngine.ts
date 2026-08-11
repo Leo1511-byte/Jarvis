@@ -171,6 +171,15 @@ export interface CommandContext {
    * spec §62 workflow can genuinely take a while; the four read-only
    * commands above stay on the synchronous path. */
   runOrchestratorBackground?: (prompt: string) => Promise<{ jobId: string; sessionId: string }>;
+  /** Milestone 16 follow-up: whichever project is currently selected as
+   * "active" (see hooks/useActiveProject.ts), resolved down to just the
+   * name so commandEngine.ts doesn't need the store's shape. `research`
+   * uses this to link findings back to a project instead of always
+   * writing to the vault-wide Notes/ folder with no association -- the
+   * gap ROADMAP.md's M16 row named explicitly. Undefined/null (no active
+   * project set, or the caller didn't wire this up, e.g. in tests) falls
+   * back to the original unscoped behavior unchanged. */
+  activeProject?: { name: string } | null;
 }
 
 /**
@@ -192,11 +201,18 @@ export async function executeCommand(
       return "I can switch themes (e.g. \"switch to neon void\"), report status, \"research <topic>\", \"continue project <name>\", \"check my calendar\", \"check my email\", and \"check my github\" — the last five via the local orchestrator. Anything else, I'll just ask Claude directly and read back what it says.";
     case "delete-project":
       return `"Delete project ${command.name}" is a Level 3 action and needs a real approval dialog, not a typed command — use the Delete button in the Projects view instead.`;
-    case "research":
+    case "research": {
+      const projectContext = ctx.activeProject
+        ? ` This research is for the "${ctx.activeProject.name}" project -- mention that project ` +
+          `by name near the top of the note and in your reply, so it's clear what it's for.`
+        : "";
       return runOrchestratorOrExplain(
         ctx,
-        `Research: ${command.topic}. Write findings as a new note in the Obsidian vault's Notes/ folder, then reply with one sentence summarizing what you found and the note's file path.`
+        `Research: ${command.topic}. Write findings as a new note in the Obsidian vault's Notes/ ` +
+          `folder.${projectContext} Then reply with one sentence summarizing what you found and ` +
+          `the note's file path.`
       );
+    }
     case "continue-project": {
       const prompt =
         `Continue working on the "${command.name}" project (spec §62 workflow): load its context ` +

@@ -172,6 +172,24 @@ describe("executeCommand", () => {
     expect(response).toContain("claude not found");
   });
 
+  it("mentions the active project in the research prompt when one is set", async () => {
+    const runOrchestrator = vi.fn().mockResolvedValue("Found 3 relevant papers.");
+    await executeCommand(
+      { kind: "research", topic: "quantum computing" },
+      { setTheme: vi.fn(), runOrchestrator, activeProject: { name: "Ape War Game" } }
+    );
+    expect(runOrchestrator).toHaveBeenCalledWith(expect.stringContaining("Ape War Game"));
+  });
+
+  it("leaves the research prompt unscoped when there's no active project", async () => {
+    const runOrchestrator = vi.fn().mockResolvedValue("Found 3 relevant papers.");
+    await executeCommand(
+      { kind: "research", topic: "quantum computing" },
+      { setTheme: vi.fn(), runOrchestrator, activeProject: null }
+    );
+    expect(runOrchestrator).toHaveBeenCalledWith(expect.not.stringContaining("project"));
+  });
+
   it("says research is unavailable without an orchestrator connection", async () => {
     const response = await executeCommand(
       { kind: "research", topic: "quantum computing" },

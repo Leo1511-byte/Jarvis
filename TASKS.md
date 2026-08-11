@@ -99,6 +99,24 @@
       consistent or a one-off (rate limiting, more repos to check that run, etc.) before assuming
       it's just normal variance. Raw output: `benchmark_results_20260811_100102.md` (gitignored,
       local only — numbers summarized here instead of committing timestamped raw files).
+- [x] 2026-08-11 — **Two real gaps found in the benchmark/roadmap review closed, both frontend-only
+      (no cargo needed):**
+      (1) Every synchronous orchestrator command measured 12–44s live with zero feedback beyond
+      the core animation. `App.tsx`'s `handleCommand` now starts a 6s timer for any
+      orchestrator-routed command kind; if it fires before the real response lands, an interim
+      "Still working on that…" line appears above the Command Log, cleared the moment the actual
+      response arrives. Doesn't touch `continue-project`'s background path (already fast, ~1s,
+      already has its own immediate feedback).
+      (2) M16's named gap — research findings never linked to a specific project, and the
+      Dashboard's "Active Project" panel was hardcoded dead text, not backed by any real state.
+      Added `useActiveProject` (localStorage-persisted selection, same pattern as
+      `useTheme`/`useVoiceSettings`), a "Set Active"/"Active" control per project card in
+      `ProjectsView`, and real Dashboard display. `research <topic>`'s orchestrator prompt now
+      mentions the active project by name when one is set (via a new
+      `CommandContext.activeProject` field), asking Claude to note it in both the saved note and
+      the reply — a real, working link without inventing new folder-structure conventions.
+      Deleting the active project correctly clears the selection instead of leaving it dangling.
+      2 new commandEngine tests (40 total, up from 38), `tsc -b`/`vite build` both clean.
 - [ ] **Test all five orchestrator-routed commands in the actual running app** — `research
       <topic>`, `continue project <name>`, `check my calendar`, `check my email`, `check my
       github` — type each into the real command bar in the `cargo tauri dev` window and confirm
