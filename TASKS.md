@@ -110,24 +110,23 @@
       the reply — a real, working link without inventing new folder-structure conventions.
       Deleting the active project correctly clears the selection instead of leaving it dangling.
       2 new commandEngine tests (40 total, up from 38), `tsc -b`/`vite build` both clean.
-- [x] 2026-08-11 — **`check my github` finally hit with the exact phrase — real, different
-      permission gap found and patched.** Unlike Calendar/Email (an MCP-tool-permission wall),
-      this is a Bash-permission wall: the orchestrator's headless `claude -p` tried to run `gh`
-      directly and got refused with a clear, honest error ("This session doesn't have permission
-      to run `gh` commands, and since it's non-interactive there's no one to approve the
-      prompt"), even suggesting the exact commands it wanted to run
-      (`gh search prs --assignee=@me --state=open`, `gh search issues --assignee=@me --state=open`).
-      `.claude/settings.local.json` only had `gh auth *`/`gh repo *` pre-approved from earlier,
-      not the read-only search/list/view commands `check-github`'s prompt actually needs. Added
-      `gh search prs/issues *`, `gh pr list/status/view *`, `gh issue list/view *`,
-      `gh notifications*` — deliberately narrow (no `gh *` wildcard) so write subcommands
-      (create/merge/close/comment) stay unapproved, matching the command's own Level 1
-      read-only-by-prompt design. Not yet retested — needs "check my github" run again to confirm.
-- [ ] **One command still needs live confirmation with its exact phrasing:**
+- [x] 2026-08-11 — **`check my github` fixed and confirmed live — M12 fully done.** First live
+      attempt with the exact phrase found a real, different permission gap than Calendar/Email
+      (a Bash-permission wall, not MCP-tool): the orchestrator's headless `claude -p` tried to
+      run `gh` directly and got refused with a clear, honest error ("This session doesn't have
+      permission to run `gh` commands, and since it's non-interactive there's no one to approve
+      the prompt"), even naming the exact commands it wanted to run. `.claude/settings.local.json`
+      only had `gh auth *`/`gh repo *` pre-approved; added `gh search prs/issues *`,
+      `gh pr list/status/view *`, `gh issue list/view *`, `gh notifications*` — deliberately no
+      `gh *` wildcard, so write subcommands stay unapproved. Retested: "check my github" returned
+      a real, correct result ("No open PRs or issues assigned to you... GitHub is clear right
+      now"). Every orchestrator-routed command except `continue-project` is now confirmed live.
+- [ ] **Last command still needing live confirmation with its exact phrasing:**
       **"continue project Ape War Game"** (matching the real project name, not "continue
       with..." — anything else falls through to the safer but non-dedicated `ask` path). Takes
       the background path — expect an immediate "started as a background job" reply, then a
-      second Command Log entry once it finishes.
+      second Command Log entry once it finishes. Once this lands, every command in M10-M18 is
+      genuinely confirmed live and M20 (V1 polish) has nothing left blocking it from starting.
 - [ ] **`orchestrator.rs`'s bundled-app `PATH` resolution gap, plus two other cargo/live-window
       items, hand off written 2026-08-11:** see `HANDOFF_PATH_FIX_AND_VERIFICATION.md` — covers
       the known `PATH` limitation (works under `cargo tauri dev`, would silently fail in a
