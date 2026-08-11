@@ -6,11 +6,14 @@ import { useVoiceSettings } from "./hooks/useVoiceSettings";
 import { useVoiceListener } from "./hooks/useVoiceListener";
 import { useActiveProject } from "./hooks/useActiveProject";
 import { useCurrentConversation } from "./hooks/useCurrentConversation";
+import { useApproval } from "./hooks/useApproval";
 import { type CoreState } from "./components/JarvisCore";
 import { CommandBar } from "./components/CommandBar";
 import { Sidebar } from "./components/Sidebar";
 import { ThemeSwitcher } from "./components/ThemeSwitcher";
+import { ApprovalDialog } from "./components/ApprovalDialog";
 import { parseCommand, executeCommand } from "./commandEngine";
+import { permissionLevelFor } from "./permissions";
 import { getStore, type Conversation, type Message, type Project } from "./lib/store";
 import { DashboardView, type LogEntry } from "./views/DashboardView";
 import { ProjectsView } from "./views/ProjectsView";
@@ -97,6 +100,12 @@ export default function App() {
   // mount and whenever persistence itself fails, which handleCommand below
   // treats as "don't persist this exchange" rather than blocking on it.
   const { conversation: currentConversation, selectConversation } = useCurrentConversation();
+  // Milestone 28: the same Level-3 approval flow ProjectsView's Delete
+  // button already uses (permissions.ts / spec §55) -- reused here rather
+  // than a second dialog/hook, so any Skill this app ever classifies Level
+  // 3 gets a real approval gate automatically instead of needing bespoke
+  // per-command UI wiring the way delete-project's dedicated button does.
+  const { pending: pendingApproval, requestApproval, respond: respondApproval } = useApproval();
   const [active, setActive] = useState("Dashboard");
   const [coreState, setCoreState] = useState<CoreState>("idle");
   const [log, setLog] = useState<LogEntry[]>([]);
@@ -250,6 +259,31 @@ export default function App() {
   async function handleCommand(text: string, speak = false) {
     setCoreState("processing");
     const command = parseCommand(text);
+
+    // Milestone 28: gate Level 3 Skills behind the same real approval flow
+    // ProjectsView's Delete button already uses. delete-project itself is
+    // unaffected (it's not in SKILL_COMMAND_KINDS) -- executeCommand's
+    // delete-project case is deliberately a redirect-to-UI stub, not
+    // something this generic path should start executing instead. None of
+    // today's six built-in Skills are actually Level 3 (see
+    // builtinSkills.ts), so this doesn't change behavior for anything live
+    // yet -- it's the general mechanism so the next Level 3 Skill gets a
+    // real approval gate automatically instead of needing bespoke UI
+    // wiring the way delete-project currently does.
+    if (SKILL_COMMAND_KINDS.has(command.kind) && permissionLevelFor(command.kind) === 3) {
+      const approved = await requestApproval({
+        action: `Run: "${text}"`,
+        context: `Skill "${command.kind}" is classified Level 3 (sensitive) in permissions.ts.`,
+        reason:
+          "Level 3 Skills require your explicit approval every time before JARVIS runs them (SECURITY.md).",
+        risk: "This action may be irreversible or touch a sensitive system — review before approving.",
+      });
+      if (!approved) {
+        setLog((prev) => [...prev, { you: text, jarvis: "Not approved — nothing was run." }].slice(-6));
+        setCoreState("idle");
+        return;
+      }
+    }
 
     let thinkingTimer: number | undefined;
     if (ORCHESTRATOR_ROUTED_KINDS.has(command.kind)) {
@@ -409,6 +443,8 @@ export default function App() {
 
         {renderActive()}
       </main>
+
+      {pendingApproval && <ApprovalDialog request={pendingApproval} onRespond={respondApproval} />}
     </div>
   );
 }

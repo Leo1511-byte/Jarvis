@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+### Added — 2026-08-11 (Milestone 28: skill-aware permission enforcement)
+- **Real gap found while implementing this milestone:** `permissionLevelFor` (`permissions.ts`)
+  was fully unit-tested but never actually called anywhere in the running app — the only real
+  Level 3 gate was `ProjectsView`'s Delete button, hand-wired to its own `useApproval`/
+  `ApprovalDialog` instance.
+- `App.tsx`'s `handleCommand` now checks `permissionLevelFor(command.kind)` for every
+  `SKILL_COMMAND_KINDS` command before running it. A Level 3 result routes through the same real
+  approval flow (`useApproval`/`ApprovalDialog`, spec §55 ACTION/CONTEXT/REASON/RISK format) —
+  denying it logs "Not approved — nothing was run" and `executeCommand` is never called.
+- `delete-project` is deliberately excluded (not in `SKILL_COMMAND_KINDS`) — `executeCommand`'s
+  delete-project case is intentionally a redirect-to-UI stub, and this generic gate shouldn't
+  start executing it instead of the dedicated, already-correct Projects view flow.
+- None of the six built-in Skills are actually Level 3 today, so this changes no live behavior
+  yet — it's the general mechanism so a future Level 3 Skill gets a real approval gate
+  automatically instead of needing bespoke per-command UI wiring.
+- `tsc -b`, `npm run test` (53 passing, unchanged), `vite build` all clean.
+
 ### Added — 2026-08-11 (Milestone 26: activity logging for Skill runs)
 - New `ActivityEvent`/`NewActivityEventInput` types and `listActivityEvents`/`createActivityEvent`
   `JarvisStore` methods — the first store methods and UI to ever read/write `activity_events`,

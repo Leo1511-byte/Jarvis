@@ -2,6 +2,22 @@
 
 ## Now
 
+- [ ] 2026-08-11 — **Milestone 28 (skill-aware permission enforcement) built — real gap found
+      and closed.** While wiring this, found that `permissionLevelFor` (`permissions.ts`) was
+      dead code: defined, unit-tested, but never actually called anywhere in the running app —
+      the only real Level 3 enforcement was `ProjectsView`'s Delete button, hand-wired to its own
+      `useApproval`/`ApprovalDialog` instance specifically. `App.tsx`'s `handleCommand` now checks
+      `permissionLevelFor(command.kind)` for every `SKILL_COMMAND_KINDS` command before running
+      it; if it's Level 3, the same real approval flow (`useApproval`/`ApprovalDialog`, spec §55
+      format) gates it — denying it logs "Not approved — nothing was run" and stops before
+      `executeCommand` is ever called. **`delete-project` is deliberately untouched** (not in
+      `SKILL_COMMAND_KINDS`) since `executeCommand`'s delete-project case is intentionally a
+      redirect-to-UI stub, not something this generic path should start executing. **None of the
+      six built-in Skills are actually Level 3 today**, so this changes no live behavior yet — it's
+      the general mechanism so the next Level 3 Skill (e.g. a future "send email" or "delete note")
+      gets a real approval gate automatically instead of needing bespoke per-command wiring.
+      `tsc -b`/`npm run test` (53 passing, unchanged — nothing tested here changed)/`vite build`
+      all clean.
 - [ ] 2026-08-11 — **Milestone 26 (activity logging for Skill runs) built.** Extended the
       `activity_events` table `0001_init.sql` created back at Milestone 7 but that had zero store
       methods or UI ever reading/writing it — first real use of that table. New
