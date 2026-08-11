@@ -1,68 +1,62 @@
 # JARVIS
 
-A personal AI operating system: one assistant (JARVIS) backed by Claude, with long-term
-knowledge in Obsidian, structured state in Supabase, automation in n8n, development work
-via Claude Code, and a premium desktop command-center UI with voice input/output.
+Leonardo's personal AI assistant — local, single-user, not a product. See `VISION.md` for what
+it's actually for and why. Backed by Claude, with structured state in Supabase, long-term
+memory in Obsidian, and a Tauri desktop command-center UI with voice input/output.
 
-This repo is the ground-up build of the full master spec. Status: **pre-Milestone 1**.
+Status, 2026-08-11: core daily-life assistant slice is real and live-confirmed (calendar,
+email, GitHub, Obsidian memory, chat, voice). Ambient multi-window presence and any hardware
+integration (3D printer, robotic arm) have not been started — see `ROADMAP.md` for exactly
+where the line is.
 
-## Before you read further: the runtime split
+## Runtime split
 
-The master spec was written as if a single Claude Code agent runs locally on your Mac with
-full access to your filesystem, microphone, Docker, and installed tools. This project was
-scaffolded from a **Cowork** session, which runs in an isolated cloud sandbox — no access to
-your actual machine's Node/Python/Git versions, no microphone, no ability to install software
-on your Mac, no persistent local process. See `ARCHITECTURE.md` for the corrected two-tier
-design this implies: Cowork is the planning/docs/design partner; a **local Claude Code session
-on your Mac** is the actual JARVIS runtime once built.
-
-## What already exists (don't rebuild this)
-
-You have a working lightweight Jarvis today, built on your Obsidian vault at
-`/Users/leonardo/obsidian`:
-- Scripts: `what_open.py`, `connect_this.py`, `orphan_scan.py` in `System/scripts/`
-- A local ElevenLabs voice bridge (`System/voice/speak_daemon.py`, queue/done folders)
-- A "Jarvis Command Center" dashboard artifact (Cyber Noir theme, mic input, chat)
-- A scheduled daily task that writes a morning brief to `Briefs/` at ~7am
-- A memory log at `System/memory.md`
-
-This is real prior art for Milestones 6 (Obsidian memory), 9 (voice), and 14 (calendar-adjacent
-briefing). `OBSIDIAN_SETUP.md` covers how the new vault memory files integrate with — not
-replace — this existing structure.
+Two tiers, not one: **local Claude Code** (or an Agent SDK process) running on Leonardo's Mac
+is the actual JARVIS orchestrator — the only tier with real filesystem/mic/hardware access.
+**Cowork** (cloud, sandboxed) is the design/docs/code partner that can't touch the machine
+directly. See `ARCHITECTURE.md` for the full split and why it exists.
 
 ## Repo layout
 
 ```
 jarvis/
-  apps/desktop/{frontend,backend}   — the command-center app (not yet started)
+  apps/desktop/{frontend,backend}   — the actual app: Tauri (Rust) + React/TS, real code
   packages/{ui,core,agents,memory,tools,voice,permissions,database,integrations,automations}
-  shared/     config/     tests/     scripts/     docs/
+                                     — mostly scaffolding (.gitkeep) today; only
+                                       database/migrations has real content
+  docs/archive/                     — full milestone-by-milestone history (M1-29)
+  shared/     config/     tests/     scripts/
 ```
+
+Don't assume the `packages/` split reflects real module boundaries yet — almost everything
+that exists today lives in `apps/desktop/frontend/src`.
 
 ## Docs index
 
 | Doc | Purpose |
 |---|---|
-| ARCHITECTURE.md | System design, corrected runtime split, diagrams |
-| ROADMAP.md | 20-milestone build order and status |
+| VISION.md | What JARVIS is for, who it's for, open questions |
+| ARCHITECTURE.md | System design, runtime split, stack decisions |
+| ROADMAP.md | Current milestone status (full history in `docs/archive/`) |
 | TASKS.md | Live task board |
-| CHANGELOG.md | What actually shipped, by date |
+| CHANGELOG.md | What's shipping now (full history in `docs/archive/`) |
 | SECURITY.md | Credential rules, permission levels |
-| INSTALLATION.md | Prerequisites and setup, incl. real system inspection |
+| INSTALLATION.md | Prerequisites and setup |
 | MCP_SETUP.md | Which MCP servers, configured where |
-| VOICE_SETUP.md | Wake word, STT, TTS plan vs. what exists today |
-| OBSIDIAN_SETUP.md | Vault structure reconciliation |
-| DATABASE_SCHEMA.md | Proposed Supabase schema (not yet provisioned) |
-| AUTOMATIONS.md | n8n plan vs. current scheduled tasks |
-| COMMANDS.md | Target natural-language command set |
-| AGENT_SYSTEM.md | Orchestrator + specialist agent routing |
+| VOICE_SETUP.md | Wake word, STT, TTS — what exists |
+| OBSIDIAN_SETUP.md | Vault structure |
+| DATABASE_SCHEMA.md | Supabase schema |
+| AUTOMATIONS.md | launchd-based scheduled tasks |
+| COMMANDS.md | Natural-language command set |
+| AGENT_SYSTEM.md | Orchestrator + Skills routing |
 | UI_DESIGN.md | Theme tokens, Jarvis Core states |
 | TESTING.md | Test plan per layer |
 | TROUBLESHOOTING.md | Error format, known issues |
-| SYSTEM_INSPECTION_PROMPT.md | Run this in local Claude Code to complete Milestone 1 |
 
-## Next step
+## Running it
 
-Run `SYSTEM_INSPECTION_PROMPT.md` in a Claude Code session on your actual machine. That's
-Milestone 1. Its output feeds the stack decision in `ARCHITECTURE.md` and the setup steps in
-`INSTALLATION.md`.
+```
+cd apps/desktop/backend && cargo tauri dev
+```
+
+See `INSTALLATION.md` for prerequisites (Rust, Node) if this is a fresh machine.

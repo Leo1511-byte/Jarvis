@@ -1,0 +1,704 @@
+# Changelog
+
+## Unreleased
+
+### Added — 2026-08-11 (Milestone 29: voice ↔ Chat integration polish)
+- Voice transcripts landing in Chat turned out to already be true by construction:
+  `useVoiceListener`'s `onTranscript` calls the same `handleCommand(text, true)` typed input
+  uses, and Milestone 21's message persistence lives inside `handleCommand` itself — no
+  voice-specific change was needed for the headline behavior.
+- What this milestone actually added: voice error/crash-recovery notifications (`onError`/
+  `onStatus`) now also persist as `(voice) ...` messages, so Chat's history reflects what
+  actually happened with voice, not just successful exchanges.
+- Extracted `persistMessage(role, content)` — `handleCommand`'s two persisted messages and the
+  two voice-notification call sites now share one implementation instead of three near-identical
+  fire-and-forget blocks.
+- `tsc -b`, `npm run test` (53 passing, unchanged), `vite build` all clean.
+- **This closes out the Chat/Memory/Skills/Connections plan except Milestone 27** (Memory index —
+  needs `cargo`, see `HANDOFF_MEMORY_INDEX_AND_MIGRATIONS.md`).
+
+### Added — 2026-08-11 (Milestone 28: skill-aware permission enforcement)
+- **Real gap found while implementing this milestone:** `permissionLevelFor` (`permissions.ts`)
+  was fully unit-tested but never actually called anywhere in the running app — the only real
+  Level 3 gate was `ProjectsView`'s Delete button, hand-wired to its own `useApproval`/
+  `ApprovalDialog` instance.
+- `App.tsx`'s `handleCommand` now checks `permissionLevelFor(command.kind)` for every
+  `SKILL_COMMAND_KINDS` command before running it. A Level 3 result routes through the same real
+  approval flow (`useApproval`/`ApprovalDialog`, spec §55 ACTION/CONTEXT/REASON/RISK format) —
+  denying it logs "Not approved — nothing was run" and `executeCommand` is never called.
+- `delete-project` is deliberately excluded (not in `SKILL_COMMAND_KINDS`) — `executeCommand`'s
+  delete-project case is intentionally a redirect-to-UI stub, and this generic gate shouldn't
+  start executing it instead of the dedicated, already-correct Projects view flow.
+- None of the six built-in Skills are actually Level 3 today, so this changes no live behavior
+  yet — it's the general mechanism so a future Level 3 Skill gets a real approval gate
+  automatically instead of needing bespoke per-command UI wiring.
+- `tsc -b`, `npm run test` (53 passing, unchanged), `vite build` all clean.
+
+### Added — 2026-08-11 (Milestone 26: activity logging for Skill runs)
+- New `ActivityEvent`/`NewActivityEventInput` types and `listActivityEvents`/`createActivityEvent`
+  `JarvisStore` methods — the first store methods and UI to ever read/write `activity_events`,
+  the table `0001_init.sql` created back at Milestone 7 but that had sat unused since.
+- `App.tsx`'s `handleCommand` now logs an activity event for every Skill run (new
+  `SKILL_COMMAND_KINDS` set — matches `builtinSkills.ts`'s six ids, deliberately excludes "ask"
+  since it isn't a named Skill), recording skill id, conversation id, and active project id.
+  Fire-and-forget, same non-blocking pattern as message persistence.
+- New "Activity" sidebar section — `views/ActivityView.tsx` replaces its `NotBuiltView`
+  placeholder, lists events most-recent-first.
+- `packages/database/migrations/0005_activity_events_skill_tracking.sql` adds `skill_id`/
+  `conversation_id` columns to the existing table. Must run after `0002_chat.sql` and
+  `0004_skills.sql`. Not yet run against the real Supabase project.
+- **Incidental fix:** `check-memory` was missing from `ORCHESTRATOR_ROUTED_KINDS`, so it never
+  triggered the "still working on that" interim-feedback banner the other four `check-*` commands
+  get on a slow response — added it while wiring up the new skill-run kind set.
+- **Incidental fix, caught by the new tests:** `LocalStore.listActivityEvents` originally sorted
+  by `createdAt` string; two events created in the same millisecond (easy to hit, including live)
+  tie under a string sort with undefined relative order. Switched to reversing insertion order,
+  which is reliable regardless of timestamp resolution.
+- 2 new tests (53 total, up from 51). `tsc -b`, `npm run test`, `vite build` all clean.
+
+### Added — 2026-08-11 (Milestone 25: Skills UI + manual invocation)
+- New "Agents" sidebar section is real now — `views/SkillsView.tsx` replaces its `NotBuiltView`
+  placeholder. Lists every Skill from Milestone 24's registry with its description, permission
+  level, and which Connections it uses, plus a Run button.
+- `check-calendar`/`check-email`/`check-github`/`check-memory` run immediately with their
+  canonical trigger phrase (the same text a person would type, e.g. "check my calendar");
+  `research`/`continue-project` get an inline input for the topic/project name first, then send
+  `research <topic>` / `continue project <name>`.
+- No new orchestration logic: `onRun` is the same `text => handleCommand(text)` wiring `ChatView`
+  already uses, so a Skill run here goes through `parseCommand`/`executeCommand` exactly like the
+  command bar, voice, or Chat — same permission level, same prompt, same everything.
+- `tsc -b`, `npm run test` (51 passing, unchanged — `SkillsView` isn't unit tested, same as the
+  other views), `vite build` all clean.
+
+### Added — 2026-08-11 (Milestone 24: Skills data model — scope note included)
+- New `Skill` type and `listSkills`/`listSkillConnections` `JarvisStore` methods, implemented in
+  both `LocalStore` (fixed built-in list, new `lib/store/builtinSkills.ts`) and `SupabaseStore`
+  (real queries against new `skills`/`skill_connections` tables).
+- **Deliberate scope decision, documented in `builtinSkills.ts` and `TASKS.md`:** this is a
+  descriptive registry of the six commands `commandEngine.ts` already runs, not a rewrite of
+  them. The plan flagged this milestone as needing to avoid regressing 42 passing tests or
+  live-confirmed command behavior — the safest way to honor that was to leave
+  `commandEngine.ts`'s proven prompt templates untouched and build the Skills data alongside it,
+  not have it replace them.
+- `packages/database/migrations/0004_skills.sql` — `skills`/`skill_connections` tables + seed
+  data mirroring `builtinSkills.ts`. Must run after `0003_connections.sql`. Not yet run against
+  the real Supabase project.
+- New regression test in `permissions.test.ts` asserting every builtin skill's declared
+  `permissionLevel` matches `permissions.ts`'s `permissionLevelFor` exactly — nothing else
+  enforces the two stay in sync since they're necessarily two separate declarations (one needs
+  to work in plain SQL too).
+- 3 new tests (51 total, up from 48). `tsc -b`, `npm run test`, `vite build` all clean.
+
+### Added — 2026-08-11 (Milestone 23: Connections registry)
+- New "Integrations" sidebar section is real now — `views/ConnectionsView.tsx` replaces its
+  `NotBuiltView` placeholder. Read-only registry of the six connections already real in this app
+  (calendar, gmail, github, obsidian, web, supabase): live status per connection (connected/
+  unverified/not-wired, same honesty rule as `StatusPanel.tsx`, computed the same way — never
+  trusted from a DB row) plus each connection's capabilities with a read-only/write flag.
+- New `Connection`/`ConnectionCapability` types and `listConnections`/`listConnectionCapabilities`
+  `JarvisStore` methods. `LocalStore` returns a fixed built-in list (new
+  `lib/store/builtinConnections.ts`, the single source of truth mirrored by hand into the
+  migration's seed data); `SupabaseStore` queries the real tables.
+- `packages/database/migrations/0003_connections.sql` — `connections`/`connection_capabilities`
+  tables + seed inserts for the six built-in connections. **Identity and capability metadata
+  only — no credential columns, ever**, per the Chat/Memory/Skills/Connections plan's security
+  section; real auth stays exactly where it already lives (OS keyring,
+  `.claude/settings.local.json`, `.env.local`). Not yet run against the real Supabase project —
+  needs Leonardo, same as 0001/0002.
+- Extracted `hooks/useInTauri.ts` out of `StatusPanel.tsx`'s local `useSystems` hook so
+  `ConnectionsView` reuses the exact same "genuinely running in Tauri" detection instead of a
+  second copy — `StatusPanel` itself refactored to use the new hook, behavior unchanged.
+- 2 new `localStore.test.ts` tests (48 total, up from 46). `tsc -b`, `npm run test`, `vite build`
+  all clean.
+
+### Added — 2026-08-11 (Milestone 22: real Chat tab)
+- New `Chat` sidebar item (`Sidebar.tsx`, between Dashboard and Projects) and `views/ChatView.tsx`
+  — a conversation switcher (list of `conversations` + "New chat" button) alongside the full
+  persisted message thread for whichever conversation is selected, plus its own input.
+- No new command/orchestration logic: `ChatView`'s input calls the same `handleCommand` the
+  command bar and voice already use, via a plain `onSubmit` prop — identical parsing, permission
+  levels, and orchestrator routing either way.
+- `hooks/useCurrentConversation.ts` gained a `selectConversation` setter so `App.tsx`'s Chat
+  wiring and its existing `handleCommand` persistence share one source of truth for "the current
+  conversation" instead of drifting apart.
+- `App.tsx` gained `messages`/`conversations` state, loaded via Milestone 21's new store methods,
+  plus `handleNewConversation`. Dashboard's Command Log (`DashboardView.tsx`) is unchanged — still
+  the same rolling last-6, Chat is additive.
+- `tsc -b`, `npm run test` (46 passing, unchanged — `ChatView` isn't unit tested, matching how
+  `DashboardView`/`MemoryView` aren't either), `vite build` all clean.
+
+### Added — 2026-08-11 (Milestone 21: chat backbone — conversations/messages persistence)
+- New `Conversation`/`Message`/`MessageRole`/`NewMessageInput` types (`lib/store/types.ts`) and 4
+  new `JarvisStore` methods: `listConversations`, `createConversation`, `listMessages`,
+  `createMessage`. Implemented in both `LocalStore` (localStorage, same key-per-collection
+  pattern as projects/tasks) and `SupabaseStore` (matches the new migration's snake_case columns).
+- `packages/database/migrations/0002_chat.sql` — `conversations`/`messages` tables, permissive
+  single-user RLS, same pattern as `0001_init.sql`. Scoped to just this milestone; skills/
+  connections tables come with their own migration when M23/M24 start. **Not yet run against the
+  real Supabase project** — needs Leonardo to paste it into the SQL editor, same as M7.
+- New `hooks/useCurrentConversation.ts` — lazily creates/resolves one ongoing conversation,
+  localStorage-persisted id (same pattern as `useActiveProject`). `App.tsx`'s `handleCommand` now
+  persists every user/Jarvis exchange into it via `store.createMessage`, fire-and-forget so a
+  persistence failure can't block or fail a command that already succeeded.
+- Dashboard's Command Log UI (`DashboardView.tsx`) is deliberately unchanged — it still shows the
+  in-memory last-6 `LogEntry[]`. A real Chat view reading full persisted history is Milestone 22.
+- 5 new `localStore.test.ts` tests (create conversation + messages, chronological ordering,
+  title-derivation from the first user message, title not overwritten once set, message scoping
+  per conversation) — 46 tests total. `tsc -b`, `npm run test`, `vite build` all clean.
+
+### Planned — 2026-08-11 (Chat + Memory + Skills + Connections — plan only, no code yet)
+- Leonardo requested a chat tab, memory tab, and skills tab (pasted spec) instead of one-shot
+  orders JARVIS doesn't remember between commands. Per the spec's own instruction, inspected the
+  current implementation and docs first, then wrote the full structured integration plan at
+  `CHAT_MEMORY_SKILLS_CONNECTIONS_PLAN.md` (current state, reusable components, required/database/
+  Obsidian/UI/voice changes, security considerations, proposed Milestones 21–29 with dependencies
+  and complexity). `TASKS.md`/`ROADMAP.md` updated to track it. No implementation, no schema, no
+  new views yet — awaiting approval before Milestone 21 starts.
+
+### Added — 2026-08-11 (Obsidian linked into the app: check-memory command + Memory view)
+- New `check-memory` command in `commandEngine.ts` — matches "check my memory" / "what's in my
+  memory" / "check my notes" (typed or spoken, same engine either way per spec §32). Prompts the
+  orchestrator's `claude` to read `~/Documents/Obsidian Vault`'s `Daily/`/`Inbox/`/`Notes/`
+  folders and summarize recent activity, flagging unprocessed `Inbox/` items. Read-only by prompt,
+  Level 1 in `permissions.ts`. Exact same no-new-Rust pattern as check-calendar/check-email/
+  check-github: no vault-reading code added to this app at all, since `claude` already has direct
+  filesystem access to the vault through its own tools.
+- New `MemoryView.tsx` replaces the Memory sidebar section's `NotBuiltView` placeholder — real
+  copy about the vault's actual structure, plus a "Check recent memory" button that calls the
+  exact same `check-memory` command path rather than duplicating prompt logic.
+- `StatusPanel`'s Obsidian row moved off a hardcoded `"not-wired"` onto the same dynamic
+  unverified/not-wired logic (`inTauri` check) the other systems already used — it's genuinely
+  reachable from the app now, for the first time since M6 was built.
+- Also fixed while auditing that panel: Claude/Voice/GitHub/Supabase had all been confirmed live
+  earlier this session (real research/calendar/email/GitHub/voice/Supabase results in the actual
+  app) but `StatusPanel` still showed "WIRED, UNVERIFIED" for all four — the panel's own design
+  comment says this needs a manual flip to "connected" once verified, and that flip never
+  happened. Fixed: all four now show "CONNECTED" (still gated on actually running inside Tauri,
+  so a plain browser preview can't inherit the claim).
+- `system-status`'s and `help`'s spoken/typed responses updated to mention Obsidian/check-memory
+  instead of the old "Obsidian isn't wired into the app directly" line.
+- 2 new `commandEngine.test.ts` tests (42 total, up from 40). `tsc -b`/`vite build` both clean.
+  Not yet live-confirmed in the running app.
+
+### Added — 2026-08-11 (active project selection + research linking, interim feedback for slow commands)
+- New `useActiveProject` hook (`apps/desktop/frontend/src/hooks/useActiveProject.ts`):
+  localStorage-persisted selection of which single project JARVIS treats as "the one we're
+  working on now" — distinct from each `Project.status` field, which is an independent per-project
+  lifecycle value, not a UI-level selection. Same persistence pattern as `useTheme`/`useVoiceSettings`.
+- `ProjectsView` gained a "Set Active" / "Active" control per project card; deleting the currently
+  active project clears the selection instead of leaving `useActiveProject` pointing at a dangling
+  id. `DashboardView`'s "Active Project" panel — previously hardcoded dead text since Milestone 3 —
+  now shows the real selected project's name and status.
+- `commandEngine.ts`'s `CommandContext` gained an optional `activeProject: { name: string } | null`
+  field. The `research` command's orchestrator prompt now asks Claude to mention the active
+  project by name in both the saved note and its reply when one is set — closes the gap
+  `ROADMAP.md`'s M16 row named explicitly ("research results linked back into a specific project").
+  No new folder-structure conventions invented; findings still land in the vault-wide `Notes/`
+  folder, just with real project context in the content itself.
+- `App.tsx`'s `handleCommand` now starts a 6-second timer for any orchestrator-routed command
+  (`research`/`continue-project`/`check-calendar`/`check-email`/`check-github`/`ask`); if it fires
+  before the real response lands, an interim "Still working on that…" line appears above the
+  Command Log, cleared the moment the actual response arrives. Motivated by real numbers, not a
+  guess: `scripts/benchmark_orchestrator.sh` measured synchronous commands taking 12–44 seconds
+  live (2026-08-11) with zero feedback beyond the `JarvisCore` animation — for voice especially,
+  tens of seconds of silence reads as broken, not working. Doesn't affect `continue-project`'s
+  background-mode path, which already responds in ~1s with its own immediate feedback.
+- 2 new `commandEngine.test.ts` tests (40 total, up from 38). `tsc -b`/`vite build` both clean.
+  Not yet live-confirmed in the running app — frontend-only change, verified via the automated
+  test suite and type/build checks, same as every other Cowork-side change this project makes
+  without `cargo`.
+
+### Fixed, not yet live-confirmed — 2026-08-10 (JARVIS talking in a loop, reporting things Leonardo never said)
+- Reported live by Leonardo. Root cause: `listen_loop.py`'s `wait_while_speaking()` guard was
+  only checked once, before opening the mic's `sd.RawInputStream` for wake-word listening — once
+  the stream was open, `wake_callback` fired on every audio chunk for as long as the stream
+  stayed open, with no re-check of `speaking.flag`. Since the loop reopens the mic almost
+  immediately after finishing a transcript — well before `speak_daemon.py`'s up-to-2s queue poll
+  notices the new response and starts `say` — the mic was frequently already open and listening
+  *during* JARVIS's own reply. openWakeWord isn't reliable enough to never false-positive on
+  arbitrary speech, so JARVIS's own voice could trigger a false wake, record 5s of itself still
+  talking, transcribe that back as a "command" via the `ask` fallback, and speak the response —
+  repeating indefinitely, each cycle reporting a garbled version of what it had just said as
+  something Leonardo supposedly said.
+- Fix: `wake_callback` now checks `SPEAKING_FLAG.exists()` and returns immediately (skipping
+  prediction) on every chunk, not just once at stream-open time — closes the gap regardless of
+  when the mic stream happened to open relative to the flag being set.
+- Python-only change (`System/voice/listen_loop.py`, in the Obsidian vault, not the git repo) —
+  made directly from the Cowork session since no Rust/cargo was needed. Not yet confirmed live;
+  needs a real mic session to verify the loop actually stops. See `TASKS.md`.
+
+### Fixed — 2026-08-10 (voice crash-recovery gap, handed off from the Cowork session)
+- `HANDOFF_VOICE_CRASH_RECOVERY.md` (written by the Cowork-side session, which has no `cargo`
+  to fix Rust changes) described a real gap: `listen_loop.py`'s main loop only caught
+  `KeyboardInterrupt`, so any other exception killed the process outright, and `voice.rs` had
+  no crash detection or restart logic — voice went silently dead until the Microphone/Wake
+  word toggles were manually cycled.
+- `listen_loop.py`: the per-cycle body (wait-for-speaking, wake detection, recording,
+  transcription) is now wrapped in broad `except Exception` handling — logs the full traceback
+  to stderr, emits `{"event":"error"}` so the frontend sees it, sleeps 1s as backoff, and loops
+  again. `KeyboardInterrupt` is a `BaseException`, not `Exception`, so both the deliberate
+  wake-signal use and a real Ctrl+C/process kill still work exactly as before.
+- `voice.rs`: added `listener_restarts`/`speak_daemon_restarts` counters and
+  `listener_monitor_started`/`speak_daemon_monitor_started` flags to `VoiceState`, plus a
+  per-process background monitor thread (started lazily on first `start_voice_listener`/
+  `start_speak_daemon` call) that polls `Child::try_wait()` every 2s. An unexpectedly-dead
+  child gets its stale `Mutex` handle cleared and is auto-restarted with linear backoff
+  (1s, 2s, 3s, 4s, capped), up to 5 attempts before giving up. An explicit stop call clears the
+  handle synchronously first, so intentional stops are never mistaken for crashes.
+- New `VoiceEvent::Status` variant (Rust) / `{ event: "status" }` (frontend) for these
+  Rust-originated lifecycle notifications, separate from Python-reported `Error` events since a
+  successful reconnect isn't bad news. `useVoiceListener`'s `VoiceCallbacks` gains `onStatus`;
+  `App.tsx` logs status messages to the Command Log without forcing the error visual state.
+- 2 new Rust tests (`parses_a_status_event`, `backoff_grows_then_caps_at_four_times_base`) —
+  22 Rust total. 38 frontend tests unchanged (this slice is Rust + one new frontend event
+  variant with no new frontend logic to unit test beyond the existing plumbing). `cargo build`/
+  `cargo test`, `tsc -b`/`vite build` all clean; relaunched `cargo tauri dev` with the fix
+  loaded.
+- `ROADMAP.md`, `TASKS.md` updated; `HANDOFF_VOICE_CRASH_RECOVERY.md` deleted per its own
+  instructions once the fix landed.
+
+### Fixed — 2026-08-10 (JARVIS never asked Claude anything outside 9 fixed commands)
+- Reported live by Leonardo: JARVIS wasn't "asking Claude back" for what he said. Root cause:
+  `commandEngine.ts`'s `parseCommand` had no general fallback — anything not matching one of
+  9 rigid patterns hit a hardcoded "Not implemented yet" and never reached the orchestrator,
+  affecting typed input equally, not just voice.
+- Added a new `ask` command kind: unrecognized (non-empty) input now routes through the
+  orchestrator as a direct message to Claude. Prompt explicitly scoped read-only-by-instruction
+  (told to describe rather than act on anything consequential) since this path has no
+  approval-dialog surface. Level 1 in `permissions.ts`, consistent with the other
+  orchestrator-routed read-only commands.
+- Fixed two now-stale hardcoded response strings found while in there: `system-status` claimed
+  everything reads "NOT WIRED YET" (no longer true after the StatusPanel fix below), and `help`
+  didn't mention the new fallback exists.
+- 5 new tests (38 total), `tsc -b`/`vite build` verified.
+
+### Fixed — 2026-08-10 (stale System Status panel)
+- `StatusPanel.tsx` hardcoded "NOT WIRED YET" for every system since Milestone 4 and was never
+  updated as Supabase/voice/orchestrator/GitHub actually got built and wired in. Added a real
+  "WIRED, UNVERIFIED" status for things that are genuinely coded and unit-tested but never
+  confirmed via a live human click/voice test — detected dynamically where possible (Tauri
+  runtime presence, Supabase env var presence) so it can't lie in a plain browser preview.
+  Obsidian correctly stays "not wired" — nothing in the app talks to it directly.
+
+### Found, documented, not yet fixed — 2026-08-10 (voice reliability gap)
+- `listen_loop.py`'s main loop only catches `KeyboardInterrupt`; any other exception kills the
+  process outright, and `voice.rs` has no restart/health-check logic — voice goes silently dead
+  until the Microphone/Wake word toggles are manually cycled. Needs a `cargo`-equipped session
+  to fix properly (broad exception handling in the Python loop, and/or crash detection +
+  auto-restart with backoff in `voice.rs`). Tracked in `TASKS.md`.
+
+### Fixed — 2026-08-10 (voice feedback loop: JARVIS hearing itself speak)
+- Reported live by Leonardo: after any spoken error reply, JARVIS would "start listening to
+  itself and reporting tons and tons of errors" -- a classic voice-assistant feedback loop.
+  Root cause: `listen_loop.py`'s wake-word stream re-opens immediately after handling a
+  transcript, with no coordination with `speak_daemon.py` -- so the mic picks up JARVIS's own
+  TTS output through the speakers, which can re-trigger detection and cascade.
+- Fixed with a file-based mute flag in `System/voice/` (both scripts already live outside
+  this repo, in the Obsidian vault): `speak_daemon.py` touches `speaking.flag` before calling
+  `speak()` and removes it ~0.4s after playback ends (a short tail for room echo/speaker
+  decay); `listen_loop.py` now calls `wait_while_speaking()` at the top of every loop
+  iteration, blocking until the flag clears before reopening the wake-word stream. Both sides
+  guard against the other crashing mid-speech: `speak_daemon.py` clears any stale flag from a
+  previous run on startup, and `listen_loop.py` ignores a flag older than 30s (no real
+  utterance takes that long) rather than muting forever.
+- `listen_loop.py`'s module docstring updated: it's genuinely confirmed live now (wake
+  detection, transcription, and this fix all exercised for real), not just syntax-checked.
+
+### Fixed — 2026-08-10 (voice loop end-to-end: wake phrase not stripped, duplicate event handling)
+- Live test with Leonardo: said "Hey Jarvis, status", got a spoken reply of "not implemented
+  yet ... see ROADMAP.md" **twice**. Two separate real bugs, both fixed:
+  1. `commandEngine.ts`'s `normalize()` didn't strip a leading wake phrase, so a transcript
+     like "hey jarvis status" (whisper sometimes includes it) never matched any command
+     pattern. Added a `WAKE_PHRASE` regex stripped in `normalize()`, plus a case-preserving
+     `stripWakePhrase()` used everywhere a name/topic is re-extracted from the original-cased
+     input (`delete-project`/`research`/`continue-project` previously would have kept failing
+     to match even after this fix, since they re-match against `input.trim()` directly).
+  2. `useVoiceListener.ts` leaked a duplicate `voice-event` listener under React 18
+     StrictMode's dev-mode double-invoke (mount -> cleanup -> mount again): if the effect's
+     cleanup ran before its async `listen()` call resolved, the old code just skipped setup
+     without unregistering the listener it had just received -- leaving two active listeners
+     both handling every event. Now the async callback unregisters immediately if it finds
+     itself already cancelled by the time `listen()` resolves.
+- 4 new frontend tests for the wake-phrase stripping (both the lowercase-`text` path and the
+  case-preserving `stripWakePhrase` path) -- 35 total, all passing. `tsc -b`/`vite build` clean.
+- Confirms the rest of the voice pipeline (wake detection, transcription, Rust event parsing/
+  forwarding) is working correctly live -- both bugs were purely in command-text matching and
+  listener registration, not the audio/transcription/IPC path itself.
+
+### Fixed — 2026-08-10 (voice pipeline confirmed live, one real bug found and fixed)
+- Leonardo launched `cargo tauri dev` from his own Terminal per the previous fix's
+  instructions -- confirmed the sandboxed-launch theory: this time PortAudio initialized
+  fine, faster-whisper loaded, and **the wake word actually detected live** ("Hey Jarvis"
+  worked). It then crashed: `TypeError: Object of type float32 is not JSON serializable`.
+  openWakeWord's prediction scores are numpy `float32`, which `json.dumps()` can't
+  serialize -- `listen_loop.py`'s `wake_callback` now casts to a native Python `float`
+  before storing it, so the wake event's JSON line can actually be emitted.
+- This also confirms the Rust side of the pipeline (`voice.rs`'s line-by-line JSON parsing,
+  `App.tsx`'s `voice-event` handling) needed no changes -- the crash was entirely on the
+  Python side, before anything reached Rust.
+- Next: relaunch and confirm the full loop (wake -> record -> transcribe -> command ->
+  spoken reply) end to end.
+
+### Changed — 2026-08-10 (voice process stderr no longer discarded)
+- `voice.rs`: `start_voice_listener`/`start_speak_daemon` previously ran with
+  `.stderr(Stdio::null())`, silently discarding any progress/error output from the Python
+  scripts. Found needed while diagnosing a real hang live: `listen_loop.py` sat at ~0% CPU in
+  a "sleeping" state for over a minute with no wake-word prompt from macOS ever appearing --
+  consistent with `import sounddevice` hanging on PortAudio init without real CoreAudio access,
+  the same failure mode hit earlier in this session's own sandboxed shell (`VOICE_SETUP.md`).
+  Root cause: `cargo tauri dev` was launched via the assistant's sandboxed Bash tool, so every
+  child process it spawns -- including `listen_loop.py` -- inherits that same restriction.
+  Not fixable from that side; the real fix is launching `cargo tauri dev` from a normal
+  Terminal window instead. Now `stderr` is inherited (voice listener) or both streams
+  inherited (speak daemon) so this kind of hang is visible in the terminal output instead of
+  invisible, whoever launches it next.
+- `cargo test` still 20/20 passing.
+
+### Fixed — 2026-08-10 (missing Tauri capabilities file)
+- Found live with Leonardo: toggling voice on produced this error in the Command Log (visible
+  thanks to the error-surfacing fix earlier today) --
+  `Failed to start voice listener: event.listen not allowed. Permissions associated with this
+  command: core:event:allow-listen, core:event:default`. Root cause: `apps/desktop/backend` had
+  **no `capabilities/` directory at all** -- the generated effective capabilities were `{}`.
+  Custom `#[tauri::command]`s (`run_orchestrator`, `start_voice_listener`, etc.) aren't
+  ACL-gated so they worked anyway, which is why this went unnoticed until the first call to
+  `@tauri-apps/api/event`'s `listen()` (added today for the voice pipeline).
+- Added `apps/desktop/backend/capabilities/default.json` granting `core:default` (the standard
+  Tauri v2 scaffold default, which bundles `core:event:default` along with window/webview/app/
+  path/image/resources/menu/tray) to the main window. Verified the fix is real, not cosmetic:
+  `cargo build` regenerates `target/debug/build/*/out/capabilities.json` from empty `{}` to the
+  actual granted permission set.
+- `cargo test` still 20/20 passing; relaunched `cargo tauri dev` clean with the fix in place.
+
+### Added — 2026-08-10 (Milestone 10 background-mode path)
+- `orchestrator.rs`: 4 new Tauri commands — `run_orchestrator_background` (`claude --bg
+  <prompt>`, returns immediately with a job id + session id), `poll_orchestrator_background`
+  (`claude agents --json --all`, returns `running`/`done`/`failed`/`not_found`),
+  `fetch_orchestrator_background_result` (fetches the real result once done), and
+  `stop_orchestrator_background` (`claude stop <id>`, cleanup).
+- Real CLI behavior verified by hand in a terminal before writing any of this (a genuine
+  trivial background job, "reply with the word pong", launched/polled/fetched/stopped end to
+  end): `--bg` conflicts with `-p`/`--output-format` so its launch confirmation is plain text,
+  not JSON; `claude agents --json --all` never exposes result text even after `claude stop`;
+  `claude logs <id>` is a raw ANSI terminal capture, not parseable output. The result is
+  fetched by resuming the finished session with `--fork-session` (doesn't disturb the still-
+  alive background session) and asking it to repeat its last answer with `--output-format
+  json` — reuses the already-tested `parse_claude_output`. Full design rationale and the
+  known cost/fidelity caveat of that approach are in `AGENT_SYSTEM.md`.
+- `commandEngine.ts`: `continue-project` now calls `ctx.runOrchestratorBackground` when
+  available and returns an immediate "started as a background job" response instead of
+  blocking; falls back to the old synchronous path when it isn't (e.g. in tests), so the
+  existing test for that path still passes unchanged. The other four orchestrator-routed
+  commands are untouched — they're quick reads, sync is still the right call for them.
+- `App.tsx`: `runOrchestratorBackground` + `pollBackgroundJob` — polls every 5s, and on
+  completion fetches the real result and appends a second Command Log entry, then stops the
+  background job for cleanup.
+- 10 new Rust unit tests for the parsing logic (`parse_bg_launch`, `find_session_id`,
+  `parse_bg_status`), using the **real captured output** from the hand-verification above as
+  fixtures rather than guessed JSON shapes. 20 Rust tests total, all passing. 2 new frontend
+  tests (background routing, background launch failure) — 33 frontend tests total, all
+  passing. `tsc -b`, `vite build`, and the live `cargo tauri dev` session all still clean.
+- Not verified: an actual `continue project <name>` clicked through the live app window —
+  this session has no WindowServer access to its own launched window (same gap noted at
+  Milestones 7 and 9).
+- `AGENT_SYSTEM.md`, `ROADMAP.md`, `TASKS.md` updated.
+
+### Added — 2026-08-10 (Milestone 9 wired into Tauri)
+- New `apps/desktop/backend/src/voice.rs`: 5 Tauri commands —
+  `start_voice_listener`/`stop_voice_listener` spawn/kill a new `listen_loop.py` (combines
+  `wake_listener.py` + `transcribe.py`'s already-verified logic into one continuous
+  wake-then-transcribe-then-loop-back process) via `std::process::Command`, forwarding its
+  line-delimited JSON stdout events to the frontend as a `voice-event` Tauri event.
+  `start_speak_daemon`/`stop_speak_daemon` spawn/kill `speak_daemon.py` the same way.
+  `queue_speech` writes text into `System/voice/queue/` for the daemon to pick up. Chose direct
+  process spawning over `tauri-plugin-shell`'s sidecar mechanism (built for cross-compiled
+  binaries, doesn't fit a project-local Python venv) — see `VOICE_SETUP.md`.
+- `main.rs`: registers `voice::VoiceState` and the 5 new commands alongside the existing
+  `run_orchestrator`.
+- New `System/voice/listen_loop.py` in the vault: continuous loop, one JSON event per stdout
+  line (`wake`/`transcript`/`error`). `wake_listener.py`/`transcribe.py` untouched, still
+  individually runnable.
+- Frontend: new `useVoiceListener` hook starts/stops the Rust-side processes as Voice
+  settings' "Microphone enabled" + "Wake word" toggles both go on, and listens for
+  `voice-event`. `App.tsx` feeds `transcript` events into the same `parseCommand`/
+  `executeCommand` the typed command bar uses, and queues the response to be spoken via
+  `queue_speech`. `VoiceSettings`/`DashboardView` now take `settings`/`update` as props
+  (lifted from a component-local hook call to App.tsx) so App.tsx can react to the same state.
+  The wake-word toggle is no longer permanently disabled — it's gated on "Microphone enabled"
+  instead.
+- 7 new Rust unit tests for `parse_voice_line` (wake/transcript/error events, blank lines,
+  malformed JSON, unrecognized event tags) — all pure-function, no mic needed. 10 Rust tests
+  total, all passing. 31 frontend tests, `tsc -b`, `vite build` all still pass. `cargo tauri
+  dev` hot-reloaded every change (backend and frontend) with no compile errors.
+- Not verified: `listen_loop.py` live. This session's sandboxed shell hangs on `import
+  sounddevice` (no CoreAudio access) the same way it has no WindowServer access for GUI
+  interaction (see M7 above) — syntax-checked only (`py_compile`, `ast.parse`). One manual
+  check left for Leonardo, documented in `VOICE_SETUP.md`/`TASKS.md`.
+- `ROADMAP.md`, `TASKS.md`, `VOICE_SETUP.md` updated to reflect exactly what was and wasn't
+  verified.
+
+### Added — 2026-08-10 (Milestone 7 backend write path confirmed)
+- Killed a stale Vite dev server left holding port 1420 from an earlier session, relaunched
+  `cargo tauri dev` clean: frontend on :1420, Rust compiled, `target/debug/jarvis` running with
+  no errors.
+- Verified the real Supabase write path end-to-end via direct REST calls that mirror
+  `SupabaseStore.createProject`/`listProjects`/`deleteProject` exactly (same table, same anon
+  key from `.env.local`, same RLS policy): insert succeeded, select read the row back, delete
+  cleaned it up. Confirms schema + RLS + anon key are all correctly wired — `getStore()` will
+  resolve to `SupabaseStore` since `isSupabaseConfigured()` is true.
+- Not verified: an actual UI click-through, since this session has no WindowServer/screen-
+  recording access to see or interact with its own launched window (same limitation noted at
+  Milestone 3). Left `cargo tauri dev` running for Leonardo to do the 10-second manual check.
+- `ROADMAP.md`, `TASKS.md` updated to reflect exactly what was and wasn't verified.
+
+### Added — 2026-08-10 (Milestone 7 fully provisioned)
+- Real Supabase project created by Leonardo (`Leo1511-byte's Project`, free tier, AWS
+  eu-central-1). Migration `packages/database/migrations/0001_init.sql` run successfully in the
+  SQL editor: 5 tables (`projects`/`tasks`/`task_dependencies`/`activity_events`/`settings`) +
+  RLS policies with permissive single-user access.
+- `apps/desktop/frontend/.env.local` filled in with the real `VITE_SUPABASE_URL` and
+  `VITE_SUPABASE_ANON_KEY`. Store will switch from local storage to Supabase automatically on
+  next app launch — not yet re-verified live.
+- `ROADMAP.md`, `TASKS.md` updated: Milestone 7 marked done.
+
+### Added — 2026-08-10 (Milestone 9 fully confirmed live)
+- `wake_listener.py` fixed and confirmed detecting "Hey Jarvis" live (score 0.92): switched
+  openWakeWord to `inference_framework="onnx"` (the default `tflite` backend has no reliable
+  Apple Silicon wheel) and added an automatic `download_models()` call (the pip package ships
+  code only, not the model weight files).
+- `speak_daemon.py` rewritten to support two TTS engines via `config.json`'s new `tts_engine`
+  key: `macos_say` (new default — free, fully offline, macOS's built-in `say` command, no API
+  key) and `elevenlabs` (original path, kept intact). Confirmed working live with real audio.
+- Root cause for the ElevenLabs path: its free API tier blocks TTS generation entirely
+  regardless of voice (402 `paid_plan_required`), confirmed both via web search and by hitting
+  it live with a Voice Library voice and a premade voice. Not just a Voice Library restriction
+  as ElevenLabs' own error message implies.
+- `config.json`/`config.example.json` updated with `tts_engine` and `macos_say_voice` keys and
+  comments documenting the free-tier limitation and how to switch back to ElevenLabs later.
+- `ROADMAP.md`, `TASKS.md` updated: Milestone 9 marked done, no longer a blocked item.
+
+### Added — 2026-08-09 (Milestones 11, 14, 15, 16 built; 17 reframed)
+- `commandEngine.ts`: three new command kinds — `continue-project` (M11, spec §62's full
+  workflow as a single orchestrator prompt), `check-calendar` (M14), `check-email` (M15) — plus
+  the `research` (M16) command committed earlier. All four call the same
+  `run_orchestrator` Tauri command from M10 with a different, purpose-built prompt; the
+  read-only three (research/calendar/email) explicitly tell the orchestrator not to send,
+  draft, label, or modify anything. No new Rust code required — `run_orchestrator`'s generic
+  `prompt: String` interface was already enough.
+- `permissions.ts`: classified the three new kinds — research/check-calendar/check-email as
+  Level 1 (explicitly read-only), continue-project as Level 2 (writes to a project repo, but
+  traceable via git history and the orchestrator's session id, not gated per-action).
+- `runOrchestratorOrExplain` helper added to `commandEngine.ts` so the "no orchestrator
+  connection" / error-handling logic exists once instead of copy-pasted across four commands.
+- 9 new tests (4 parsing, 5 execution) in `commandEngine.test.ts`; 2 new tests in
+  `permissions.test.ts`. 29 total frontend tests passing. `tsc -b`/`vite build` verified.
+- `AGENT_SYSTEM.md` rewritten: Milestone 17's original "specialist agents" design assumed
+  separate agent processes/personas behind a routing table. What actually got built is simpler
+  — four prompt templates over one orchestrator call — and there's no evidence yet that
+  separate personas would behave differently than a clear, scoped prompt each time. Documented
+  as the real (simpler) architecture rather than building the originally-sketched routing table
+  just to match the spec's shape.
+- `COMMANDS.md`, `ROADMAP.md` updated to describe all four orchestrator-routed commands and
+  their permission levels.
+- Committed local Claude Code's independently-completed M10 slice + verification work
+  (`dd3bb38`) after finding it uncommitted in the working tree: real `cargo tauri dev` launch,
+  `transcribe.py` verified end-to-end, `gh auth`/Calendar MCP/Gmail MCP all verified locally,
+  a real regression fix (Node 25's native `localStorage` breaking 6 tests since the vitest 2→4
+  bump). Re-verified the frontend side independently before committing rather than trusting the
+  docs' claims at face value. Added `.claude/settings.local.json` to `.gitignore`.
+- Milestone 12 (GitHub) closed the same way as 14/15: `check my github` / `check my prs` /
+  `check my pull requests` / `check my issues` route through the orchestrator with a prompt
+  telling `claude` to use its already-authenticated `gh` command directly — no GitHub MCP server
+  needed. Level 1, explicitly read-only ("don't create, comment on, merge, or close anything").
+  4 new tests — 31 total passing. `MCP_SETUP.md` updated with the general lesson: an MCP server
+  is only needed when the orchestrator can't already reach a capability some other way.
+
+### Added — 2026-08-09
+- Initial repo scaffold: `apps/`, `packages/{ui,core,agents,memory,tools,voice,permissions,
+  database,integrations,automations}`, `shared/`, `config/`, `tests/`, `scripts/`, `docs/`.
+- `.gitignore` covering `.env`, keys, tokens, credentials, and the existing vault's
+  `System/voice/config.json`.
+- Full docs set: `README.md`, `ARCHITECTURE.md`, `ROADMAP.md`, `TASKS.md`, `SECURITY.md`,
+  `INSTALLATION.md`, `MCP_SETUP.md`, `VOICE_SETUP.md`, `OBSIDIAN_SETUP.md`,
+  `DATABASE_SCHEMA.md`, `AUTOMATIONS.md`, `COMMANDS.md`, `AGENT_SYSTEM.md`, `UI_DESIGN.md`,
+  `TESTING.md`, `TROUBLESHOOTING.md`, `SYSTEM_INSPECTION_PROMPT.md`.
+- Git repository initialized.
+
+### Added — 2026-08-09 (later)
+- Milestone 1 (system inspection) completed via local Claude Code; report saved to
+  `~/Documents/Obsidian Vault/System/SYSTEM_INSPECTION_REPORT.md`.
+- Stack decided from real data: Tauri (Rust install pending, Milestone 3), Supabase Cloud,
+  launchd/cron instead of n8n initially, local Claude Code confirmed as orchestrator.
+- Vault path corrected to `~/Documents/Obsidian Vault`, confirmed by Leonardo.
+- Risks logged: tight disk (~22 GiB free), prior unrelated "Jarvis"-named app remnants on disk,
+  GitHub auth is HTTPS not SSH, two coexisting Claude Code installs, unverified mic permission
+  state, repo currently sitting inside a Claude session artifacts folder (needs relocating).
+
+### Added — 2026-08-09 (Milestone 3/4)
+- `apps/desktop/frontend`: Vite + React + TypeScript app. Builds clean (`npm run build`
+  verified in-session). Theme token system (`src/theme.css`) implementing Crimson Command,
+  Neon Void, Holographic Core, and Obsidian, persisted via `localStorage`. `JarvisCore`
+  component with all 10 spec states (idle through offline) as CSS animations, respecting
+  `prefers-reduced-motion`. Sidebar nav shell (12 sections, no routing yet), disabled command
+  bar placeholder, status panel that honestly reports "NOT WIRED YET" instead of faking
+  connection state.
+- `apps/desktop/backend`: Tauri v2 config (`Cargo.toml`, `tauri.conf.json`, `main.rs`).
+  **Not compiled or verified** — written without a Rust toolchain available; see its README for
+  the real verification steps before trusting it.
+
+### Added — 2026-08-09 (Milestone 3 verification + Milestone 6)
+- Local Claude Code compiled the Tauri backend: `apps/desktop/backend/target/debug/jarvis` is a
+  real Mach-O arm64 binary. It fixed a redundant `[lib]` block in `Cargo.toml` and relative
+  frontend paths in `tauri.conf.json`, and generated app icons (checked: not the Marvel/Iron Man
+  image flagged earlier).
+- Repo relocated to `~/Developer/jarvis`.
+- Milestone 6 (Obsidian memory) built and verified in `~/Documents/Obsidian Vault`: `JARVIS.md`,
+  `System/memory.md`, all 3 scripts (run-tested against real seeded content, not just written),
+  `Inbox/`/`Daily/`/`Notes/`/`Briefs/` populated. Ran the literal spec §12 connection test.
+
+### Added — 2026-08-09 (Milestone 5)
+- `apps/desktop/frontend/src/commandEngine.ts`: real parser (`parseCommand`) and executor
+  (`executeCommand`) — theme switching and status are real actions, everything else honestly
+  returns "not implemented yet" instead of a fabricated response.
+- 5 unit tests in `commandEngine.test.ts`, passing.
+- `CommandBar` enabled and wired to the engine; `App.tsx` shows a live command log and drives
+  the Jarvis Core through processing/success/error states from real command execution.
+- `COMMANDS.md` rewritten to separate what's actually working (desktop command bar + the
+  pre-existing Obsidian-skill trigger phrases) from the spec's target command list.
+- Noted: `npm audit` reports a moderate esbuild advisory in the vitest/vite dev toolchain
+  (dev-server only) — not fixed, tracked in `TASKS.md`.
+
+### Added — 2026-08-09 (Milestone 9, partial)
+- Voice stack decided: openWakeWord (local wake word), faster-whisper (local STT), ElevenLabs
+  (cloud TTS, behind an interchangeable interface). Rationale in `VOICE_SETUP.md`.
+- `~/Documents/Obsidian Vault/System/voice/{wake_listener,transcribe,speak_daemon}.py` written,
+  syntax-checked with `py_compile`. **Not run** — no microphone/audio hardware in the sandbox
+  that wrote them. `requirements.txt`, `config.example.json`, `README.md` included.
+- `JARVIS.md` corrected — it previously implied this folder already existed; it didn't until
+  today.
+- Frontend: `useVoiceSettings` (persisted toggles), `useAudioDevices` (real device enumeration +
+  permission status via Web APIs), `VoiceSettings` panel added to the dashboard. Wake-word
+  toggle is explicitly disabled with a tooltip explaining why, rather than looking functional
+  when it isn't. `npm run test`/`build` verified passing.
+
+### Added — 2026-08-09 (Milestones 7 + 8)
+- `packages/database/migrations/0001_init.sql`: real schema (projects, tasks,
+  task_dependencies, activity_events, settings) with RLS enabled.
+- `apps/desktop/frontend/src/lib/supabaseClient.ts`, `store/supabaseStore.ts`: real Supabase
+  client and store implementation, matching the migration exactly. Untested — no project
+  provisioned (account creation isn't something Claude does for you).
+- `store/localStore.ts`: the store that's actually active right now, backed by localStorage.
+  6 tests passing.
+- `store/index.ts`: `getStore()` picks Supabase or local automatically based on whether
+  `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` are set.
+- `ProjectsView.tsx`, `TasksView.tsx`: real CRUD UI. Sidebar nav (`App.tsx`) now actually routes
+  between Dashboard/Projects/Tasks instead of always showing the dashboard regardless of
+  selection — that gap existed since Milestone 3 and is fixed now.
+- `INSTALLATION.md`, `DATABASE_SCHEMA.md` updated with the exact steps to provision Supabase.
+
+### Fixed — 2026-08-09 (npm audit)
+- `apps/desktop/frontend`: `npm audit` actually reported 5 findings (esbuild moderate, vite high
+  path-traversal, vitest **critical** — arbitrary file read/execute via its UI server — plus 2
+  more in the same dependency chain), not just the single moderate esbuild advisory previously
+  noted. All dev-only (not shipped in the production build), but the severity was undersold.
+  `npm audit fix --force` bumped `vitest` `^2.1.8` → `^4.1.10`; `vite` stayed `^6.0.3`. Re-ran the
+  full verification after the bump: 16 tests pass, `tsc -b` and `vite build` both pass. `npm
+  audit` now reports 0 vulnerabilities.
+
+### Added — 2026-08-09 (Milestones 10, 11, 12, 14, 15, 16, 17, 19, 20 — architecture pass)
+- `ROADMAP.md`: replaced bare "Not started" rows with real design decisions and specific
+  blockers for each remaining milestone, distinguishing "blocked on a local orchestrator process
+  that doesn't exist yet" (M10, M11, M16, M17) from "blocked on local MCP config, not
+  authorization" (M14, M15) from "blocked on you confirming M3's visual launch" (M20).
+- `MCP_SETUP.md` corrected: Calendar and Gmail MCP connectors are already connected at the
+  Cowork account level (checked directly) — the real gap is that Cowork's connectors don't
+  transfer to the local runtime that will actually run as JARVIS, not missing authorization.
+- `TESTING.md`: added an actual coverage summary (16 tests passing, what's verified against real
+  systems vs. syntax-checked only vs. not applicable yet) instead of leaving it as an empty plan.
+- No new application code in this pass, deliberately — routing/integration code for M10/M11/
+  M16/M17 needs a local orchestrator process to run against; writing it now would be untestable
+  and would repeat the "renders but isn't connected" mistake called out by spec principle #6.
+
+### Added — 2026-08-09 (Milestone 13)
+- `~/Documents/Obsidian Vault/System/scripts/morning_brief.py`: generates `Briefs/YYYY-MM-DD.md`
+  from today's Daily note, open tasks across `Daily/`/`Notes/`/`Inbox/`, Inbox backlog count, and
+  the last 5 `System/memory.md` entries. Run manually against the real vault (not just syntax-
+  checked) — produced a correct brief. Explicitly states it doesn't cover calendar/email.
+- `packages/automations/launchd/dev.leonardo.jarvis.morningbrief.plist`: daily 7am launchd job.
+  Written and documented (`packages/automations/launchd/README.md`), **not loaded** —
+  `launchctl load` is left to the user, not run automatically.
+- Corrected `AUTOMATIONS.md`, which incorrectly stated a Cowork scheduled task already generated
+  the brief; no such task existed (verified via `list_scheduled_tasks`). Also updated
+  `JARVIS.md`'s "morning brief" trigger phrase and vault map to match reality.
+
+### Added — 2026-08-09 (Milestone 18)
+- `apps/desktop/frontend/src/permissions.ts`: `PermissionLevel` (1/2/3) and `permissionLevelFor`,
+  classifying command kinds per spec §54. Unknown kinds default to the strictest level.
+- `store/types.ts`, `localStore.ts`, `supabaseStore.ts`: added `deleteProject`, the first Level 3
+  action wired end-to-end. `localStore` cascades to delete the project's tasks, matching the
+  migration's `on delete cascade`.
+- `components/ApprovalDialog.tsx` + `.css`: real modal implementing spec §55's
+  ACTION/CONTEXT/REASON/RISK format with Approve/Deny — no default action, no auto-approve.
+- `hooks/useApproval.ts`: promise-based approval flow (`requestApproval` resolves once the user
+  responds) so call sites can `await` a real decision instead of assuming yes.
+- `ProjectsView.tsx`: added a Delete button per project, gated through `useApproval` — the store's
+  `deleteProject` only runs after the user clicks Approve in the dialog.
+- `commandEngine.ts`: added `delete-project` parsing (`"delete project <name>"` /
+  `"remove project <name>"`), but `executeCommand` deliberately does not perform the deletion —
+  it tells the user to use the Projects view instead, since a typed command has no real
+  confirmation surface to gate a Level 3 action behind.
+- 5 new tests (3 in `permissions.test.ts`, 2 in `commandEngine.test.ts`) — 16 total passing.
+  `tsc -b` and `vite build` both verified.
+
+### Verified — 2026-08-09 (local Claude Code session: launch + voice + MCP)
+- Milestone 3: `cargo tauri dev` run for real (previously only `cargo build` had been verified).
+  Compiled in 2.79s, Vite served the frontend on `:1420`, `target/debug/jarvis` launched and came
+  to the foreground.
+- Milestone 9: voice script dependencies installed into an isolated `.venv` in `System/voice/`
+  (`uv venv` + `uv pip install -r requirements.txt`, 36 packages). `transcribe.py` confirmed
+  working end-to-end (mic → faster-whisper `small` → correct transcript), run directly by
+  Leonardo after several rounds of debugging established that driving real-time mic input
+  through an assistant's tool calls doesn't work — no live terminal for the user to react to, so
+  "speak now" prompts never land in time. `wake_listener.py` handed off the same way, result
+  pending. `speak_daemon.py` still blocked: `elevenlabs_api_key` in `config.json` is empty
+  (checked programmatically, length 0, without ever printing the file's contents).
+- Milestones 14/15: corrected a second time. Called `list_calendars` and `list_labels` directly
+  from this local Claude Code session and got real data back — the Calendar/Gmail MCP connectors
+  are already configured and working locally, not just in Cowork as previously documented. Real
+  blocker for M14/15 is now purely the M10 orchestrator, not MCP config. `MCP_SETUP.md` and
+  `ROADMAP.md` updated.
+- Milestone 12: `gh auth status` confirms real, active HTTPS GitHub auth.
+- Spot-checked `~/Desktop/Jarvis.app` (gone), `~/plugins/jarvis` (unrelated Codex plugin dir),
+  `~/.Trash` (no `jarvis-desktop` remnants) — no bundle id collision risk.
+- Declined to run `launchctl load` for the morning-brief job even under a blanket "always allow"
+  grant from Leonardo — `packages/automations/launchd/README.md` states the reasoning
+  explicitly (a recurring job writing to the vault should start because the user turned it on),
+  and a general permission grant doesn't override a specific, documented project principle.
+  Left as a 3-line manual step.
+
+### Added — 2026-08-09 (Milestone 10, first real slice)
+- Scoped the orchestrator design with Leonardo before writing code: Tauri's Rust backend shells
+  out to the local `claude` CLI rather than a separate Agent SDK server, reusing existing auth
+  and the just-verified local MCP servers. Verified `claude -p --output-format json`,
+  `claude --bg`, and `claude agents --json` by hand in a terminal first.
+- `apps/desktop/backend/src/orchestrator.rs`: `run_orchestrator` Tauri command, runs
+  `claude -p --output-format json` via `tauri::async_runtime::spawn_blocking`, parses the result/
+  error/session id. 3 Rust unit tests.
+- `commandEngine.ts`: new `research <topic>` command kind, routed through an injected
+  `ctx.runOrchestrator` (keeps the engine testable without Tauri). `executeCommand` is now
+  `async`. 4 new tests; existing tests updated to `await`.
+- `App.tsx`: real `invoke("run_orchestrator", ...)` wiring via `@tauri-apps/api` (new dependency).
+- Fixed a real test regression from the vitest 2→4 bump (`5e2d7f9`): Node 25's experimental
+  native `localStorage`, on by default, was shadowing jsdom's and silently breaking 6
+  `localStore.test.ts` tests. `TASKS.md`'s prior "16 tests still pass" note for that commit was
+  wrong — fixed via `NODE_OPTIONS=--no-experimental-webstorage` in the `test` script.
+- Removed a stale `.git/index.lock` (70+ min old, no git process holding it, confirmed via `ps`)
+  that was blocking `git stash`/other git operations — likely left behind by GitHub Desktop.
+
+### Corrected vs. original spec
+- Runtime split documented: Cowork (this session) cannot run local system inspection, access
+  the microphone, or persist a background process. `ARCHITECTURE.md` now specifies a local
+  Claude Code / Agent SDK process as the actual JARVIS runtime.
+- `OBSIDIAN_SETUP.md` reconciles the spec's proposed vault structure with the vault that
+  already exists at `/Users/leonardo/obsidian`, instead of creating a conflicting parallel
+  structure.
