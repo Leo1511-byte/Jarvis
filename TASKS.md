@@ -121,6 +121,21 @@
       `gh *` wildcard, so write subcommands stay unapproved. Retested: "check my github" returned
       a real, correct result ("No open PRs or issues assigned to you... GitHub is clear right
       now"). Every orchestrator-routed command except `continue-project` is now confirmed live.
+- [x] 2026-08-11 — **Obsidian linked into the app — the gap Leonardo named directly ("everything
+      works, only obsidian isn't linked").** New `check-memory` command (`commandEngine.ts`): typed
+      "check my memory"/"check my notes", spoken the same way, or a button in a new `MemoryView`
+      (replacing the Memory sidebar section's `NotBuiltView` placeholder) all ask the
+      orchestrator's `claude` to read `~/Documents/Obsidian Vault`'s Daily/Inbox/Notes folders and
+      summarize what's there — same no-new-Rust pattern as check-calendar/check-email/check-github,
+      since `claude` already has direct filesystem access to the vault through its own tools.
+      `StatusPanel`'s Obsidian row moved off its hardcoded "not-wired" onto the same dynamic
+      unverified/not-wired logic the other systems use. While auditing that panel, also caught
+      that Claude/Voice/GitHub/Supabase had all been live-confirmed this session but were still
+      showing "WIRED, UNVERIFIED" instead of "CONNECTED" — the panel was designed to need a manual
+      flip once confirmed (see its own comment) and that flip never happened until now. Fixed all
+      four. 2 new commandEngine tests (42 total, up from 40), `tsc -b`/`vite build` both clean.
+      Not yet seen live in the running app — same "verified by tests, not by eyes yet" gap as the
+      other frontend-only work today.
 - [ ] **Last command still needing live confirmation with its exact phrasing:**
       **"continue project Ape War Game"** (matching the real project name, not "continue
       with..." — anything else falls through to the safer but non-dedicated `ask` path). Takes

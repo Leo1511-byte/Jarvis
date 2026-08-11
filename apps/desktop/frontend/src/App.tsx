@@ -14,6 +14,7 @@ import { getStore, type Project } from "./lib/store";
 import { DashboardView, type LogEntry } from "./views/DashboardView";
 import { ProjectsView } from "./views/ProjectsView";
 import { TasksView } from "./views/TasksView";
+import { MemoryView } from "./views/MemoryView";
 import { NotBuiltView } from "./views/NotBuiltView";
 
 // Synchronous orchestrator commands (research/check-calendar/check-email/
@@ -240,6 +241,8 @@ export default function App() {
         );
       case "Tasks":
         return <TasksView />;
+      case "Memory":
+        return <MemoryView runOrchestrator={runOrchestrator} />;
       default:
         return <NotBuiltView section={active} />;
     }

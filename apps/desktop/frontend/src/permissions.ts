@@ -32,6 +32,7 @@ export function permissionLevelFor(kind: string): PermissionLevel {
     case "check-calendar":
     case "check-email":
     case "check-github":
+    case "check-memory":
     case "ask":
       // Read/search/summarize, explicitly scoped as read-only (or, for
       // "ask", read-only-by-prompt: told not to take action, only to

@@ -13,6 +13,7 @@ describe("permissionLevelFor", () => {
     expect(permissionLevelFor("check-calendar")).toBe(1);
     expect(permissionLevelFor("check-email")).toBe(1);
     expect(permissionLevelFor("check-github")).toBe(1);
+    expect(permissionLevelFor("check-memory")).toBe(1);
     expect(permissionLevelFor("ask")).toBe(1);
   });
 

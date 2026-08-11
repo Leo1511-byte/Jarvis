@@ -32,24 +32,30 @@ function useSystems(): Array<{ name: string; status: Status }> {
   }, []);
 
   return [
-    // M10: orchestrator.rs's run_orchestrator is real and unit-tested, but
-    // no command bar command has actually been clicked through live yet.
-    { name: "Claude (local orchestrator)", status: inTauri ? "unverified" : "not-wired" },
-    // Nothing in the desktop app talks to the Obsidian vault directly --
-    // that's Claude's own file access, not app-level code. Genuinely
-    // not wired at the app level.
-    { name: "Obsidian", status: "not-wired" },
-    // M7: migration ran, REST insert/select/delete confirmed working
-    // directly, but the UI click-through (type a name, click Add, check
-    // the table editor) hasn't happened yet.
-    { name: "Supabase", status: isSupabaseConfigured() ? "unverified" : "not-wired" },
-    // M9: voice.rs spawns listen_loop.py/speak_daemon.py, 7 Rust tests
-    // pass, but the live wake-word-to-spoken-reply loop has never
-    // actually been exercised -- needs a real "Hey Jarvis" + reply.
-    { name: "Voice", status: inTauri ? "unverified" : "not-wired" },
-    // M12: routes through the same orchestrator as above using the
-    // authenticated gh CLI -- same unverified-in-the-live-window gap.
-    { name: "GitHub", status: inTauri ? "unverified" : "not-wired" },
+    // M10: confirmed live 2026-08-10/11 -- research/check-calendar/
+    // check-email/check-github/ask/continue-project all returned real
+    // results in the actual running app (see TASKS.md for each). Still
+    // gated on inTauri so a plain browser preview (vite dev, no Tauri
+    // backend) can't inherit a "connected" claim it hasn't earned.
+    { name: "Claude (local orchestrator)", status: inTauri ? "connected" : "not-wired" },
+    // M20 (2026-08-11): the last "not wired" system now has a real path
+    // in -- the check-memory command (see commandEngine.ts) asks the
+    // orchestrator's `claude` to read the vault directly, same pattern as
+    // Calendar/Email/GitHub. Unlike those, this is brand new and hasn't
+    // been exercised live yet, so it starts at "unverified" like they did
+    // before their own first live confirmation, not "connected".
+    { name: "Obsidian", status: inTauri ? "unverified" : "not-wired" },
+    // M7: confirmed live 2026-08-10 -- created a real project through the
+    // actual Projects UI, persisted and displayed correctly, in addition
+    // to the earlier direct-REST proof.
+    { name: "Supabase", status: isSupabaseConfigured() && inTauri ? "connected" : "not-wired" },
+    // M9: confirmed live 2026-08-10 -- real "Hey Jarvis" wake, transcript,
+    // and spoken reply, plus the self-talk feedback loop bug found and
+    // fixed after. Leonardo's own words: "the voice is perfect."
+    { name: "Voice", status: inTauri ? "connected" : "not-wired" },
+    // M12: confirmed live 2026-08-11 -- check my github returned a real
+    // result after a permission-gap fix (see TASKS.md).
+    { name: "GitHub", status: inTauri ? "connected" : "not-wired" },
   ];
 }
 

@@ -19,6 +19,7 @@ export type Command =
   | { kind: "check-calendar" }
   | { kind: "check-email" }
   | { kind: "check-github" }
+  | { kind: "check-memory" }
   | { kind: "ask"; text: string }
   | { kind: "unknown"; raw: string };
 
@@ -146,6 +147,19 @@ export function parseCommand(input: string): Command {
     return { kind: "check-github" };
   }
 
+  // "check my memory" / "what's in my memory" / "check my notes" -- closes
+  // the last real "not linked" gap Leonardo flagged live 2026-08-11: the
+  // Obsidian vault (Milestone 6, built and real since 2026-08-09) had no
+  // way to reach it from the app at all -- StatusPanel honestly showed
+  // "NOT WIRED YET" because nothing in the app talked to it. Same pattern
+  // as check-calendar/check-email: no new Rust, no vault-reading code in
+  // this app at all -- the local `claude` CLI already has direct
+  // filesystem access to the vault via its own tools, so the orchestrator
+  // prompt just asks it to look.
+  if (/^(?:check |show |what'?s in )?(?:my )?(?:memory|notes)\??$/.test(text)) {
+    return { kind: "check-memory" };
+  }
+
   // Anything else -- hit live 2026-08-10: Leonardo asking JARVIS ordinary
   // questions/conversation got a hardcoded "not implemented yet" instead
   // of ever reaching Claude, since every case above is a rigid pattern
@@ -196,9 +210,9 @@ export async function executeCommand(
       ctx.setTheme(command.theme);
       return `Switched to ${command.theme.replace("-", " ")}.`;
     case "system-status":
-      return "Claude, Voice, Supabase, and GitHub are wired but not yet human-confirmed — see the System Status panel for exact per-system state. Obsidian isn't wired into the app directly.";
+      return "Claude, Voice, Supabase, GitHub, and Obsidian all reach the app now — see the System Status panel for exact per-system state.";
     case "help":
-      return "I can switch themes (e.g. \"switch to neon void\"), report status, \"research <topic>\", \"continue project <name>\", \"check my calendar\", \"check my email\", and \"check my github\" — the last five via the local orchestrator. Anything else, I'll just ask Claude directly and read back what it says.";
+      return "I can switch themes (e.g. \"switch to neon void\"), report status, \"research <topic>\", \"continue project <name>\", \"check my calendar\", \"check my email\", \"check my github\", and \"check my memory\" — the last six via the local orchestrator. Anything else, I'll just ask Claude directly and read back what it says.";
     case "delete-project":
       return `"Delete project ${command.name}" is a Level 3 action and needs a real approval dialog, not a typed command — use the Delete button in the Projects view instead.`;
     case "research": {
@@ -254,6 +268,14 @@ export async function executeCommand(
         `Check GitHub for any open PRs or issues assigned to me, using the gh CLI (already ` +
           `authenticated locally), then reply with 2-3 sentences summarizing what needs attention. ` +
           `Read-only — don't create, comment on, merge, or close anything.`
+      );
+    case "check-memory":
+      return runOrchestratorOrExplain(
+        ctx,
+        `Look at the Obsidian vault at ~/Documents/Obsidian Vault -- check Daily/, Inbox/, and ` +
+          `Notes/ for anything from the last few days, then reply with 2-3 sentences summarizing ` +
+          `what's there and flagging anything in Inbox/ that looks unprocessed. Read-only -- ` +
+          `don't create, modify, or delete any notes.`
       );
     case "ask":
       return runOrchestratorOrExplain(

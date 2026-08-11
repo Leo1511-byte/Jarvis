@@ -2,6 +2,31 @@
 
 ## Unreleased
 
+### Added — 2026-08-11 (Obsidian linked into the app: check-memory command + Memory view)
+- New `check-memory` command in `commandEngine.ts` — matches "check my memory" / "what's in my
+  memory" / "check my notes" (typed or spoken, same engine either way per spec §32). Prompts the
+  orchestrator's `claude` to read `~/Documents/Obsidian Vault`'s `Daily/`/`Inbox/`/`Notes/`
+  folders and summarize recent activity, flagging unprocessed `Inbox/` items. Read-only by prompt,
+  Level 1 in `permissions.ts`. Exact same no-new-Rust pattern as check-calendar/check-email/
+  check-github: no vault-reading code added to this app at all, since `claude` already has direct
+  filesystem access to the vault through its own tools.
+- New `MemoryView.tsx` replaces the Memory sidebar section's `NotBuiltView` placeholder — real
+  copy about the vault's actual structure, plus a "Check recent memory" button that calls the
+  exact same `check-memory` command path rather than duplicating prompt logic.
+- `StatusPanel`'s Obsidian row moved off a hardcoded `"not-wired"` onto the same dynamic
+  unverified/not-wired logic (`inTauri` check) the other systems already used — it's genuinely
+  reachable from the app now, for the first time since M6 was built.
+- Also fixed while auditing that panel: Claude/Voice/GitHub/Supabase had all been confirmed live
+  earlier this session (real research/calendar/email/GitHub/voice/Supabase results in the actual
+  app) but `StatusPanel` still showed "WIRED, UNVERIFIED" for all four — the panel's own design
+  comment says this needs a manual flip to "connected" once verified, and that flip never
+  happened. Fixed: all four now show "CONNECTED" (still gated on actually running inside Tauri,
+  so a plain browser preview can't inherit the claim).
+- `system-status`'s and `help`'s spoken/typed responses updated to mention Obsidian/check-memory
+  instead of the old "Obsidian isn't wired into the app directly" line.
+- 2 new `commandEngine.test.ts` tests (42 total, up from 40). `tsc -b`/`vite build` both clean.
+  Not yet live-confirmed in the running app.
+
 ### Added — 2026-08-11 (active project selection + research linking, interim feedback for slow commands)
 - New `useActiveProject` hook (`apps/desktop/frontend/src/hooks/useActiveProject.ts`):
   localStorage-persisted selection of which single project JARVIS treats as "the one we're

@@ -120,6 +120,13 @@ describe("parseCommand", () => {
     expect(parseCommand("check my pull requests")).toEqual({ kind: "check-github" });
     expect(parseCommand("check my issues")).toEqual({ kind: "check-github" });
   });
+
+  it("parses memory-check commands in their common phrasings", () => {
+    expect(parseCommand("check my memory")).toEqual({ kind: "check-memory" });
+    expect(parseCommand("what's in my memory")).toEqual({ kind: "check-memory" });
+    expect(parseCommand("check my notes")).toEqual({ kind: "check-memory" });
+    expect(parseCommand("memory")).toEqual({ kind: "check-memory" });
+  });
 });
 
 describe("executeCommand", () => {
@@ -272,6 +279,17 @@ describe("executeCommand", () => {
     );
     expect(response).toMatch(/orchestrator error/i);
     expect(response).toContain("no session");
+  });
+
+  it("routes check-memory through the orchestrator with a read-only vault prompt", async () => {
+    const runOrchestrator = vi.fn().mockResolvedValue("Nothing unprocessed in your inbox.");
+    const response = await executeCommand(
+      { kind: "check-memory" },
+      { setTheme: vi.fn(), runOrchestrator }
+    );
+    expect(runOrchestrator).toHaveBeenCalledWith(expect.stringContaining("Read-only"));
+    expect(runOrchestrator).toHaveBeenCalledWith(expect.stringContaining("Obsidian Vault"));
+    expect(response).toBe("Nothing unprocessed in your inbox.");
   });
 
   it("routes ask through the orchestrator with the original message and an act-don't-do instruction", async () => {
