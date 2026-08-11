@@ -55,3 +55,7 @@ vite.config.ts.timestamp-*.mjs
 # TypeScript incremental build cache — machine-specific, not meaningful to commit
 tsconfig.tsbuildinfo
 apps/desktop/frontend/tsconfig.tsbuildinfo
+
+# scripts/benchmark_orchestrator.sh output — regenerable, timestamped per run;
+# real numbers get summarized into TASKS.md/ROADMAP.md instead of piling up raw files
+benchmark_results_*.md

@@ -80,20 +80,25 @@
       pattern, so it fell through to `ask` again (which behaved safely, asking what kind of
       GitHub info was wanted rather than guessing). Still need: exact phrase "check my github",
       and "continue project Ape War Game" (matching the real created project name) for M10.
-- [ ] **M19 performance benchmarking started:** `scripts/benchmark_orchestrator.sh` written and
-      committed — times all 5 orchestrator commands (the 4 synchronous ones + continue-project's
-      background launch-to-done plumbing) by calling `claude` directly with the exact prompts
-      `commandEngine.ts` sends, since `orchestrator.rs`'s Rust wrapper only adds negligible
-      process-spawn overhead on top of that call. Can't be run from the Cowork sandbox that wrote
-      it — needs the same authenticated `claude` + locally-configured Calendar/Gmail MCP servers
-      that live on Leonardo's machine, or numbers wouldn't be representative. Parsing logic
-      (job-id extraction, JSON field extraction, agents-state lookup) unit-tested by hand against
-      the same real fixture data `orchestrator.rs`'s own Rust tests use (`REAL_BG_LAUNCH_OUTPUT`,
-      `REAL_AGENTS_JSON`) — all three matched correctly. Run with `bash
-      scripts/benchmark_orchestrator.sh` from the repo root; writes a timestamped
-      `benchmark_results_*.md`. Still needed: an actual run producing real numbers, and app
-      startup timing (deferred — that's really about the bundled release build, which isn't
-      testable yet per the known PATH-resolution gap in `orchestrator.rs`).
+- [x] 2026-08-11 — **M19 performance benchmarking: real numbers collected.** Leonardo ran
+      `scripts/benchmark_orchestrator.sh` for real (3 runs each). Results:
+      research 15s/15s/15s (avg 15s, $0.04–$0.21); check-calendar 12s/13s/14s (avg 13s,
+      $0.09–$0.13); check-email 17s/19s/16s (avg 17s, $0.14–$0.18); check-github 25s/25s/**44s**
+      (avg 31s, $0.10–$0.24 — notably more variance than the others, one run 76% slower);
+      continue-project background launch 1s/1s/1s (consistently fast), done-after 13s/5s/6s
+      (first run slower, likely a cold-start effect matching the cost decline seen in `research`
+      across its own 3 runs, probably prompt-cache warmup).
+      **Real finding, not just a number:** every synchronous command takes 12–44 seconds. That's
+      a long silent wait for a command-bar/voice interaction with no incremental feedback today —
+      `App.tsx` shows a "processing" core-state animation for typed input, but a voice command
+      like "check my github" going quiet for up to 44 seconds before JARVIS speaks could easily
+      read as broken rather than working. Worth a real UX pass (progress indication, or an
+      earlier "still checking..." interim reply) before calling M19/M20 done — not filed as a
+      separate milestone since it's really a V1-polish-level finding, logged here so it isn't
+      lost. check-github's specific 44s outlier is also worth a second batch to see if it's
+      consistent or a one-off (rate limiting, more repos to check that run, etc.) before assuming
+      it's just normal variance. Raw output: `benchmark_results_20260811_100102.md` (gitignored,
+      local only — numbers summarized here instead of committing timestamped raw files).
 - [ ] **Test all five orchestrator-routed commands in the actual running app** — `research
       <topic>`, `continue project <name>`, `check my calendar`, `check my email`, `check my
       github` — type each into the real command bar in the `cargo tauri dev` window and confirm
