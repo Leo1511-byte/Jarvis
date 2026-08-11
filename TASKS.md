@@ -2,6 +2,21 @@
 
 ## Now
 
+- [ ] 2026-08-11 — **Milestone 29 (voice ↔ Chat integration polish) built.** Turned out the main
+      thing this milestone asked for — voice transcripts landing in Chat, not just the Dashboard's
+      Command Log — was already true by construction: `useVoiceListener`'s `onTranscript` calls
+      the exact same `handleCommand(text, true)` typed input uses, and Milestone 21's message
+      persistence lives inside `handleCommand` itself, not gated to typed-only. What this
+      milestone actually added: voice error/crash-recovery notifications (`onError`/`onStatus`,
+      previously only in the ephemeral `log`) now also persist as `(voice) ...` messages, so
+      scrolling back through Chat shows what actually happened with voice, not just successful
+      exchanges. Extracted a small `persistMessage(role, content)` helper so this and
+      `handleCommand`'s existing two persisted messages share one implementation instead of three
+      near-identical fire-and-forget blocks. `tsc -b`/`npm run test` (53 passing, unchanged)/
+      `vite build` all clean. **All of Milestones 21-26, 28-29 are done** — the only remaining
+      item from the Chat/Memory/Skills/Connections plan is M27 (Memory index), which needs
+      `cargo` and is being handed off, not attempted blind. See
+      `HANDOFF_MEMORY_INDEX_AND_MIGRATIONS.md`.
 - [ ] 2026-08-11 — **Milestone 28 (skill-aware permission enforcement) built — real gap found
       and closed.** While wiring this, found that `permissionLevelFor` (`permissions.ts`) was
       dead code: defined, unit-tested, but never actually called anywhere in the running app —

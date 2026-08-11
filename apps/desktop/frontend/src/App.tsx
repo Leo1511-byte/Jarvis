@@ -184,6 +184,18 @@ export default function App() {
     };
   }, [active]);
 
+  // Milestone 21/29: shared by handleCommand's two persisted messages per
+  // exchange and by the voice error/status notifications below -- one
+  // place for the "no conversation yet, or the write failed" no-op
+  // instead of three near-identical fire-and-forget blocks.
+  function persistMessage(role: "user" | "jarvis", content: string) {
+    if (!currentConversation) return;
+    getStore()
+      .createMessage({ conversationId: currentConversation.id, role, content })
+      .then((msg) => setMessages((prev) => [...prev, msg]))
+      .catch(() => {});
+  }
+
   async function handleNewConversation() {
     try {
       const created = await getStore().createConversation();
@@ -310,22 +322,14 @@ export default function App() {
     setLog((prev) => [...prev, { you: text, jarvis: response }].slice(-6));
     setCoreState(command.kind === "unknown" ? "error" : "success");
 
-    // Milestone 21/22: persist the exchange alongside the existing in-memory
-    // Command Log (unchanged above), and append to `messages` once each
-    // write resolves so the Chat view reflects it without a full refetch.
-    // Fire-and-forget: persistence failing (store not ready yet, offline,
-    // etc.) shouldn't block or error out a command that already succeeded.
-    if (currentConversation) {
-      const store = getStore();
-      store
-        .createMessage({ conversationId: currentConversation.id, role: "user", content: text })
-        .then((msg) => setMessages((prev) => [...prev, msg]))
-        .catch(() => {});
-      store
-        .createMessage({ conversationId: currentConversation.id, role: "jarvis", content: response })
-        .then((msg) => setMessages((prev) => [...prev, msg]))
-        .catch(() => {});
-    }
+    // Milestone 21/22/29: persist the exchange alongside the existing
+    // in-memory Command Log (unchanged above). This same handleCommand
+    // path runs for voice transcripts too (see useVoiceListener's
+    // onTranscript below, which calls handleCommand(text, true)) -- so a
+    // spoken command lands in Chat exactly the same way a typed one does,
+    // with no separate voice-persistence logic needed.
+    persistMessage("user", text);
+    persistMessage("jarvis", response);
 
     // Milestone 26: log every Skill run to activity_events (SECURITY.md's
     // Level 2 "traceable" requirement) -- separate from the message
@@ -367,6 +371,10 @@ export default function App() {
       // land in the Command Log like everything else, so a failure is
       // readable without opening devtools.
       setLog((prev) => [...prev, { you: "(voice)", jarvis: message }].slice(-6));
+      // Milestone 29: also into Chat's persisted history, same as a real
+      // exchange -- so scrolling back through Chat shows what actually
+      // happened with voice, not just successful commands.
+      persistMessage("jarvis", `(voice) ${message}`);
       setCoreState("error");
       window.setTimeout(() => setCoreState("idle"), 1200);
     },
@@ -376,6 +384,7 @@ export default function App() {
       // Logged like any other voice event -- not forced into the error
       // visual state, since a successful reconnect isn't bad news.
       setLog((prev) => [...prev, { you: "(voice)", jarvis: message }].slice(-6));
+      persistMessage("jarvis", `(voice) ${message}`);
     },
   });
 
