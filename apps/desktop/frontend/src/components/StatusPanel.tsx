@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
 import { isSupabaseConfigured } from "../lib/supabaseClient";
+import { useInTauri } from "../hooks/useInTauri";
 
 type Status = "connected" | "disconnected" | "not-wired" | "unverified";
 
@@ -24,12 +24,7 @@ const LABEL: Record<Status, string> = {
  * own, so it still needs a manual flip to "connected" once you have.
  */
 function useSystems(): Array<{ name: string; status: Status }> {
-  const [inTauri, setInTauri] = useState(false);
-
-  useEffect(() => {
-    const w = window as unknown as Record<string, unknown>;
-    setInTauri(typeof w.__TAURI_INTERNALS__ !== "undefined" || typeof w.__TAURI__ !== "undefined");
-  }, []);
+  const inTauri = useInTauri();
 
   return [
     // M10: confirmed live 2026-08-10/11 -- research/check-calendar/

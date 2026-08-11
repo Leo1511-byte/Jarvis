@@ -113,4 +113,22 @@ describe("LocalStore", () => {
     expect(messagesA).toHaveLength(1);
     expect(messagesA[0].content).toBe("in a");
   });
+
+  it("lists the six built-in connections", async () => {
+    const store = new LocalStore();
+    const connections = await store.listConnections();
+    expect(connections.map((c) => c.id).sort()).toEqual(
+      ["calendar", "gmail", "github", "obsidian", "supabase", "web"].sort()
+    );
+  });
+
+  it("lists a connection's capabilities, and none for an unknown connection", async () => {
+    const store = new LocalStore();
+    const obsidianCaps = await store.listConnectionCapabilities("obsidian");
+    expect(obsidianCaps.map((c) => c.capability).sort()).toEqual(["read-vault", "write-notes"]);
+    expect(obsidianCaps.every((c) => c.connectionId === "obsidian")).toBe(true);
+
+    const unknown = await store.listConnectionCapabilities("does-not-exist");
+    expect(unknown).toEqual([]);
+  });
 });

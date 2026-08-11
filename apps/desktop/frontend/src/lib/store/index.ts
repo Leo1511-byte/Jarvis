@@ -16,6 +16,8 @@ export type {
   Message,
   MessageRole,
   NewMessageInput,
+  Connection,
+  ConnectionCapability,
 } from "./types";
 
 /**

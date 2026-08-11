@@ -2,6 +2,28 @@
 
 ## Unreleased
 
+### Added — 2026-08-11 (Milestone 23: Connections registry)
+- New "Integrations" sidebar section is real now — `views/ConnectionsView.tsx` replaces its
+  `NotBuiltView` placeholder. Read-only registry of the six connections already real in this app
+  (calendar, gmail, github, obsidian, web, supabase): live status per connection (connected/
+  unverified/not-wired, same honesty rule as `StatusPanel.tsx`, computed the same way — never
+  trusted from a DB row) plus each connection's capabilities with a read-only/write flag.
+- New `Connection`/`ConnectionCapability` types and `listConnections`/`listConnectionCapabilities`
+  `JarvisStore` methods. `LocalStore` returns a fixed built-in list (new
+  `lib/store/builtinConnections.ts`, the single source of truth mirrored by hand into the
+  migration's seed data); `SupabaseStore` queries the real tables.
+- `packages/database/migrations/0003_connections.sql` — `connections`/`connection_capabilities`
+  tables + seed inserts for the six built-in connections. **Identity and capability metadata
+  only — no credential columns, ever**, per the Chat/Memory/Skills/Connections plan's security
+  section; real auth stays exactly where it already lives (OS keyring,
+  `.claude/settings.local.json`, `.env.local`). Not yet run against the real Supabase project —
+  needs Leonardo, same as 0001/0002.
+- Extracted `hooks/useInTauri.ts` out of `StatusPanel.tsx`'s local `useSystems` hook so
+  `ConnectionsView` reuses the exact same "genuinely running in Tauri" detection instead of a
+  second copy — `StatusPanel` itself refactored to use the new hook, behavior unchanged.
+- 2 new `localStore.test.ts` tests (48 total, up from 46). `tsc -b`, `npm run test`, `vite build`
+  all clean.
+
 ### Added — 2026-08-11 (Milestone 22: real Chat tab)
 - New `Chat` sidebar item (`Sidebar.tsx`, between Dashboard and Projects) and `views/ChatView.tsx`
   — a conversation switcher (list of `conversations` + "New chat" button) alongside the full

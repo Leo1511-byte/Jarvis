@@ -17,6 +17,7 @@ import { ProjectsView } from "./views/ProjectsView";
 import { TasksView } from "./views/TasksView";
 import { MemoryView } from "./views/MemoryView";
 import { ChatView } from "./views/ChatView";
+import { ConnectionsView } from "./views/ConnectionsView";
 import { NotBuiltView } from "./views/NotBuiltView";
 
 // Synchronous orchestrator commands (research/check-calendar/check-email/
@@ -338,6 +339,8 @@ export default function App() {
             }}
           />
         );
+      case "Integrations":
+        return <ConnectionsView />;
       default:
         return <NotBuiltView section={active} />;
     }

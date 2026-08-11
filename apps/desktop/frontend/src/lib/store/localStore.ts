@@ -1,4 +1,7 @@
+import { BUILTIN_CONNECTIONS } from "./builtinConnections";
 import type {
+  Connection,
+  ConnectionCapability,
   Conversation,
   JarvisStore,
   Message,
@@ -31,6 +34,12 @@ function uuid(): string {
 function nowISO(): string {
   return new Date().toISOString();
 }
+
+// Fixed timestamp for the static, non-user-created connection rows below --
+// there's no real "created at" for something that's always just been part
+// of the app, and a fresh Date() on every listConnections() call would
+// make the same row look like it changes on every render for no reason.
+const EPOCH = "2026-08-11T00:00:00.000Z";
 
 function loadProjects(): Project[] {
   try {
@@ -231,5 +240,26 @@ export class LocalStore implements JarvisStore {
       saveConversations(conversations);
     }
     return message;
+  }
+
+  async listConnections(): Promise<Connection[]> {
+    // Static, not localStorage-backed -- see builtinConnections.ts's doc
+    // comment for why these are fixed rows rather than user-created data.
+    return BUILTIN_CONNECTIONS.map((c) => ({
+      id: c.id,
+      name: c.id,
+      createdAt: EPOCH,
+    }));
+  }
+
+  async listConnectionCapabilities(connectionId: string): Promise<ConnectionCapability[]> {
+    const found = BUILTIN_CONNECTIONS.find((c) => c.id === connectionId);
+    if (!found) return [];
+    return found.capabilities.map((cap) => ({
+      id: `${connectionId}:${cap.capability}`,
+      connectionId,
+      capability: cap.capability,
+      readOnly: cap.readOnly,
+    }));
   }
 }

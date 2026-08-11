@@ -1,5 +1,7 @@
 import { supabase } from "../supabaseClient";
 import type {
+  Connection,
+  ConnectionCapability,
   Conversation,
   JarvisStore,
   Message,
@@ -108,6 +110,33 @@ function messageFromRow(row: MessageRow): Message {
     role: row.role,
     content: row.content,
     createdAt: row.created_at,
+  };
+}
+
+// Milestone 23 — matches packages/database/migrations/0003_connections.sql.
+interface ConnectionRow {
+  id: string;
+  name: string;
+  created_at: string;
+}
+
+interface ConnectionCapabilityRow {
+  id: string;
+  connection_id: string;
+  capability: string;
+  read_only: boolean;
+}
+
+function connectionFromRow(row: ConnectionRow): Connection {
+  return { id: row.id, name: row.name, createdAt: row.created_at };
+}
+
+function connectionCapabilityFromRow(row: ConnectionCapabilityRow): ConnectionCapability {
+  return {
+    id: row.id,
+    connectionId: row.connection_id,
+    capability: row.capability,
+    readOnly: row.read_only,
   };
 }
 
@@ -294,5 +323,22 @@ export class SupabaseStore implements JarvisStore {
     }
 
     return messageFromRow(data as MessageRow);
+  }
+
+  async listConnections(): Promise<Connection[]> {
+    const client = requireClient();
+    const { data, error } = await client.from("connections").select("*").order("name");
+    if (error) throw error;
+    return (data as ConnectionRow[]).map(connectionFromRow);
+  }
+
+  async listConnectionCapabilities(connectionId: string): Promise<ConnectionCapability[]> {
+    const client = requireClient();
+    const { data, error } = await client
+      .from("connection_capabilities")
+      .select("*")
+      .eq("connection_id", connectionId);
+    if (error) throw error;
+    return (data as ConnectionCapabilityRow[]).map(connectionCapabilityFromRow);
   }
 }

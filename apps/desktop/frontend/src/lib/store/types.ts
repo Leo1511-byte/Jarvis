@@ -77,6 +77,25 @@ export interface NewMessageInput {
 }
 
 /**
+ * Milestone 23 (Connections registry) — identity + capability metadata
+ * only, never credentials (see builtinConnections.ts). `id` is a stable
+ * slug (`"calendar"`, `"gmail"`, ...) rather than a generated uuid, since
+ * these are fixed, known-in-advance rows, not user-created ones.
+ */
+export interface Connection {
+  id: string;
+  name: string;
+  createdAt: string;
+}
+
+export interface ConnectionCapability {
+  id: string;
+  connectionId: string;
+  capability: string;
+  readOnly: boolean;
+}
+
+/**
  * Every store implementation (local, Supabase, ...) implements this.
  * Callers never import a concrete store directly -- they get one from
  * store/index.ts, which decides which implementation to use.
@@ -100,4 +119,8 @@ export interface JarvisStore {
   createConversation(title?: string): Promise<Conversation>;
   listMessages(conversationId: string): Promise<Message[]>;
   createMessage(input: NewMessageInput): Promise<Message>;
+
+  /** Milestone 23: read-only registry, see Connection's doc comment above. */
+  listConnections(): Promise<Connection[]>;
+  listConnectionCapabilities(connectionId: string): Promise<ConnectionCapability[]>;
 }

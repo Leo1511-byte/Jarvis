@@ -2,6 +2,24 @@
 
 ## Now
 
+- [ ] 2026-08-11 — **Milestone 23 (Connections registry) built.** New "Integrations" sidebar
+      section is now real (`ConnectionsView.tsx`, replacing its `NotBuiltView` placeholder) —
+      read-only registry of the six connections already real in this app (calendar, gmail,
+      github, obsidian, web, supabase), each showing live status (same connected/unverified/
+      not-wired honesty rule as `StatusPanel`, computed the same way, never read from the DB) and
+      its capabilities (`read-events`, `read-email`, etc.) with a read-only/write flag. New
+      `Connection`/`ConnectionCapability` types + `listConnections`/`listConnectionCapabilities`
+      store methods, implemented in both `LocalStore` (returns a fixed built-in list — see
+      `lib/store/builtinConnections.ts`) and `SupabaseStore` (real queries against the new
+      `connections`/`connection_capabilities` tables). `packages/database/migrations/
+      0003_connections.sql` creates and seeds them — **another migration Leonardo needs to run**
+      in the Supabase SQL editor (same as 0001/0002); until then `listConnections()` against
+      Supabase will error, same fallback-unavailable pattern as Chat. Extracted `useInTauri.ts`
+      out of `StatusPanel.tsx` so the new view reuses the exact same "genuinely running in Tauri"
+      check instead of a second copy. **This table stores identity/capability metadata only —
+      no credentials, ever** — matches the plan's own security section. 2 new `localStore.test.ts`
+      tests (48 total, up from 46). `tsc -b`/`npm run test`/`vite build` all clean. Not yet seen
+      live.
 - [ ] 2026-08-11 — **Milestone 22 (Chat tab) built, same session as M21.** New `Chat` sidebar
       item (between Dashboard and Projects) and `ChatView.tsx`: a conversation switcher (list +
       "New chat") on the left, full persisted message thread + input on the right. Zero new
