@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { permissionLevelFor } from "./permissions";
+import { BUILTIN_SKILLS } from "./lib/store/builtinSkills";
 
 describe("permissionLevelFor", () => {
   it("classifies safe commands as level 1", () => {
@@ -27,5 +28,17 @@ describe("permissionLevelFor", () => {
 
   it("defaults unknown command kinds to the strictest level", () => {
     expect(permissionLevelFor("some-future-command-nobody-classified-yet")).toBe(3);
+  });
+
+  it("keeps builtinSkills.ts's permission levels in sync with this file (Milestone 24)", () => {
+    // Regression guard: the Skills registry (builtinSkills.ts) declares its
+    // own permissionLevel per skill rather than importing permissionLevelFor
+    // directly (it needs to work in both LocalStore and the Supabase seed
+    // migration's plain SQL), so nothing enforces these stay identical
+    // except this test. If they ever drift, the Skills UI (M25) would show
+    // a different level than commandEngine.ts actually enforces.
+    for (const skill of BUILTIN_SKILLS) {
+      expect(permissionLevelFor(skill.id)).toBe(skill.permissionLevel);
+    }
   });
 });

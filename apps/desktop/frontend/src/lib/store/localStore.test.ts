@@ -131,4 +131,34 @@ describe("LocalStore", () => {
     const unknown = await store.listConnectionCapabilities("does-not-exist");
     expect(unknown).toEqual([]);
   });
+
+  it("lists the six built-in skills with permission levels matching permissions.ts", async () => {
+    const store = new LocalStore();
+    const skills = await store.listSkills();
+    expect(skills.map((s) => s.id).sort()).toEqual(
+      [
+        "research",
+        "continue-project",
+        "check-calendar",
+        "check-email",
+        "check-github",
+        "check-memory",
+      ].sort()
+    );
+    expect(skills.every((s) => s.builtin)).toBe(true);
+    expect(skills.find((s) => s.id === "continue-project")?.permissionLevel).toBe(2);
+    expect(skills.find((s) => s.id === "check-calendar")?.permissionLevel).toBe(1);
+  });
+
+  it("lists a skill's connections, empty for continue-project", async () => {
+    const store = new LocalStore();
+    const checkCalendarConns = await store.listSkillConnections("check-calendar");
+    expect(checkCalendarConns.map((c) => c.id)).toEqual(["calendar"]);
+
+    const continueProjectConns = await store.listSkillConnections("continue-project");
+    expect(continueProjectConns).toEqual([]);
+
+    const unknown = await store.listSkillConnections("does-not-exist");
+    expect(unknown).toEqual([]);
+  });
 });

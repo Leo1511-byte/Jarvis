@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+### Added — 2026-08-11 (Milestone 24: Skills data model — scope note included)
+- New `Skill` type and `listSkills`/`listSkillConnections` `JarvisStore` methods, implemented in
+  both `LocalStore` (fixed built-in list, new `lib/store/builtinSkills.ts`) and `SupabaseStore`
+  (real queries against new `skills`/`skill_connections` tables).
+- **Deliberate scope decision, documented in `builtinSkills.ts` and `TASKS.md`:** this is a
+  descriptive registry of the six commands `commandEngine.ts` already runs, not a rewrite of
+  them. The plan flagged this milestone as needing to avoid regressing 42 passing tests or
+  live-confirmed command behavior — the safest way to honor that was to leave
+  `commandEngine.ts`'s proven prompt templates untouched and build the Skills data alongside it,
+  not have it replace them.
+- `packages/database/migrations/0004_skills.sql` — `skills`/`skill_connections` tables + seed
+  data mirroring `builtinSkills.ts`. Must run after `0003_connections.sql`. Not yet run against
+  the real Supabase project.
+- New regression test in `permissions.test.ts` asserting every builtin skill's declared
+  `permissionLevel` matches `permissions.ts`'s `permissionLevelFor` exactly — nothing else
+  enforces the two stay in sync since they're necessarily two separate declarations (one needs
+  to work in plain SQL too).
+- 3 new tests (51 total, up from 48). `tsc -b`, `npm run test`, `vite build` all clean.
+
 ### Added — 2026-08-11 (Milestone 23: Connections registry)
 - New "Integrations" sidebar section is real now — `views/ConnectionsView.tsx` replaces its
   `NotBuiltView` placeholder. Read-only registry of the six connections already real in this app

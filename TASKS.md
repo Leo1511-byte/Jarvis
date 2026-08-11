@@ -2,6 +2,25 @@
 
 ## Now
 
+- [ ] 2026-08-11 — **Milestone 24 (Skills data model) built — deliberately scoped down from
+      the original plan's wording, flagged explicitly.** The plan called this "medium-high
+      complexity — must not regress 42 passing tests or live-confirmed command behavior," which
+      is exactly why `commandEngine.ts` was **not** touched: rewriting its six proven, live-
+      confirmed prompt templates (research/continue-project/check-calendar/check-email/
+      check-github/check-memory) to read from a data table at runtime would have been the risky
+      version of this milestone for no user-visible gain yet. Instead, built a descriptive
+      registry alongside it: new `Skill`/`skills`/`skill_connections` types + store methods
+      (`listSkills`, `listSkillConnections`), seeded with the same six commands, each declaring
+      its real `permissionLevel` (matching `permissions.ts` exactly — now enforced by a new
+      regression test, `permissions.test.ts`, comparing the two directly) and which of the six
+      Connections it uses. `continue-project` intentionally has zero declared connections — it
+      operates on the local filesystem/git, which isn't one of the six registered Connections;
+      forcing a mapping would've been dishonest. New
+      `packages/database/migrations/0004_skills.sql` (**third new migration Leonardo needs to
+      run**, after `0002_chat.sql`/`0003_connections.sql`, and must run after `0003` since
+      `skill_connections` references `connections`). See `lib/store/builtinSkills.ts`'s doc
+      comment for the full reasoning. 3 new tests (51 total, up from 48). `tsc -b`/
+      `npm run test`/`vite build` all clean. No UI yet for this — that's Milestone 25.
 - [ ] 2026-08-11 — **Milestone 23 (Connections registry) built.** New "Integrations" sidebar
       section is now real (`ConnectionsView.tsx`, replacing its `NotBuiltView` placeholder) —
       read-only registry of the six connections already real in this app (calendar, gmail,

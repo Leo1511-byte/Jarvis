@@ -96,6 +96,21 @@ export interface ConnectionCapability {
 }
 
 /**
+ * Milestone 24 (Skills data model) — see builtinSkills.ts's doc comment
+ * for the deliberate scope decision this represents (a descriptive
+ * registry, not a rewrite of commandEngine.ts's proven prompt logic).
+ * `permissionLevel` mirrors `permissions.ts`'s `PermissionLevel` exactly.
+ */
+export interface Skill {
+  id: string;
+  name: string;
+  description: string;
+  permissionLevel: 1 | 2 | 3;
+  builtin: boolean;
+  createdAt: string;
+}
+
+/**
  * Every store implementation (local, Supabase, ...) implements this.
  * Callers never import a concrete store directly -- they get one from
  * store/index.ts, which decides which implementation to use.
@@ -123,4 +138,8 @@ export interface JarvisStore {
   /** Milestone 23: read-only registry, see Connection's doc comment above. */
   listConnections(): Promise<Connection[]>;
   listConnectionCapabilities(connectionId: string): Promise<ConnectionCapability[]>;
+
+  /** Milestone 24: read-only registry, see Skill's doc comment above. */
+  listSkills(): Promise<Skill[]>;
+  listSkillConnections(skillId: string): Promise<Connection[]>;
 }

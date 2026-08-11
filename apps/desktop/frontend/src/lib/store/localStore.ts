@@ -1,4 +1,5 @@
 import { BUILTIN_CONNECTIONS } from "./builtinConnections";
+import { BUILTIN_SKILLS } from "./builtinSkills";
 import type {
   Connection,
   ConnectionCapability,
@@ -10,6 +11,7 @@ import type {
   NewTaskInput,
   Project,
   ProjectStatus,
+  Skill,
   Task,
   TaskStatus,
 } from "./types";
@@ -261,5 +263,25 @@ export class LocalStore implements JarvisStore {
       capability: cap.capability,
       readOnly: cap.readOnly,
     }));
+  }
+
+  async listSkills(): Promise<Skill[]> {
+    return BUILTIN_SKILLS.map((s) => ({
+      id: s.id,
+      name: s.name,
+      description: s.description,
+      permissionLevel: s.permissionLevel,
+      builtin: true,
+      createdAt: EPOCH,
+    }));
+  }
+
+  async listSkillConnections(skillId: string): Promise<Connection[]> {
+    const skill = BUILTIN_SKILLS.find((s) => s.id === skillId);
+    if (!skill) return [];
+    return skill.connectionIds
+      .map((id) => BUILTIN_CONNECTIONS.find((c) => c.id === id))
+      .filter((c): c is (typeof BUILTIN_CONNECTIONS)[number] => c !== undefined)
+      .map((c) => ({ id: c.id, name: c.id, createdAt: EPOCH }));
   }
 }

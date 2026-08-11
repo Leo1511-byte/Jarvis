@@ -11,6 +11,7 @@ import type {
   NewTaskInput,
   Project,
   ProjectStatus,
+  Skill,
   Task,
   TaskStatus,
 } from "./types";
@@ -137,6 +138,27 @@ function connectionCapabilityFromRow(row: ConnectionCapabilityRow): ConnectionCa
     connectionId: row.connection_id,
     capability: row.capability,
     readOnly: row.read_only,
+  };
+}
+
+// Milestone 24 — matches packages/database/migrations/0004_skills.sql.
+interface SkillRow {
+  id: string;
+  name: string;
+  description: string;
+  permission_level: 1 | 2 | 3;
+  builtin: boolean;
+  created_at: string;
+}
+
+function skillFromRow(row: SkillRow): Skill {
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    permissionLevel: row.permission_level,
+    builtin: row.builtin,
+    createdAt: row.created_at,
   };
 }
 
@@ -340,5 +362,26 @@ export class SupabaseStore implements JarvisStore {
       .eq("connection_id", connectionId);
     if (error) throw error;
     return (data as ConnectionCapabilityRow[]).map(connectionCapabilityFromRow);
+  }
+
+  async listSkills(): Promise<Skill[]> {
+    const client = requireClient();
+    const { data, error } = await client.from("skills").select("*").order("name");
+    if (error) throw error;
+    return (data as SkillRow[]).map(skillFromRow);
+  }
+
+  async listSkillConnections(skillId: string): Promise<Connection[]> {
+    const client = requireClient();
+    const { data: links, error: linksError } = await client
+      .from("skill_connections")
+      .select("connection_id")
+      .eq("skill_id", skillId);
+    if (linksError) throw linksError;
+    const connectionIds = (links as { connection_id: string }[]).map((l) => l.connection_id);
+    if (connectionIds.length === 0) return [];
+    const { data, error } = await client.from("connections").select("*").in("id", connectionIds);
+    if (error) throw error;
+    return (data as ConnectionRow[]).map(connectionFromRow);
   }
 }
