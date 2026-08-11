@@ -110,13 +110,24 @@
       the reply — a real, working link without inventing new folder-structure conventions.
       Deleting the active project correctly clears the selection instead of leaving it dangling.
       2 new commandEngine tests (40 total, up from 38), `tsc -b`/`vite build` both clean.
-- [ ] **Only two commands still need live confirmation with their exact phrasing** — everything
-      else (research, check-calendar, check-email, Supabase/Projects) is confirmed live as of
-      2026-08-10/11. Still open: type **"check my github"** (not "check my git hub" — the space
-      makes it fall through to `ask` instead) and **"continue project Ape War Game"** (matching
-      the real project name, not "continue with..." — same reason) into the real command bar.
-      `continue-project` takes the background path — expect an immediate "started as a background
-      job" reply, then a second Command Log entry once it finishes.
+- [x] 2026-08-11 — **`check my github` finally hit with the exact phrase — real, different
+      permission gap found and patched.** Unlike Calendar/Email (an MCP-tool-permission wall),
+      this is a Bash-permission wall: the orchestrator's headless `claude -p` tried to run `gh`
+      directly and got refused with a clear, honest error ("This session doesn't have permission
+      to run `gh` commands, and since it's non-interactive there's no one to approve the
+      prompt"), even suggesting the exact commands it wanted to run
+      (`gh search prs --assignee=@me --state=open`, `gh search issues --assignee=@me --state=open`).
+      `.claude/settings.local.json` only had `gh auth *`/`gh repo *` pre-approved from earlier,
+      not the read-only search/list/view commands `check-github`'s prompt actually needs. Added
+      `gh search prs/issues *`, `gh pr list/status/view *`, `gh issue list/view *`,
+      `gh notifications*` — deliberately narrow (no `gh *` wildcard) so write subcommands
+      (create/merge/close/comment) stay unapproved, matching the command's own Level 1
+      read-only-by-prompt design. Not yet retested — needs "check my github" run again to confirm.
+- [ ] **One command still needs live confirmation with its exact phrasing:**
+      **"continue project Ape War Game"** (matching the real project name, not "continue
+      with..." — anything else falls through to the safer but non-dedicated `ask` path). Takes
+      the background path — expect an immediate "started as a background job" reply, then a
+      second Command Log entry once it finishes.
 - [ ] **`orchestrator.rs`'s bundled-app `PATH` resolution gap, plus two other cargo/live-window
       items, hand off written 2026-08-11:** see `HANDOFF_PATH_FIX_AND_VERIFICATION.md` — covers
       the known `PATH` limitation (works under `cargo tauri dev`, would silently fail in a
