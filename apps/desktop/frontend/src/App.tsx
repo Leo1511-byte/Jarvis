@@ -5,6 +5,7 @@ import { useTheme } from "./hooks/useTheme";
 import { useVoiceSettings } from "./hooks/useVoiceSettings";
 import { useVoiceListener } from "./hooks/useVoiceListener";
 import { useActiveProject } from "./hooks/useActiveProject";
+import { useCurrentConversation } from "./hooks/useCurrentConversation";
 import { type CoreState } from "./components/JarvisCore";
 import { CommandBar } from "./components/CommandBar";
 import { Sidebar } from "./components/Sidebar";
@@ -65,6 +66,11 @@ export default function App() {
   const { theme, setTheme } = useTheme();
   const { settings: voiceSettings, update: updateVoiceSettings } = useVoiceSettings();
   const { activeProjectId, setActiveProjectId } = useActiveProject();
+  // Milestone 21: resolves to a real, persisted conversation once the store
+  // (local or Supabase) has created/loaded one -- null briefly on first
+  // mount and whenever persistence itself fails, which handleCommand below
+  // treats as "don't persist this exchange" rather than blocking on it.
+  const currentConversation = useCurrentConversation();
   const [active, setActive] = useState("Dashboard");
   const [coreState, setCoreState] = useState<CoreState>("idle");
   const [log, setLog] = useState<LogEntry[]>([]);
@@ -186,6 +192,22 @@ export default function App() {
 
     setLog((prev) => [...prev, { you: text, jarvis: response }].slice(-6));
     setCoreState(command.kind === "unknown" ? "error" : "success");
+
+    // Milestone 21: persist the exchange alongside the existing in-memory
+    // Command Log (unchanged above) rather than replacing it -- a real Chat
+    // view reading full history is Milestone 22's job. Fire-and-forget:
+    // persistence failing (store not ready yet, offline, etc.) shouldn't
+    // block or error out a command that already succeeded.
+    if (currentConversation) {
+      const store = getStore();
+      store
+        .createMessage({ conversationId: currentConversation.id, role: "user", content: text })
+        .catch(() => {});
+      store
+        .createMessage({ conversationId: currentConversation.id, role: "jarvis", content: response })
+        .catch(() => {});
+    }
+
     if (speak) {
       setCoreState("speaking");
       invoke("queue_speech", { text: response }).catch(() => {});

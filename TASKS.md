@@ -2,8 +2,26 @@
 
 ## Now
 
-- [ ] 2026-08-11 — **Chat + Memory + Skills + Connections upgrade — plan written, awaiting
-      Leonardo's approval before any implementation starts.** He asked for a chat tab, memory
+- [ ] 2026-08-11 — **Leonardo approved the plan ("go") — Milestone 21 (chat backbone) built.**
+      New `Conversation`/`Message` types + 4 `JarvisStore` methods (`listConversations`,
+      `createConversation`, `listMessages`, `createMessage`), implemented in both `LocalStore`
+      and `SupabaseStore` (same dual-implementation pattern as Projects/Tasks).
+      `packages/database/migrations/0002_chat.sql` adds `conversations`/`messages` tables
+      (scoped to just this milestone, same "first-pass tables only" rule `0001_init.sql`
+      followed — skills/connections get their own migration when M23/M24 start). **Leonardo
+      needs to run this migration in the Supabase SQL editor** (same as M7) before Chat
+      persistence actually works against the real project — until then it silently falls back
+      to `LocalStore`, same honest fallback `getStore()` already does. New
+      `useCurrentConversation` hook (mirrors `useActiveProject`'s localStorage-id pattern)
+      lazily creates/resolves one ongoing conversation; `App.tsx`'s `handleCommand` now persists
+      every user/Jarvis exchange into it, fire-and-forget so persistence failure can't block a
+      command that already succeeded. Dashboard's Command Log UI is unchanged on purpose — a
+      real Chat view reading full history is Milestone 22, not this one. 5 new `localStore.test.ts`
+      tests (46 total, up from 41 — some earlier counts in this file undercounted since they
+      only tracked `commandEngine.test.ts`). `tsc -b`, `npm run test`, `vite build` all clean.
+      Not yet seen live (needs the migration run + a real click-through).
+- [ ] 2026-08-11 — **Chat + Memory + Skills + Connections upgrade — plan written 2026-08-11,
+      M21 now started per above.** He asked for a chat tab, memory
       tab, and skills tab (spec pasted from ChatGPT) instead of one-shot orders JARVIS doesn't
       remember. Per the spec's own instruction ("do not begin implementing before the plan is
       shown"), inspected the current V1 implementation first (`commandEngine.ts`,

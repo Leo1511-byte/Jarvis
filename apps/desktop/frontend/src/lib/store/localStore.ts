@@ -1,5 +1,8 @@
 import type {
+  Conversation,
   JarvisStore,
+  Message,
+  NewMessageInput,
   NewProjectInput,
   NewTaskInput,
   Project,
@@ -18,6 +21,8 @@ import type {
  */
 const PROJECTS_KEY = "jarvis.local.projects";
 const TASKS_KEY = "jarvis.local.tasks";
+const CONVERSATIONS_KEY = "jarvis.local.conversations";
+const MESSAGES_KEY = "jarvis.local.messages";
 
 function uuid(): string {
   return crypto.randomUUID();
@@ -49,6 +54,30 @@ function loadTasks(): Task[] {
 
 function saveTasks(tasks: Task[]): void {
   localStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
+}
+
+function loadConversations(): Conversation[] {
+  try {
+    return JSON.parse(localStorage.getItem(CONVERSATIONS_KEY) ?? "[]");
+  } catch {
+    return [];
+  }
+}
+
+function saveConversations(conversations: Conversation[]): void {
+  localStorage.setItem(CONVERSATIONS_KEY, JSON.stringify(conversations));
+}
+
+function loadMessages(): Message[] {
+  try {
+    return JSON.parse(localStorage.getItem(MESSAGES_KEY) ?? "[]");
+  } catch {
+    return [];
+  }
+}
+
+function saveMessages(messages: Message[]): void {
+  localStorage.setItem(MESSAGES_KEY, JSON.stringify(messages));
 }
 
 export class LocalStore implements JarvisStore {
@@ -146,5 +175,61 @@ export class LocalStore implements JarvisStore {
     tasks[idx] = updated;
     saveTasks(tasks);
     return updated;
+  }
+
+  async listConversations(): Promise<Conversation[]> {
+    return loadConversations().sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  }
+
+  async createConversation(title?: string): Promise<Conversation> {
+    const conversation: Conversation = {
+      id: uuid(),
+      title: title ?? null,
+      createdAt: nowISO(),
+      updatedAt: nowISO(),
+    };
+    const conversations = loadConversations();
+    conversations.push(conversation);
+    saveConversations(conversations);
+    return conversation;
+  }
+
+  async listMessages(conversationId: string): Promise<Message[]> {
+    return loadMessages()
+      .filter((m) => m.conversationId === conversationId)
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  }
+
+  async createMessage(input: NewMessageInput): Promise<Message> {
+    const message: Message = {
+      id: uuid(),
+      conversationId: input.conversationId,
+      role: input.role,
+      content: input.content,
+      createdAt: nowISO(),
+    };
+    const messages = loadMessages();
+    messages.push(message);
+    saveMessages(messages);
+
+    // Keep the parent conversation's updatedAt current (same "touch on
+    // write" convention as tasks bumping their own updatedAt) so
+    // listConversations' most-recent-first ordering reflects real activity,
+    // and derive a title from the first user message if none was set --
+    // lets a conversation show something readable in a list without
+    // requiring the caller to name it up front.
+    const conversations = loadConversations();
+    const idx = conversations.findIndex((c) => c.id === input.conversationId);
+    if (idx !== -1) {
+      const current = conversations[idx];
+      conversations[idx] = {
+        ...current,
+        title:
+          current.title ?? (input.role === "user" ? input.content.slice(0, 60) : current.title),
+        updatedAt: nowISO(),
+      };
+      saveConversations(conversations);
+    }
+    return message;
   }
 }

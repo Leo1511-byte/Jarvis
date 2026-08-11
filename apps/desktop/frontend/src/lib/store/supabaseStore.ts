@@ -1,6 +1,10 @@
 import { supabase } from "../supabaseClient";
 import type {
+  Conversation,
   JarvisStore,
+  Message,
+  MessageRole,
+  NewMessageInput,
   NewProjectInput,
   NewTaskInput,
   Project,
@@ -69,6 +73,41 @@ function taskFromRow(row: TaskRow): Task {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     completedAt: row.completed_at,
+  };
+}
+
+// Milestone 21 — matches packages/database/migrations/0002_chat.sql.
+interface ConversationRow {
+  id: string;
+  title: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface MessageRow {
+  id: string;
+  conversation_id: string;
+  role: MessageRole;
+  content: string;
+  created_at: string;
+}
+
+function conversationFromRow(row: ConversationRow): Conversation {
+  return {
+    id: row.id,
+    title: row.title,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function messageFromRow(row: MessageRow): Message {
+  return {
+    id: row.id,
+    conversationId: row.conversation_id,
+    role: row.role,
+    content: row.content,
+    createdAt: row.created_at,
   };
 }
 
@@ -182,5 +221,78 @@ export class SupabaseStore implements JarvisStore {
       .single();
     if (error) throw error;
     return taskFromRow(data as TaskRow);
+  }
+
+  async listConversations(): Promise<Conversation[]> {
+    const client = requireClient();
+    const { data, error } = await client
+      .from("conversations")
+      .select("*")
+      .order("updated_at", { ascending: false });
+    if (error) throw error;
+    return (data as ConversationRow[]).map(conversationFromRow);
+  }
+
+  async createConversation(title?: string): Promise<Conversation> {
+    const client = requireClient();
+    const { data, error } = await client
+      .from("conversations")
+      .insert({ title: title ?? null })
+      .select()
+      .single();
+    if (error) throw error;
+    return conversationFromRow(data as ConversationRow);
+  }
+
+  async listMessages(conversationId: string): Promise<Message[]> {
+    const client = requireClient();
+    const { data, error } = await client
+      .from("messages")
+      .select("*")
+      .eq("conversation_id", conversationId)
+      .order("created_at", { ascending: true });
+    if (error) throw error;
+    return (data as MessageRow[]).map(messageFromRow);
+  }
+
+  async createMessage(input: NewMessageInput): Promise<Message> {
+    const client = requireClient();
+    const { data, error } = await client
+      .from("messages")
+      .insert({
+        conversation_id: input.conversationId,
+        role: input.role,
+        content: input.content,
+      })
+      .select()
+      .single();
+    if (error) throw error;
+
+    // Same "touch + derive title on first message" behavior as LocalStore --
+    // read-then-write rather than a DB trigger, since there's no migration
+    // machinery here for triggers and this keeps the logic in one place
+    // (app code) instead of split between SQL and TypeScript. Best-effort:
+    // a failure here shouldn't fail the message write that already
+    // succeeded, so it's caught and swallowed rather than thrown.
+    try {
+      const { data: convo } = await client
+        .from("conversations")
+        .select("title")
+        .eq("id", input.conversationId)
+        .single();
+      await client
+        .from("conversations")
+        .update({
+          ...(!convo?.title && input.role === "user"
+            ? { title: input.content.slice(0, 60) }
+            : {}),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", input.conversationId);
+    } catch {
+      // Non-fatal -- see comment above.
+    }
+
+    return messageFromRow(data as MessageRow);
   }
 }

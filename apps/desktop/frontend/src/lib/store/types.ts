@@ -48,6 +48,35 @@ export interface NewTaskInput {
 }
 
 /**
+ * Milestone 21 (Chat backbone) — see CHAT_MEMORY_SKILLS_CONNECTIONS_PLAN.md.
+ * A conversation is just a container for messages; title is nullable and
+ * left for the UI to derive (e.g. from the first message) rather than
+ * requiring one up front.
+ */
+export interface Conversation {
+  id: string;
+  title: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type MessageRole = "user" | "jarvis";
+
+export interface Message {
+  id: string;
+  conversationId: string;
+  role: MessageRole;
+  content: string;
+  createdAt: string;
+}
+
+export interface NewMessageInput {
+  conversationId: string;
+  role: MessageRole;
+  content: string;
+}
+
+/**
  * Every store implementation (local, Supabase, ...) implements this.
  * Callers never import a concrete store directly -- they get one from
  * store/index.ts, which decides which implementation to use.
@@ -62,4 +91,13 @@ export interface JarvisStore {
   listTasks(projectId?: string): Promise<Task[]>;
   createTask(input: NewTaskInput): Promise<Task>;
   updateTask(id: string, patch: Partial<NewTaskInput> & { status?: TaskStatus }): Promise<Task>;
+
+  /** Milestone 21: chat backbone. listConversations sorts most-recently-
+   * updated first (same convention as listProjects/listTasks); listMessages
+   * sorts chronologically (oldest first) since that's how a conversation
+   * reads, not by recency. */
+  listConversations(): Promise<Conversation[]>;
+  createConversation(title?: string): Promise<Conversation>;
+  listMessages(conversationId: string): Promise<Message[]>;
+  createMessage(input: NewMessageInput): Promise<Message>;
 }

@@ -12,6 +12,10 @@ export type {
   ProjectStatus,
   TaskStatus,
   TaskPriority,
+  Conversation,
+  Message,
+  MessageRole,
+  NewMessageInput,
 } from "./types";
 
 /**

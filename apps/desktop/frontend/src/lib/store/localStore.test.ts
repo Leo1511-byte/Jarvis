@@ -63,4 +63,54 @@ describe("LocalStore", () => {
     const projects = await storeB.listProjects();
     expect(projects.map((p) => p.name)).toContain("Persisted");
   });
+
+  it("creates a conversation and lists messages in chronological order", async () => {
+    const store = new LocalStore();
+    const conversation = await store.createConversation();
+    await store.createMessage({ conversationId: conversation.id, role: "user", content: "hi" });
+    await store.createMessage({
+      conversationId: conversation.id,
+      role: "jarvis",
+      content: "hello",
+    });
+
+    const messages = await store.listMessages(conversation.id);
+    expect(messages).toHaveLength(2);
+    expect(messages[0].content).toBe("hi");
+    expect(messages[1].content).toBe("hello");
+  });
+
+  it("derives a conversation title from the first user message", async () => {
+    const store = new LocalStore();
+    const conversation = await store.createConversation();
+    await store.createMessage({
+      conversationId: conversation.id,
+      role: "user",
+      content: "what's on my calendar today",
+    });
+
+    const [found] = await store.listConversations();
+    expect(found.title).toBe("what's on my calendar today");
+  });
+
+  it("does not overwrite an existing conversation title", async () => {
+    const store = new LocalStore();
+    const conversation = await store.createConversation("Named up front");
+    await store.createMessage({ conversationId: conversation.id, role: "user", content: "hi" });
+
+    const [found] = await store.listConversations();
+    expect(found.title).toBe("Named up front");
+  });
+
+  it("scopes listMessages to the requested conversation", async () => {
+    const store = new LocalStore();
+    const a = await store.createConversation();
+    const b = await store.createConversation();
+    await store.createMessage({ conversationId: a.id, role: "user", content: "in a" });
+    await store.createMessage({ conversationId: b.id, role: "user", content: "in b" });
+
+    const messagesA = await store.listMessages(a.id);
+    expect(messagesA).toHaveLength(1);
+    expect(messagesA[0].content).toBe("in a");
+  });
 });

@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+### Added — 2026-08-11 (Milestone 21: chat backbone — conversations/messages persistence)
+- New `Conversation`/`Message`/`MessageRole`/`NewMessageInput` types (`lib/store/types.ts`) and 4
+  new `JarvisStore` methods: `listConversations`, `createConversation`, `listMessages`,
+  `createMessage`. Implemented in both `LocalStore` (localStorage, same key-per-collection
+  pattern as projects/tasks) and `SupabaseStore` (matches the new migration's snake_case columns).
+- `packages/database/migrations/0002_chat.sql` — `conversations`/`messages` tables, permissive
+  single-user RLS, same pattern as `0001_init.sql`. Scoped to just this milestone; skills/
+  connections tables come with their own migration when M23/M24 start. **Not yet run against the
+  real Supabase project** — needs Leonardo to paste it into the SQL editor, same as M7.
+- New `hooks/useCurrentConversation.ts` — lazily creates/resolves one ongoing conversation,
+  localStorage-persisted id (same pattern as `useActiveProject`). `App.tsx`'s `handleCommand` now
+  persists every user/Jarvis exchange into it via `store.createMessage`, fire-and-forget so a
+  persistence failure can't block or fail a command that already succeeded.
+- Dashboard's Command Log UI (`DashboardView.tsx`) is deliberately unchanged — it still shows the
+  in-memory last-6 `LogEntry[]`. A real Chat view reading full persisted history is Milestone 22.
+- 5 new `localStore.test.ts` tests (create conversation + messages, chronological ordering,
+  title-derivation from the first user message, title not overwritten once set, message scoping
+  per conversation) — 46 tests total. `tsc -b`, `npm run test`, `vite build` all clean.
+
 ### Planned — 2026-08-11 (Chat + Memory + Skills + Connections — plan only, no code yet)
 - Leonardo requested a chat tab, memory tab, and skills tab (pasted spec) instead of one-shot
   orders JARVIS doesn't remember between commands. Per the spec's own instruction, inspected the
