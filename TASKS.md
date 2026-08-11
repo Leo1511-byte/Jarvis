@@ -35,13 +35,6 @@
 - [ ] Optional, not blocking: if Leonardo upgrades his ElevenLabs plan, switch `config.json`'s
       `tts_engine` from `macos_say` to `elevenlabs` for higher-quality voice output (the
       "Jon - Calm Presence" voice ID is already saved and ready).
-- [ ] **Last step for Supabase writes — needs you at the actual window:** local Claude Code
-      relaunched `cargo tauri dev` clean (2026-08-10) and confirmed via direct REST calls that
-      `SupabaseStore`'s exact insert/select/delete queries all work against the real `projects`
-      table (RLS + anon key both correct) — see `ROADMAP.md` M7. What's left is purely the
-      click-through: this session has no WindowServer/screen access to do it itself. The dev
-      window should already be open — type a name into Projects, click Add, and check it shows
-      up in Supabase's table editor. Should take 10 seconds if the backend proof above holds.
 - [ ] **Activate the morning brief launchd job**, if you want it running automatically —
       commands are in `packages/automations/launchd/README.md`. Still deliberately not run by
       Claude, even under a blanket "always allow" grant (2026-08-09): that README states the
@@ -117,26 +110,20 @@
       the reply — a real, working link without inventing new folder-structure conventions.
       Deleting the active project correctly clears the selection instead of leaving it dangling.
       2 new commandEngine tests (40 total, up from 38), `tsc -b`/`vite build` both clean.
-- [ ] **Test all five orchestrator-routed commands in the actual running app** — `research
-      <topic>`, `continue project <name>`, `check my calendar`, `check my email`, `check my
-      github` — type each into the real command bar in the `cargo tauri dev` window and confirm
-      you get a real result back (not just the automated tests, which mock the Tauri IPC
-      boundary). Nobody has clicked through any of the four added 2026-08-09 yet. `continue
-      project` now takes the background path (see below) — expect an immediate "started as a
-      background job" response, then a second Command Log entry a bit later with the real result.
-- [ ] **Last step for background mode — needs you at the actual window:** local Claude Code
-      built the background-mode path for `continue-project` (2026-08-10) — see `AGENT_SYSTEM.md`
-      and `ROADMAP.md` M10. The underlying `claude --bg`/`claude agents --json --all`/fork-resume
-      sequence was verified by hand in a terminal with a real trivial background job (launch →
-      poll → fetch result → stop, all confirmed working), and 10 new Rust unit tests cover the
-      parsing logic using that real captured output as fixtures — 20 Rust tests total, all
-      passing, `cargo tauri dev` hot-reloads clean. What's not verified is clicking `continue
-      project <name>` in the actual live window and watching both Command Log entries appear —
-      same WindowServer-access gap as the Supabase/voice items above.
-- [ ] Known limitation in `orchestrator.rs`: `claude` is resolved via `PATH`, which works under
-      `cargo tauri dev` (inherits Terminal's env) but will silently fail in a double-clicked,
-      bundled app (Finder-launched processes get a minimal PATH). Not fixed yet — fix when the
-      bundled build is actually being tested, not before.
+- [ ] **Only two commands still need live confirmation with their exact phrasing** — everything
+      else (research, check-calendar, check-email, Supabase/Projects) is confirmed live as of
+      2026-08-10/11. Still open: type **"check my github"** (not "check my git hub" — the space
+      makes it fall through to `ask` instead) and **"continue project Ape War Game"** (matching
+      the real project name, not "continue with..." — same reason) into the real command bar.
+      `continue-project` takes the background path — expect an immediate "started as a background
+      job" reply, then a second Command Log entry once it finishes.
+- [ ] **`orchestrator.rs`'s bundled-app `PATH` resolution gap, plus two other cargo/live-window
+      items, hand off written 2026-08-11:** see `HANDOFF_PATH_FIX_AND_VERIFICATION.md` — covers
+      the known `PATH` limitation (works under `cargo tauri dev`, would silently fail in a
+      double-clicked bundled app), re-running `check-github`'s benchmark to see if its 44s outlier
+      repeats, and live-screenshotting the active-project-selection + interim-feedback frontend
+      changes from the same date. For local Claude Code to pick up — none of it needs Leonardo
+      specifically, per his "cover as much as possible while I'm away" instruction.
 
 ## Done
 
