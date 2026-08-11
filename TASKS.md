@@ -2,6 +2,25 @@
 
 ## Now
 
+- [ ] 2026-08-11 — **Milestone 26 (activity logging for Skill runs) built.** Extended the
+      `activity_events` table `0001_init.sql` created back at Milestone 7 but that had zero store
+      methods or UI ever reading/writing it — first real use of that table. New
+      `ActivityEvent`/`NewActivityEventInput` types + `listActivityEvents`/`createActivityEvent`
+      store methods. `App.tsx`'s `handleCommand` now logs every Skill run (the six
+      `SKILL_COMMAND_KINDS` — matches `builtinSkills.ts` exactly, "ask" excluded since it isn't a
+      named Skill) with skill id, conversation id, and active project id, fire-and-forget same as
+      message persistence. New "Activity" sidebar section (`ActivityView.tsx`, replaces its
+      `NotBuiltView` placeholder) lists them most-recent-first. New
+      `packages/database/migrations/0005_activity_events_skill_tracking.sql` — **fourth new
+      migration**, must run after `0002_chat.sql` and `0004_skills.sql` (new columns reference
+      both). **Incidental fix found while wiring this up:** `check-memory` was missing from
+      `ORCHESTRATOR_ROUTED_KINDS`, so it never got the "still working on that" interim-feedback
+      banner the other four `check-*` commands get on a slow response — added it. Also fixed a
+      real ordering bug caught by the new tests: `LocalStore.listActivityEvents` originally
+      sorted by `createdAt` string, but two events created in the same millisecond (easy to hit,
+      including live) tie under a string sort with undefined order — switched to reversing
+      insertion order instead, which is reliable regardless of timestamp resolution. 2 new tests
+      (53 total, up from 51). `tsc -b`/`npm run test`/`vite build` all clean.
 - [ ] 2026-08-11 — **Milestone 25 (Skills UI + manual invocation) built.** New "Agents" sidebar
       section is real now (`SkillsView.tsx`, replacing its `NotBuiltView` placeholder) — lists
       M24's six Skills with description, permission level, and which Connections each uses, plus

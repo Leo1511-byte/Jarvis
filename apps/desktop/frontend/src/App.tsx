@@ -19,6 +19,7 @@ import { MemoryView } from "./views/MemoryView";
 import { ChatView } from "./views/ChatView";
 import { ConnectionsView } from "./views/ConnectionsView";
 import { SkillsView } from "./views/SkillsView";
+import { ActivityView } from "./views/ActivityView";
 import { NotBuiltView } from "./views/NotBuiltView";
 
 // Synchronous orchestrator commands (research/check-calendar/check-email/
@@ -37,7 +38,29 @@ const ORCHESTRATOR_ROUTED_KINDS = new Set([
   "check-calendar",
   "check-email",
   "check-github",
+  // Milestone 26 fix: check-memory is orchestrator-routed exactly like the
+  // other four check-* commands (same runOrchestratorOrExplain path in
+  // commandEngine.ts) and was missing from this set since it was added --
+  // meant it never got the "still working on that" interim feedback the
+  // other slow commands do. Found while wiring skill-run logging below.
+  "check-memory",
   "ask",
+]);
+
+// Milestone 26: which command kinds are Skills (Milestone 24's registry)
+// worth an activity_events row for -- deliberately narrower than
+// ORCHESTRATOR_ROUTED_KINDS above ("ask" isn't a named Skill; this list
+// otherwise matches lib/store/builtinSkills.ts's ids exactly, no automated
+// check tying the two together the way permissions.test.ts does for
+// permission levels, so keep them in sync by hand if a Skill is ever
+// added/removed).
+const SKILL_COMMAND_KINDS = new Set([
+  "research",
+  "continue-project",
+  "check-calendar",
+  "check-email",
+  "check-github",
+  "check-memory",
 ]);
 
 interface OrchestratorResponse {
@@ -270,6 +293,23 @@ export default function App() {
         .catch(() => {});
     }
 
+    // Milestone 26: log every Skill run to activity_events (SECURITY.md's
+    // Level 2 "traceable" requirement) -- separate from the message
+    // persistence above since not every command is a Skill (switch-theme,
+    // status, help, ask aren't in SKILL_COMMAND_KINDS). Fire-and-forget,
+    // same non-blocking pattern as message persistence.
+    if (SKILL_COMMAND_KINDS.has(command.kind)) {
+      getStore()
+        .createActivityEvent({
+          type: "skill_run",
+          summary: `${command.kind}: ${text}`.slice(0, 200),
+          skillId: command.kind,
+          conversationId: currentConversation?.id ?? null,
+          projectId: activeProject?.id ?? null,
+        })
+        .catch(() => {});
+    }
+
     if (speak) {
       setCoreState("speaking");
       invoke("queue_speech", { text: response }).catch(() => {});
@@ -350,6 +390,8 @@ export default function App() {
             }}
           />
         );
+      case "Activity":
+        return <ActivityView />;
       default:
         return <NotBuiltView section={active} />;
     }

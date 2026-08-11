@@ -161,4 +161,26 @@ describe("LocalStore", () => {
     const unknown = await store.listSkillConnections("does-not-exist");
     expect(unknown).toEqual([]);
   });
+
+  it("creates activity events and lists them most-recent-first", async () => {
+    const store = new LocalStore();
+    await store.createActivityEvent({ type: "skill_run", summary: "first" });
+    await store.createActivityEvent({ type: "skill_run", summary: "second", skillId: "check-github" });
+
+    const events = await store.listActivityEvents();
+    expect(events).toHaveLength(2);
+    expect(events[0].summary).toBe("second");
+    expect(events[0].skillId).toBe("check-github");
+    expect(events[1].skillId).toBeNull();
+  });
+
+  it("respects the limit passed to listActivityEvents", async () => {
+    const store = new LocalStore();
+    await store.createActivityEvent({ type: "skill_run", summary: "a" });
+    await store.createActivityEvent({ type: "skill_run", summary: "b" });
+    await store.createActivityEvent({ type: "skill_run", summary: "c" });
+
+    const limited = await store.listActivityEvents(2);
+    expect(limited).toHaveLength(2);
+  });
 });

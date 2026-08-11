@@ -111,6 +111,33 @@ export interface Skill {
 }
 
 /**
+ * Milestone 26 — extends the `activity_events` table 0001_init.sql already
+ * created (per SECURITY.md's Level 2 "every action must be traceable"
+ * rule) rather than inventing a parallel `skill_runs` log. `skillId`/
+ * `conversationId` are new, nullable columns added by
+ * 0005_activity_events_skill_tracking.sql; `projectId`/`type`/`summary`
+ * already existed but had no store methods reading/writing them until now
+ * -- this is the first real use of the table at all.
+ */
+export interface ActivityEvent {
+  id: string;
+  projectId: string | null;
+  skillId: string | null;
+  conversationId: string | null;
+  type: string;
+  summary: string;
+  createdAt: string;
+}
+
+export interface NewActivityEventInput {
+  projectId?: string | null;
+  skillId?: string | null;
+  conversationId?: string | null;
+  type: string;
+  summary: string;
+}
+
+/**
  * Every store implementation (local, Supabase, ...) implements this.
  * Callers never import a concrete store directly -- they get one from
  * store/index.ts, which decides which implementation to use.
@@ -142,4 +169,9 @@ export interface JarvisStore {
   /** Milestone 24: read-only registry, see Skill's doc comment above. */
   listSkills(): Promise<Skill[]>;
   listSkillConnections(skillId: string): Promise<Connection[]>;
+
+  /** Milestone 26: see ActivityEvent's doc comment above. listActivityEvents
+   * sorts most-recent-first, same convention as listProjects/listTasks. */
+  listActivityEvents(limit?: number): Promise<ActivityEvent[]>;
+  createActivityEvent(input: NewActivityEventInput): Promise<ActivityEvent>;
 }

@@ -1,11 +1,13 @@
 import { BUILTIN_CONNECTIONS } from "./builtinConnections";
 import { BUILTIN_SKILLS } from "./builtinSkills";
 import type {
+  ActivityEvent,
   Connection,
   ConnectionCapability,
   Conversation,
   JarvisStore,
   Message,
+  NewActivityEventInput,
   NewMessageInput,
   NewProjectInput,
   NewTaskInput,
@@ -28,6 +30,7 @@ const PROJECTS_KEY = "jarvis.local.projects";
 const TASKS_KEY = "jarvis.local.tasks";
 const CONVERSATIONS_KEY = "jarvis.local.conversations";
 const MESSAGES_KEY = "jarvis.local.messages";
+const ACTIVITY_EVENTS_KEY = "jarvis.local.activityEvents";
 
 function uuid(): string {
   return crypto.randomUUID();
@@ -89,6 +92,18 @@ function loadMessages(): Message[] {
 
 function saveMessages(messages: Message[]): void {
   localStorage.setItem(MESSAGES_KEY, JSON.stringify(messages));
+}
+
+function loadActivityEvents(): ActivityEvent[] {
+  try {
+    return JSON.parse(localStorage.getItem(ACTIVITY_EVENTS_KEY) ?? "[]");
+  } catch {
+    return [];
+  }
+}
+
+function saveActivityEvents(events: ActivityEvent[]): void {
+  localStorage.setItem(ACTIVITY_EVENTS_KEY, JSON.stringify(events));
 }
 
 export class LocalStore implements JarvisStore {
@@ -283,5 +298,31 @@ export class LocalStore implements JarvisStore {
       .map((id) => BUILTIN_CONNECTIONS.find((c) => c.id === id))
       .filter((c): c is (typeof BUILTIN_CONNECTIONS)[number] => c !== undefined)
       .map((c) => ({ id: c.id, name: c.id, createdAt: EPOCH }));
+  }
+
+  async listActivityEvents(limit?: number): Promise<ActivityEvent[]> {
+    // Reversing insertion order rather than sorting by createdAt --
+    // nowISO() has millisecond resolution, and two events created in the
+    // same millisecond (easily hit in tests, possible live too) would tie
+    // under a string sort, leaving their relative order undefined instead
+    // of reliably "most recent write first."
+    const reversed = [...loadActivityEvents()].reverse();
+    return limit ? reversed.slice(0, limit) : reversed;
+  }
+
+  async createActivityEvent(input: NewActivityEventInput): Promise<ActivityEvent> {
+    const event: ActivityEvent = {
+      id: uuid(),
+      projectId: input.projectId ?? null,
+      skillId: input.skillId ?? null,
+      conversationId: input.conversationId ?? null,
+      type: input.type,
+      summary: input.summary,
+      createdAt: nowISO(),
+    };
+    const events = loadActivityEvents();
+    events.push(event);
+    saveActivityEvents(events);
+    return event;
   }
 }

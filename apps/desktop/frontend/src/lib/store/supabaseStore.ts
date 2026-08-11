@@ -1,11 +1,13 @@
 import { supabase } from "../supabaseClient";
 import type {
+  ActivityEvent,
   Connection,
   ConnectionCapability,
   Conversation,
   JarvisStore,
   Message,
   MessageRole,
+  NewActivityEventInput,
   NewMessageInput,
   NewProjectInput,
   NewTaskInput,
@@ -158,6 +160,30 @@ function skillFromRow(row: SkillRow): Skill {
     description: row.description,
     permissionLevel: row.permission_level,
     builtin: row.builtin,
+    createdAt: row.created_at,
+  };
+}
+
+// Milestone 26 — matches activity_events after
+// 0005_activity_events_skill_tracking.sql adds skill_id/conversation_id.
+interface ActivityEventRow {
+  id: string;
+  project_id: string | null;
+  skill_id: string | null;
+  conversation_id: string | null;
+  type: string;
+  summary: string;
+  created_at: string;
+}
+
+function activityEventFromRow(row: ActivityEventRow): ActivityEvent {
+  return {
+    id: row.id,
+    projectId: row.project_id,
+    skillId: row.skill_id,
+    conversationId: row.conversation_id,
+    type: row.type,
+    summary: row.summary,
     createdAt: row.created_at,
   };
 }
@@ -383,5 +409,31 @@ export class SupabaseStore implements JarvisStore {
     const { data, error } = await client.from("connections").select("*").in("id", connectionIds);
     if (error) throw error;
     return (data as ConnectionRow[]).map(connectionFromRow);
+  }
+
+  async listActivityEvents(limit?: number): Promise<ActivityEvent[]> {
+    const client = requireClient();
+    let query = client.from("activity_events").select("*").order("created_at", { ascending: false });
+    if (limit) query = query.limit(limit);
+    const { data, error } = await query;
+    if (error) throw error;
+    return (data as ActivityEventRow[]).map(activityEventFromRow);
+  }
+
+  async createActivityEvent(input: NewActivityEventInput): Promise<ActivityEvent> {
+    const client = requireClient();
+    const { data, error } = await client
+      .from("activity_events")
+      .insert({
+        project_id: input.projectId ?? null,
+        skill_id: input.skillId ?? null,
+        conversation_id: input.conversationId ?? null,
+        type: input.type,
+        summary: input.summary,
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    return activityEventFromRow(data as ActivityEventRow);
   }
 }

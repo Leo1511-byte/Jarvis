@@ -2,6 +2,28 @@
 
 ## Unreleased
 
+### Added — 2026-08-11 (Milestone 26: activity logging for Skill runs)
+- New `ActivityEvent`/`NewActivityEventInput` types and `listActivityEvents`/`createActivityEvent`
+  `JarvisStore` methods — the first store methods and UI to ever read/write `activity_events`,
+  the table `0001_init.sql` created back at Milestone 7 but that had sat unused since.
+- `App.tsx`'s `handleCommand` now logs an activity event for every Skill run (new
+  `SKILL_COMMAND_KINDS` set — matches `builtinSkills.ts`'s six ids, deliberately excludes "ask"
+  since it isn't a named Skill), recording skill id, conversation id, and active project id.
+  Fire-and-forget, same non-blocking pattern as message persistence.
+- New "Activity" sidebar section — `views/ActivityView.tsx` replaces its `NotBuiltView`
+  placeholder, lists events most-recent-first.
+- `packages/database/migrations/0005_activity_events_skill_tracking.sql` adds `skill_id`/
+  `conversation_id` columns to the existing table. Must run after `0002_chat.sql` and
+  `0004_skills.sql`. Not yet run against the real Supabase project.
+- **Incidental fix:** `check-memory` was missing from `ORCHESTRATOR_ROUTED_KINDS`, so it never
+  triggered the "still working on that" interim-feedback banner the other four `check-*` commands
+  get on a slow response — added it while wiring up the new skill-run kind set.
+- **Incidental fix, caught by the new tests:** `LocalStore.listActivityEvents` originally sorted
+  by `createdAt` string; two events created in the same millisecond (easy to hit, including live)
+  tie under a string sort with undefined relative order. Switched to reversing insertion order,
+  which is reliable regardless of timestamp resolution.
+- 2 new tests (53 total, up from 51). `tsc -b`, `npm run test`, `vite build` all clean.
+
 ### Added — 2026-08-11 (Milestone 25: Skills UI + manual invocation)
 - New "Agents" sidebar section is real now — `views/SkillsView.tsx` replaces its `NotBuiltView`
   placeholder. Lists every Skill from Milestone 24's registry with its description, permission

@@ -19,6 +19,8 @@ export type {
   Connection,
   ConnectionCapability,
   Skill,
+  ActivityEvent,
+  NewActivityEventInput,
 } from "./types";
 
 /**
