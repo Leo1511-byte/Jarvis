@@ -6,8 +6,10 @@ currently active.
 
 ## Now
 
-- [ ] Milestone 32 — Multi-window foundation: pop-out windows per view via Tauri
-      `WebviewWindow`, state synced through the existing store, placeable across monitors.
+- [ ] **Milestone 32's Rust half needs `cargo`** — `windows.rs`/`main.rs`/`capabilities/
+      default.json` are written but never compiled. See
+      `docs/archive/HANDOFF_M32_MULTIWINDOW_RUST_VERIFICATION.md` for exactly what to build and
+      click through.
 
 ## Next up
 
@@ -21,6 +23,11 @@ currently active.
       `permissions.ts`, `lib/store/builtinSkills.ts`, and `App.tsx`'s `SKILL_COMMAND_KINDS` all
       derive from it instead of hand-duplicating). No behavior change, no hardware Skill added.
       57 tests passing, `tsc -b`/`vite build` clean.
+- [x] 2026-08-11 — Milestone 32 (frontend half): any real view can pop out into its own Tauri
+      window (`lib/popoutViews.ts`, `lib/windowManager.ts`, `Sidebar.tsx` pop-out buttons,
+      `main.tsx`/`App.tsx` standalone rendering). Live-verified in a browser preview
+      (`?view=chat`, `?view=activity` both render correctly, no sidebar, real store data).
+      Voice listener disabled outside the main window. Rust half unverified — see "Now".
 
 ## Blocked
 

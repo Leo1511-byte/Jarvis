@@ -4,6 +4,12 @@
   height: 100vh;
 }
 
+/* Milestone 32: a popped-out per-view window renders without the
+   Sidebar, so it doesn't need the two-column layout. */
+.app-shell--standalone {
+  grid-template-columns: 1fr;
+}
+
 /* Sidebar */
 .sidebar {
   background: var(--bg-panel);
@@ -53,6 +59,37 @@
   background: var(--accent-soft);
   color: var(--accent);
   font-weight: 600;
+}
+
+/* Milestone 32: row wrapper so a real view's nav item can carry a
+   pop-out button alongside it without changing sidebar-item's own
+   width/click target. */
+.sidebar-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.sidebar-row .sidebar-item {
+  flex: 1;
+}
+
+.sidebar-popout {
+  flex: 0 0 auto;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  font-size: 13px;
+  line-height: 1;
+  padding: var(--space-2);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.sidebar-popout:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 
 /* Main */

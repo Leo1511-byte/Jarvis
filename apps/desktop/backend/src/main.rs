@@ -5,6 +5,7 @@
 
 mod orchestrator;
 mod voice;
+mod windows;
 
 fn main() {
     tauri::Builder::default()
@@ -20,6 +21,7 @@ fn main() {
             voice::start_speak_daemon,
             voice::stop_speak_daemon,
             voice::queue_speech,
+            windows::open_view_window,
         ])
         .run(tauri::generate_context!())
         .expect("error while running jarvis");

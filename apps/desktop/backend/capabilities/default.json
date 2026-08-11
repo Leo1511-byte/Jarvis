@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Capability for the main window -- core:default covers the window/webview/event/app basics every Tauri app needs, including the event:listen the voice pipeline uses to receive wake/transcript events from voice.rs (see apps/desktop/frontend/src/hooks/useVoiceListener.ts). Custom #[tauri::command]s (run_orchestrator, start_voice_listener, etc.) aren't ACL-gated and work regardless of this file -- that's why the app worked at all before this existed, and why only the event.listen() call failed.",
-  "windows": ["main"],
+  "description": "Capability for the main window and Milestone 32's popped-out per-view windows (label pattern view-*, see apps/desktop/backend/src/windows.rs) -- core:default covers the window/webview/event/app basics every Tauri app needs, including the event:listen the voice pipeline uses to receive wake/transcript events from voice.rs (see apps/desktop/frontend/src/hooks/useVoiceListener.ts). Custom #[tauri::command]s (run_orchestrator, start_voice_listener, etc.) aren't ACL-gated and work regardless of this file -- that's why the app worked at all before this existed, and why only the event.listen() call failed. Popped-out windows don't actually run the voice listener (App.tsx disables it outside the main window, to avoid two windows fighting over one wake-word process) but still need core:default for things like the approval dialog and general webview APIs.",
+  "windows": ["main", "view-*"],
   "permissions": ["core:default"]
 }

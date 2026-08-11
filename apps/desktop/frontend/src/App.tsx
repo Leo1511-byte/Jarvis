@@ -25,6 +25,7 @@ import { SkillsView } from "./views/SkillsView";
 import { ActivityView } from "./views/ActivityView";
 import { NotBuiltView } from "./views/NotBuiltView";
 import { SKILLS } from "./skills/registry";
+import { SLUG_TO_VIEW } from "./lib/popoutViews";
 
 // Synchronous orchestrator commands (research/check-calendar/check-email/
 // check-github/ask) measured 12-44s live via scripts/benchmark_orchestrator.sh
@@ -72,7 +73,12 @@ async function runOrchestrator(prompt: string): Promise<string> {
   return response.result;
 }
 
-export default function App() {
+// Milestone 32: `standaloneView` is the `?view=<slug>` a popped-out
+// window (windows.rs's open_view_window) launches with -- resolved to a
+// Sidebar-name string so the existing renderActive() switch below needs
+// no changes. Undefined/null (the normal main-window case) behaves
+// exactly as before this milestone.
+export default function App({ standaloneView = null }: { standaloneView?: string | null }) {
   const { theme, setTheme } = useTheme();
   const { settings: voiceSettings, update: updateVoiceSettings } = useVoiceSettings();
   const { activeProjectId, setActiveProjectId } = useActiveProject();
@@ -87,7 +93,9 @@ export default function App() {
   // 3 gets a real approval gate automatically instead of needing bespoke
   // per-command UI wiring the way delete-project's dedicated button does.
   const { pending: pendingApproval, requestApproval, respond: respondApproval } = useApproval();
-  const [active, setActive] = useState("Dashboard");
+  const [active, setActive] = useState(() =>
+    standaloneView ? (SLUG_TO_VIEW[standaloneView] ?? "Dashboard") : "Dashboard"
+  );
   const [coreState, setCoreState] = useState<CoreState>("idle");
   const [log, setLog] = useState<LogEntry[]>([]);
   const [activeProject, setActiveProject] = useState<Project | null>(null);
@@ -341,7 +349,11 @@ export default function App() {
   // parseCommand/executeCommand path the typed command bar uses -- no
   // separate voice-command logic, per spec §32. Only active while both
   // "Microphone enabled" and "Wake word" are on in Voice settings.
-  useVoiceListener(voiceSettings.micEnabled && voiceSettings.wakeWordEnabled, {
+  // Milestone 32: never active in a popped-out standalone window --
+  // voice.rs's listener process is a single global backend resource, so
+  // two windows both requesting it would just fight over one microphone/
+  // wake-word process instead of getting two independent ones.
+  useVoiceListener(!standaloneView && voiceSettings.micEnabled && voiceSettings.wakeWordEnabled, {
     onWake: () => setCoreState("listening"),
     onTranscript: (text) => {
       handleCommand(text, true);
@@ -422,8 +434,8 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell">
-      <Sidebar active={active} onSelect={setActive} />
+    <div className={standaloneView ? "app-shell app-shell--standalone" : "app-shell"}>
+      {!standaloneView && <Sidebar active={active} onSelect={setActive} />}
 
       <main className="main">
         <header className="main-header">
