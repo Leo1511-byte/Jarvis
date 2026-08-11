@@ -25,6 +25,10 @@ head — done means tests pass (`npm run test`), typecheck is clean (`tsc -b`), 
 (`vite build`), and where feasible, you actually looked at it (browser preview, live click-
 through) rather than trusting the code alone.**
 
+New ideas go straight into `TASKS.md`'s prioritized Backlog (tagged by which `VISION.md` pillar
+they serve) instead of getting lost mid-conversation. An item only becomes a numbered milestone
+in `ROADMAP.md` once it's actually about to start.
+
 ## Known gotchas
 
 - New Tauri windows need their label covered by `capabilities/default.json`'s `"windows"` glob,

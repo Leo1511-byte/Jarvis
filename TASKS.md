@@ -33,7 +33,25 @@ currently active.
 
 (none)
 
-## Backlog (unscoped — do not start yet)
+## Backlog
 
-School/study tracking, first hardware Skill, GitHub/email/calendar write actions, n8n (if ever
-needed), bundled-app `PATH` resolution fix in `orchestrator.rs`.
+Unscoped ideas — no milestone number, no spec note, nothing started. An item only gets promoted
+to `ROADMAP.md`'s Current milestones table once it's actually about to start (see `CLAUDE.md`'s
+working agreement). Prioritized, top = most likely next; add new ideas at the point they come
+up rather than letting them evaporate. Tagged by which `VISION.md` pillar each serves —
+`[daily-life]`, `[workshop]`, `[ambient]`, or `[process]` for things that aren't feature work —
+so it's visible if one pillar's being neglected (daily-life has had all the real progress so
+far).
+
+1. `[process]` Fix `orchestrator.rs`'s bundled-app `PATH` resolution gap — see
+   `docs/archive/HANDOFF_PATH_FIX_AND_VERIFICATION.md`. Blocks a real release build.
+2. `[daily-life]` School/study tracking — next daily-life depth pass, per VISION.md's explicit
+   naming of it as a core job, not a side feature. Wants M32's window foundation live-verified
+   first so it has somewhere ambient to live.
+3. `[workshop]` First hardware Skill (3D printer or robotic arm) — needs M31's `Skill` interface
+   (done) plus an actual reachable device; not scoped until Leonardo names which device and
+   what "start a print job" or equivalent should really do.
+4. `[daily-life]` GitHub/email/calendar write actions (currently read-only by design, see
+   `SECURITY.md`) — real Level 3 surface, needs a considered approval-flow design before any
+   of it starts.
+5. `[process]` n8n — only if launchd/cron scripts genuinely become unwieldy; not a default plan.
