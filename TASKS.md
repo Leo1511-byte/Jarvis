@@ -2,6 +2,24 @@
 
 ## Now
 
+- [ ] 2026-08-11 — **Chat + Memory + Skills + Connections upgrade — plan written, awaiting
+      Leonardo's approval before any implementation starts.** He asked for a chat tab, memory
+      tab, and skills tab (spec pasted from ChatGPT) instead of one-shot orders JARVIS doesn't
+      remember. Per the spec's own instruction ("do not begin implementing before the plan is
+      shown"), inspected the current V1 implementation first (`commandEngine.ts`,
+      `permissions.ts`, `AGENT_SYSTEM.md`, `MCP_SETUP.md`, `0001_init.sql`, `Sidebar.tsx`,
+      `App.tsx`, `DashboardView.tsx`, `MemoryView.tsx`) and wrote the full structured plan at
+      `CHAT_MEMORY_SKILLS_CONNECTIONS_PLAN.md` — see that file for CURRENT V1 STATE / REUSABLE
+      COMPONENTS / REQUIRED CHANGES / DATABASE CHANGES / OBSIDIAN CHANGES / UI CHANGES / VOICE
+      CHANGES / SECURITY CONSIDERATIONS / proposed Milestones 21–29. Key finding: most of what
+      the spec asks for is an extension of things that already exist, not new systems — Skills
+      are the existing prompt-template commands given a data row instead of a hardcoded switch
+      case, Connections are a UI layer over auth that's already live (Calendar/Gmail/GitHub/
+      Obsidian/Supabase), Chat is `App.tsx`'s ephemeral 6-entry log made persistent. Real new
+      work: `conversations`/`messages`/`skills`/`connections` tables (new migration, Leonardo
+      runs the SQL himself same as M7), and Memory's index (M27) needs actual filesystem
+      scanning — likely `cargo`/Rust, handed to local Claude Code when that milestone starts.
+      **Nothing implemented yet** — see the plan doc's "Awaiting approval" section.
 - [x] 2026-08-10 — **Fixed and live-confirmed: JARVIS talking in a loop / reporting things
       Leonardo never said.** Root cause: `wait_while_speaking()` in `listen_loop.py` only ran
       once, before opening the mic stream for wake-word listening — once inside that stream,

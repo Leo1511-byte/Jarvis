@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Planned — 2026-08-11 (Chat + Memory + Skills + Connections — plan only, no code yet)
+- Leonardo requested a chat tab, memory tab, and skills tab (pasted spec) instead of one-shot
+  orders JARVIS doesn't remember between commands. Per the spec's own instruction, inspected the
+  current implementation and docs first, then wrote the full structured integration plan at
+  `CHAT_MEMORY_SKILLS_CONNECTIONS_PLAN.md` (current state, reusable components, required/database/
+  Obsidian/UI/voice changes, security considerations, proposed Milestones 21–29 with dependencies
+  and complexity). `TASKS.md`/`ROADMAP.md` updated to track it. No implementation, no schema, no
+  new views yet — awaiting approval before Milestone 21 starts.
+
 ### Added — 2026-08-11 (Obsidian linked into the app: check-memory command + Memory view)
 - New `check-memory` command in `commandEngine.ts` — matches "check my memory" / "what's in my
   memory" / "check my notes" (typed or spoken, same engine either way per spec §32). Prompts the

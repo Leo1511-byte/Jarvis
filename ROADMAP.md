@@ -26,6 +26,26 @@ test and update `TASKS.md`/`CHANGELOG.md` at the end of each.
 | 19 | Testing + performance | **Substantially real, command latency now measured 2026-08-11.** All 5 orchestrator commands confirmed live in the actual app (M7/M10/M12/M14/M15/M16), and `scripts/benchmark_orchestrator.sh` produced real numbers: synchronous commands (research/calendar/email/GitHub) take 12–44 seconds each; continue-project's background-mode launch is consistently ~1s, with the job itself finishing in 5–13s. **Real finding:** that's a long silent wait for a voice/command-bar interaction with zero incremental feedback today — worth a UX pass before V1 polish is called done (see `TASKS.md`). `check-github` also showed notably more run-to-run variance (25s/25s/44s) than the others, worth a second look. App startup timing deliberately still not benchmarked — that's about the bundled release build, blocked on the known `PATH`-resolution gap in `orchestrator.rs` | Cowork + Leonardo (live run) |
 | 20 | V1 polish | **Not started as its own pass, but most of what it would cover has already happened incrementally, 2026-08-11.** M7/M9/M10/M12/M14/M15/M16 are all confirmed live; M6 (Obsidian) is now reachable from the app for the first time. What's left: one exact-phrase confirmation (`continue project Ape War Game` — see `TASKS.md`), the bundled-app `PATH`-resolution fix (see `HANDOFF_PATH_FIX_AND_VERIFICATION.md`, needs `cargo`), and a real look at whether the interim "still working" feedback (added 2026-08-11) actually fixes the long-silent-wait UX finding from M19's benchmark once it's been seen live rather than just shipped. Most of the sidebar's remaining `NotBuiltView` placeholders (Agents, Automations, Research, Integrations, Activity, Notifications, System, Settings) are still genuinely not built — Memory was the one Leonardo named as missing, not a signal the rest should be rushed too | — |
 
+| 21 | Conversations/messages persistence (Chat backbone) | **Plan written, not started** — see `CHAT_MEMORY_SKILLS_CONNECTIONS_PLAN.md` | — |
+| 22 | Chat UI (real tab, persisted history) | **Plan written, not started** | — |
+| 23 | Connections registry (data + status UI) | **Plan written, not started** | — |
+| 24 | Skills data model (migrate the 6 existing commands to data-driven) | **Plan written, not started** | — |
+| 25 | Skills UI + manual invocation | **Plan written, not started** | — |
+| 26 | skill_runs / activity_events logging extension | **Plan written, not started** | — |
+| 27 | Memory index (real vault browsing) | **Plan written, not started — needs cargo, will hand off to local Claude Code** | — |
+| 28 | Skill-aware permission enforcement in UI | **Plan written, not started** | — |
+| 29 | Voice ↔ Chat integration polish | **Plan written, not started** | — |
+
+## Milestones 21–29: Chat + Memory + Skills + Connections
+
+New scope Leonardo requested 2026-08-11 (pasted spec, chat/memory/skills tabs instead of one-shot
+orders). Full structured plan — current state, reusable components, database/UI/voice changes,
+security considerations, dependency-ordered milestone table — is in
+`CHAT_MEMORY_SKILLS_CONNECTIONS_PLAN.md`. Per the spec's own instruction, nothing above is
+implemented yet; this table exists so the new milestones are tracked the same honest way as 1–20
+rather than living only in a separate doc. Awaiting Leonardo's go-ahead on the plan before M21
+starts.
+
 ## Sequencing note
 
 Milestones 1–2 are done (2026-08-09). Stack is decided: Tauri, Supabase Cloud, no n8n initially
