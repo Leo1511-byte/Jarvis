@@ -11,11 +11,12 @@ import { CommandBar } from "./components/CommandBar";
 import { Sidebar } from "./components/Sidebar";
 import { ThemeSwitcher } from "./components/ThemeSwitcher";
 import { parseCommand, executeCommand } from "./commandEngine";
-import { getStore, type Project } from "./lib/store";
+import { getStore, type Conversation, type Message, type Project } from "./lib/store";
 import { DashboardView, type LogEntry } from "./views/DashboardView";
 import { ProjectsView } from "./views/ProjectsView";
 import { TasksView } from "./views/TasksView";
 import { MemoryView } from "./views/MemoryView";
+import { ChatView } from "./views/ChatView";
 import { NotBuiltView } from "./views/NotBuiltView";
 
 // Synchronous orchestrator commands (research/check-calendar/check-email/
@@ -70,12 +71,18 @@ export default function App() {
   // (local or Supabase) has created/loaded one -- null briefly on first
   // mount and whenever persistence itself fails, which handleCommand below
   // treats as "don't persist this exchange" rather than blocking on it.
-  const currentConversation = useCurrentConversation();
+  const { conversation: currentConversation, selectConversation } = useCurrentConversation();
   const [active, setActive] = useState("Dashboard");
   const [coreState, setCoreState] = useState<CoreState>("idle");
   const [log, setLog] = useState<LogEntry[]>([]);
   const [activeProject, setActiveProject] = useState<Project | null>(null);
   const [thinking, setThinking] = useState<string | null>(null);
+  // Milestone 22 (Chat view): full persisted history for currentConversation
+  // (unlike `log` above, not capped at 6) and the list of every conversation
+  // for the switcher. Both loaded lazily -- conversations only once the Chat
+  // tab is actually opened, since nothing else in the app needs the list.
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
 
   // Resolves activeProjectId (just an id, from localStorage) down to the
   // real project object -- both DashboardView's display and handleCommand's
@@ -102,6 +109,57 @@ export default function App() {
       cancelled = true;
     };
   }, [activeProjectId]);
+
+  // Milestone 22: loads full history whenever the current conversation
+  // changes (including on first resolve and whenever the Chat view's
+  // switcher picks a different one via selectConversation) -- this is what
+  // makes ChatView show more than the Dashboard's rolling last-6 log.
+  useEffect(() => {
+    let cancelled = false;
+    if (!currentConversation) {
+      setMessages([]);
+      return;
+    }
+    getStore()
+      .listMessages(currentConversation.id)
+      .then((msgs) => {
+        if (!cancelled) setMessages(msgs);
+      })
+      .catch(() => {
+        if (!cancelled) setMessages([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentConversation]);
+
+  // Milestone 22: the conversation switcher's list -- only fetched once the
+  // Chat tab is opened (not on every render) rather than kept live-synced
+  // at all times, since nothing else in the app reads it.
+  useEffect(() => {
+    if (active !== "Chat") return;
+    let cancelled = false;
+    getStore()
+      .listConversations()
+      .then((cs) => {
+        if (!cancelled) setConversations(cs);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [active]);
+
+  async function handleNewConversation() {
+    try {
+      const created = await getStore().createConversation();
+      selectConversation(created);
+      setConversations((prev) => [created, ...prev]);
+    } catch {
+      // Best-effort, same as the rest of Chat persistence -- a failed
+      // create just means the button didn't do anything, not a crash.
+    }
+  }
 
   // Milestone 10, background-mode slice: polls `poll_orchestrator_background`
   // every BACKGROUND_POLL_MS until the job is done (or fails/disappears),
@@ -193,18 +251,20 @@ export default function App() {
     setLog((prev) => [...prev, { you: text, jarvis: response }].slice(-6));
     setCoreState(command.kind === "unknown" ? "error" : "success");
 
-    // Milestone 21: persist the exchange alongside the existing in-memory
-    // Command Log (unchanged above) rather than replacing it -- a real Chat
-    // view reading full history is Milestone 22's job. Fire-and-forget:
-    // persistence failing (store not ready yet, offline, etc.) shouldn't
-    // block or error out a command that already succeeded.
+    // Milestone 21/22: persist the exchange alongside the existing in-memory
+    // Command Log (unchanged above), and append to `messages` once each
+    // write resolves so the Chat view reflects it without a full refetch.
+    // Fire-and-forget: persistence failing (store not ready yet, offline,
+    // etc.) shouldn't block or error out a command that already succeeded.
     if (currentConversation) {
       const store = getStore();
       store
         .createMessage({ conversationId: currentConversation.id, role: "user", content: text })
+        .then((msg) => setMessages((prev) => [...prev, msg]))
         .catch(() => {});
       store
         .createMessage({ conversationId: currentConversation.id, role: "jarvis", content: response })
+        .then((msg) => setMessages((prev) => [...prev, msg]))
         .catch(() => {});
     }
 
@@ -265,6 +325,19 @@ export default function App() {
         return <TasksView />;
       case "Memory":
         return <MemoryView runOrchestrator={runOrchestrator} />;
+      case "Chat":
+        return (
+          <ChatView
+            conversation={currentConversation}
+            conversations={conversations}
+            messages={messages}
+            onSelectConversation={selectConversation}
+            onNewConversation={handleNewConversation}
+            onSubmit={(text) => {
+              handleCommand(text);
+            }}
+          />
+        );
       default:
         return <NotBuiltView section={active} />;
     }

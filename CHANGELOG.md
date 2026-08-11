@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+### Added — 2026-08-11 (Milestone 22: real Chat tab)
+- New `Chat` sidebar item (`Sidebar.tsx`, between Dashboard and Projects) and `views/ChatView.tsx`
+  — a conversation switcher (list of `conversations` + "New chat" button) alongside the full
+  persisted message thread for whichever conversation is selected, plus its own input.
+- No new command/orchestration logic: `ChatView`'s input calls the same `handleCommand` the
+  command bar and voice already use, via a plain `onSubmit` prop — identical parsing, permission
+  levels, and orchestrator routing either way.
+- `hooks/useCurrentConversation.ts` gained a `selectConversation` setter so `App.tsx`'s Chat
+  wiring and its existing `handleCommand` persistence share one source of truth for "the current
+  conversation" instead of drifting apart.
+- `App.tsx` gained `messages`/`conversations` state, loaded via Milestone 21's new store methods,
+  plus `handleNewConversation`. Dashboard's Command Log (`DashboardView.tsx`) is unchanged — still
+  the same rolling last-6, Chat is additive.
+- `tsc -b`, `npm run test` (46 passing, unchanged — `ChatView` isn't unit tested, matching how
+  `DashboardView`/`MemoryView` aren't either), `vite build` all clean.
+
 ### Added — 2026-08-11 (Milestone 21: chat backbone — conversations/messages persistence)
 - New `Conversation`/`Message`/`MessageRole`/`NewMessageInput` types (`lib/store/types.ts`) and 4
   new `JarvisStore` methods: `listConversations`, `createConversation`, `listMessages`,

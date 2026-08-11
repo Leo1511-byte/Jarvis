@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getStore, type Conversation } from "../lib/store";
 
 const STORAGE_KEY = "jarvis.currentConversationId";
@@ -11,14 +11,20 @@ const STORAGE_KEY = "jarvis.currentConversationId";
  * (local or Supabase) so it survives a reload and, once Supabase is the
  * active store, syncs like everything else.
  *
- * Deliberately just one ongoing conversation for now, auto-created on
- * first use -- a UI for creating/switching between multiple conversations
- * is Milestone 22's job (Chat tab), not this one. This hook only exists so
- * App.tsx has something real to write messages into; it renders no UI
- * itself.
+ * Auto-creates one conversation on first use so App.tsx always has
+ * something real to write messages into. Milestone 22 addition: exposes
+ * `selectConversation` so the new Chat view can switch to a different (or
+ * newly created) conversation and have App.tsx -- which reads this same
+ * hook instance -- immediately start persisting into it too, instead of
+ * the two staying out of sync.
  */
 export function useCurrentConversation() {
-  const [conversation, setConversation] = useState<Conversation | null>(null);
+  const [conversation, setConversationState] = useState<Conversation | null>(null);
+
+  const selectConversation = useCallback((next: Conversation) => {
+    localStorage.setItem(STORAGE_KEY, next.id);
+    setConversationState(next);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -31,7 +37,7 @@ export function useCurrentConversation() {
           const existing = await store.listConversations();
           const found = existing.find((c) => c.id === savedId);
           if (found) {
-            if (!cancelled) setConversation(found);
+            if (!cancelled) setConversationState(found);
             return;
           }
         } catch {
@@ -43,7 +49,7 @@ export function useCurrentConversation() {
       try {
         const created = await store.createConversation();
         localStorage.setItem(STORAGE_KEY, created.id);
-        if (!cancelled) setConversation(created);
+        if (!cancelled) setConversationState(created);
       } catch {
         // No conversation to persist into -- callers (App.tsx) treat a
         // null conversation as "don't persist this exchange" rather than
@@ -58,5 +64,5 @@ export function useCurrentConversation() {
     };
   }, []);
 
-  return conversation;
+  return { conversation, selectConversation };
 }

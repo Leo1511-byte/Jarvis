@@ -1,5 +1,6 @@
 const NAV_ITEMS = [
   "Dashboard",
+  "Chat",
   "Projects",
   "Tasks",
   "Memory",
@@ -16,8 +17,8 @@ const NAV_ITEMS = [
 /**
  * Visual nav shell (spec §20) — no routing yet. Each item is a plain
  * button; wiring to real views happens as each area's milestone lands
- * (Projects/Tasks: M8, Agents: M17, Integrations: M12+, etc.) rather
- * than all at once.
+ * (Projects/Tasks: M8, Chat: M22, Agents: M17, Integrations: M12+, etc.)
+ * rather than all at once.
  */
 export function Sidebar({
   active,
