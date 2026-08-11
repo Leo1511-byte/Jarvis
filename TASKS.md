@@ -80,6 +80,20 @@
       pattern, so it fell through to `ask` again (which behaved safely, asking what kind of
       GitHub info was wanted rather than guessing). Still need: exact phrase "check my github",
       and "continue project Ape War Game" (matching the real created project name) for M10.
+- [ ] **M19 performance benchmarking started:** `scripts/benchmark_orchestrator.sh` written and
+      committed — times all 5 orchestrator commands (the 4 synchronous ones + continue-project's
+      background launch-to-done plumbing) by calling `claude` directly with the exact prompts
+      `commandEngine.ts` sends, since `orchestrator.rs`'s Rust wrapper only adds negligible
+      process-spawn overhead on top of that call. Can't be run from the Cowork sandbox that wrote
+      it — needs the same authenticated `claude` + locally-configured Calendar/Gmail MCP servers
+      that live on Leonardo's machine, or numbers wouldn't be representative. Parsing logic
+      (job-id extraction, JSON field extraction, agents-state lookup) unit-tested by hand against
+      the same real fixture data `orchestrator.rs`'s own Rust tests use (`REAL_BG_LAUNCH_OUTPUT`,
+      `REAL_AGENTS_JSON`) — all three matched correctly. Run with `bash
+      scripts/benchmark_orchestrator.sh` from the repo root; writes a timestamped
+      `benchmark_results_*.md`. Still needed: an actual run producing real numbers, and app
+      startup timing (deferred — that's really about the bundled release build, which isn't
+      testable yet per the known PATH-resolution gap in `orchestrator.rs`).
 - [ ] **Test all five orchestrator-routed commands in the actual running app** — `research
       <topic>`, `continue project <name>`, `check my calendar`, `check my email`, `check my
       github` — type each into the real command bar in the `cargo tauri dev` window and confirm
