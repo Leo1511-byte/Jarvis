@@ -1,4 +1,6 @@
 import { THEMES, type Theme } from "./hooks/useTheme";
+import { getSkill } from "./skills/registry";
+import type { SkillContext } from "./skills/types";
 
 /**
  * Command engine — Milestone 5. Parses free-text (voice STT or typed,
@@ -215,68 +217,18 @@ export async function executeCommand(
       return "I can switch themes (e.g. \"switch to neon void\"), report status, \"research <topic>\", \"continue project <name>\", \"check my calendar\", \"check my email\", \"check my github\", and \"check my memory\" — the last six via the local orchestrator. Anything else, I'll just ask Claude directly and read back what it says.";
     case "delete-project":
       return `"Delete project ${command.name}" is a Level 3 action and needs a real approval dialog, not a typed command — use the Delete button in the Projects view instead.`;
-    case "research": {
-      const projectContext = ctx.activeProject
-        ? ` This research is for the "${ctx.activeProject.name}" project -- mention that project ` +
-          `by name near the top of the note and in your reply, so it's clear what it's for.`
-        : "";
-      return runOrchestratorOrExplain(
-        ctx,
-        `Research: ${command.topic}. Write findings as a new note in the Obsidian vault's Notes/ ` +
-          `folder.${projectContext} Then reply with one sentence summarizing what you found and ` +
-          `the note's file path.`
-      );
-    }
-    case "continue-project": {
-      const prompt =
-        `Continue working on the "${command.name}" project (spec §62 workflow): load its context ` +
-        `(roadmap, tasks, recent activity), inspect the actual repo state, decide the next concrete ` +
-        `step, implement it, test it, update docs/changelog to match, then reply with 2-3 sentences ` +
-        `summarizing what you did.`;
-      if (!ctx.runOrchestratorBackground) {
-        // Honest fallback: no background-mode connection available (e.g. in
-        // tests), so behave like the other four commands rather than fail.
-        return runOrchestratorOrExplain(ctx, prompt);
-      }
-      try {
-        const job = await ctx.runOrchestratorBackground(prompt);
-        return (
-          `Started continuing "${command.name}" as a background job (${job.jobId}) -- this can ` +
-          `take a while, I'll let you know when it's done.`
-        );
-      } catch (e) {
-        return `Orchestrator error: ${e instanceof Error ? e.message : String(e)}`;
-      }
-    }
+    case "research":
+      return runSkill("research", ctx, command.topic);
+    case "continue-project":
+      return runSkill("continue-project", ctx, command.name);
     case "check-calendar":
-      return runOrchestratorOrExplain(
-        ctx,
-        `Check my calendar for today and the next couple of days using the Calendar MCP tools ` +
-          `already configured locally, then reply with 2-3 sentences summarizing what's coming up. ` +
-          `Read-only — don't create, modify, or respond to any events.`
-      );
+      return runSkill("check-calendar", ctx);
     case "check-email":
-      return runOrchestratorOrExplain(
-        ctx,
-        `Check my email inbox using the Gmail MCP tools already configured locally for anything ` +
-          `urgent or unread that needs my attention, then reply with 2-3 sentences summarizing it. ` +
-          `Read-only — don't send, draft, or label anything.`
-      );
+      return runSkill("check-email", ctx);
     case "check-github":
-      return runOrchestratorOrExplain(
-        ctx,
-        `Check GitHub for any open PRs or issues assigned to me, using the gh CLI (already ` +
-          `authenticated locally), then reply with 2-3 sentences summarizing what needs attention. ` +
-          `Read-only — don't create, comment on, merge, or close anything.`
-      );
+      return runSkill("check-github", ctx);
     case "check-memory":
-      return runOrchestratorOrExplain(
-        ctx,
-        `Look at the Obsidian vault at ~/Documents/Obsidian Vault -- check Daily/, Inbox/, and ` +
-          `Notes/ for anything from the last few days, then reply with 2-3 sentences summarizing ` +
-          `what's there and flagging anything in Inbox/ that looks unprocessed. Read-only -- ` +
-          `don't create, modify, or delete any notes.`
-      );
+      return runSkill("check-memory", ctx);
     case "ask":
       return runOrchestratorOrExplain(
         ctx,
@@ -293,10 +245,10 @@ export async function executeCommand(
 }
 
 /**
- * Shared by every command that routes through the local orchestrator
- * (research, continue-project, check-calendar, check-email) so the "no
- * connection" / error-handling logic exists in exactly one place instead
- * of being copy-pasted per command.
+ * Shared by the one command that routes through the orchestrator but
+ * isn't a named Skill ("ask" — see skills/registry.ts for the six that
+ * are) so the "no connection" / error-handling logic exists in exactly
+ * one place instead of being copy-pasted.
  */
 async function runOrchestratorOrExplain(ctx: CommandContext, prompt: string): Promise<string> {
   if (!ctx.runOrchestrator) {
@@ -307,4 +259,24 @@ async function runOrchestratorOrExplain(ctx: CommandContext, prompt: string): Pr
   } catch (e) {
     return `Orchestrator error: ${e instanceof Error ? e.message : String(e)}`;
   }
+}
+
+/**
+ * Milestone 31: looks up a Skill in the registry and executes it, passing
+ * through the same CommandContext fields Skills need (SkillContext is a
+ * narrower shape). Skill ids are only ever passed here from the switch
+ * above, all of which have a matching registry entry -- if that ever
+ * drifts, fail honestly instead of throwing.
+ */
+async function runSkill(id: string, ctx: CommandContext, input?: unknown): Promise<string> {
+  const skill = getSkill(id);
+  if (!skill) {
+    return `Skill "${id}" isn't registered. See skills/registry.ts.`;
+  }
+  const skillCtx: SkillContext = {
+    runOrchestrator: ctx.runOrchestrator,
+    runOrchestratorBackground: ctx.runOrchestratorBackground,
+    activeProject: ctx.activeProject,
+  };
+  return skill.execute(skillCtx, input);
 }

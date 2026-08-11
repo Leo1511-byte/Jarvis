@@ -24,6 +24,7 @@ import { ConnectionsView } from "./views/ConnectionsView";
 import { SkillsView } from "./views/SkillsView";
 import { ActivityView } from "./views/ActivityView";
 import { NotBuiltView } from "./views/NotBuiltView";
+import { SKILLS } from "./skills/registry";
 
 // Synchronous orchestrator commands (research/check-calendar/check-email/
 // check-github/ask) measured 12-44s live via scripts/benchmark_orchestrator.sh
@@ -35,36 +36,16 @@ import { NotBuiltView } from "./views/NotBuiltView";
 // job" text is already the fast-feedback path), so this timer firing for it
 // would be rare and harmless, not double feedback.
 const THINKING_DELAY_MS = 6000;
-const ORCHESTRATOR_ROUTED_KINDS = new Set([
-  "research",
-  "continue-project",
-  "check-calendar",
-  "check-email",
-  "check-github",
-  // Milestone 26 fix: check-memory is orchestrator-routed exactly like the
-  // other four check-* commands (same runOrchestratorOrExplain path in
-  // commandEngine.ts) and was missing from this set since it was added --
-  // meant it never got the "still working on that" interim feedback the
-  // other slow commands do. Found while wiring skill-run logging below.
-  "check-memory",
-  "ask",
-]);
 
-// Milestone 26: which command kinds are Skills (Milestone 24's registry)
-// worth an activity_events row for -- deliberately narrower than
-// ORCHESTRATOR_ROUTED_KINDS above ("ask" isn't a named Skill; this list
-// otherwise matches lib/store/builtinSkills.ts's ids exactly, no automated
-// check tying the two together the way permissions.test.ts does for
-// permission levels, so keep them in sync by hand if a Skill is ever
-// added/removed).
-const SKILL_COMMAND_KINDS = new Set([
-  "research",
-  "continue-project",
-  "check-calendar",
-  "check-email",
-  "check-github",
-  "check-memory",
-]);
+// Milestone 31: both sets below now derive from skills/registry.ts instead
+// of being separately hand-maintained lists that could drift from it (and
+// from each other -- this file used to note there was "no automated check"
+// tying them together).
+const SKILL_COMMAND_KINDS = new Set(SKILLS.map((skill) => skill.id));
+// "ask" isn't a named Skill (no registry entry -- it's the catch-all
+// fallback in commandEngine.ts), but it does route through the
+// orchestrator and deserves the same interim "still working" feedback.
+const ORCHESTRATOR_ROUTED_KINDS = new Set([...SKILL_COMMAND_KINDS, "ask"]);
 
 interface OrchestratorResponse {
   result: string;

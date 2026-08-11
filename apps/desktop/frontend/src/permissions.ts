@@ -7,6 +7,8 @@
  * Level 3 (sensitive) — delete, send, deploy, publish, purchase, change security settings.
  *                        Requires an explicit approval per action, every time (§55).
  */
+import { getSkill } from "./skills/registry";
+
 export type PermissionLevel = 1 | 2 | 3;
 
 export interface ApprovalRequest {
@@ -17,9 +19,13 @@ export interface ApprovalRequest {
 }
 
 /**
- * Classifies a command engine intent by permission level. Kept as a
- * single lookup so adding a new command means deciding its level here,
- * not scattering that judgment call across handler code.
+ * Classifies a command engine intent by permission level. Non-Skill
+ * command kinds (theme/status/help/ask, all Level 1; delete-project,
+ * Level 3 with its own dedicated approval flow — see commandEngine.ts)
+ * are decided here directly. Skill kinds (research, continue-project,
+ * check-*) delegate to skills/registry.ts, which is now the single
+ * source of truth for their level — Milestone 31 removed the prior
+ * hand-duplication between this file and lib/store/builtinSkills.ts.
  */
 export function permissionLevelFor(kind: string): PermissionLevel {
   switch (kind) {
@@ -28,27 +34,17 @@ export function permissionLevelFor(kind: string): PermissionLevel {
     case "switch-theme":
     case "system-status":
     case "help":
-    case "research":
-    case "check-calendar":
-    case "check-email":
-    case "check-github":
-    case "check-memory":
     case "ask":
-      // Read/search/summarize, explicitly scoped as read-only (or, for
-      // "ask", read-only-by-prompt: told not to take action, only to
-      // describe and ask for confirmation) in what commandEngine.ts sends
-      // the orchestrator -- Level 1 per the table above.
       return 1;
-    case "continue-project":
-      // Writes code and docs in a project repo -- not sensitive in the
-      // Level 3 sense (no delete/send/deploy/purchase), but not read-only
-      // either. Level 2: traceable via the orchestrator's session id and
-      // the repo's own git history, not gated per-action.
-      return 2;
-    default:
-      // Unknown commands do nothing, so there's nothing to gate --
-      // but default to the strictest level on principle, in case this
-      // ever gets called for a command kind that does do something.
+    default: {
+      const skill = getSkill(kind);
+      if (skill) {
+        return skill.permissionLevel;
+      }
+      // Unknown commands do nothing, so there's nothing to gate -- but
+      // default to the strictest level on principle, in case this ever
+      // gets called for a command kind that does do something.
       return 3;
+    }
   }
 }

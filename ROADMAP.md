@@ -15,11 +15,10 @@ GitHub read-only checks, Level 1/2/3 permission classification with a real appro
 Level 3, launchd-based (not n8n) scheduled morning brief (written, not activated).
 
 **Explicitly not built, not started, not stubbed:** anything hardware (3D printer, robotic arm
-— no driver, no interface, no mention in code), multi-window / multi-monitor presence (single
-Tauri window, no `WebviewWindow` usage anywhere), school/study tracking, a real Skills
-*execution engine* (today it's a hardcoded switch statement in `commandEngine.ts` plus a
-descriptive registry that doesn't drive execution), write actions for calendar/email/GitHub
-(intentionally deferred — see `SECURITY.md`).
+— no driver, no live Skill, no mention in real device code; M31 added a `domain` field so a
+hardware Skill has a real slot, nothing more), multi-window / multi-monitor presence (single
+Tauri window, no `WebviewWindow` usage anywhere), school/study tracking, write actions for
+calendar/email/GitHub (intentionally deferred — see `SECURITY.md`).
 
 **Known live gaps carried forward:** Memory index / real vault browsing (M27, needs `cargo`,
 see [`docs/archive/HANDOFF_MEMORY_INDEX_AND_MIGRATIONS.md`](docs/archive/HANDOFF_MEMORY_INDEX_AND_MIGRATIONS.md)),
@@ -31,8 +30,8 @@ double-clicked release build — see
 
 | # | Milestone | Status |
 |---|---|---|
-| 30 | Docs restructure | **In progress** — this pass |
-| 31 | Skills engine redesign | Not started — real `Skill` interface (permission level, domain: software/hardware, `execute()`), port the existing 6 commands behind it, no regressions |
+| 30 | Docs restructure | **Done, 2026-08-11** |
+| 31 | Skills engine redesign | **Done, 2026-08-11** — real `Skill` interface (`skills/types.ts`: permission level, `domain: software \| hardware`, `execute()`) and registry (`skills/registry.ts`) now the single source of truth for the six built-in Skills' prompts, permission levels, and execution — previously duplicated by hand across `commandEngine.ts`'s switch statement, `permissions.ts`, and `lib/store/builtinSkills.ts`. All three now derive from the registry. No hardware Skill added (no device to back one) — `domain` just gives one a real place to slot in later. 57 tests passing (up from 53), `tsc -b`/`vite build` clean, no behavior change |
 | 32 | Multi-window foundation | Not started — pop-out windows per view via Tauri `WebviewWindow`, state synced through the existing store, placeable across monitors |
 | 33 | Memory index (carried over from M27) | Not started — needs `cargo`, real vault filesystem scanning |
 | — | School/study tracking | Not scoped yet — next daily-life depth pass once ambient presence exists to host it |
