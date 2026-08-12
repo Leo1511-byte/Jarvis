@@ -6,6 +6,28 @@ going forward — see `ROADMAP.md` for current milestone status and `TASKS.md` f
 
 ## Unreleased
 
+### 2026-08-12 — Milestone 37: System real performance stats (frontend done, Rust unverified)
+- New Performance panel in `SystemView.tsx` polls a `get_system_stats` Tauri command every 5s
+  while mounted, gated on `useInTauri()` (no point polling in a browser preview). Three states
+  handled honestly, no fake numbers ever shown: outside Tauri → "Needs the desktop app"; `invoke`
+  throws (command missing/erroring) → "Couldn't read system stats — Milestone 37's Rust command
+  may not be built yet"; success → real CPU%/memory GB/disk GB.
+- New `apps/desktop/backend/src/system_stats.rs` (Rust, **never compiled — no `cargo` in this
+  sandbox**): `get_system_stats` using the `sysinfo` crate (`System`/`Disks`) for CPU/memory/
+  disk. Deliberately no network figure — kept narrow.
+- **Higher-risk handoff than usual**, flagged explicitly in the code and in
+  `docs/archive/HANDOFF_M37_SYSTEM_STATS_RUST_VERIFICATION.md`: M32's Rust addition only used
+  Tauri's own already-present APIs and compiled clean first try; this pulls in a brand-new
+  external dependency this session has never resolved or compiled. `Cargo.toml` was deliberately
+  NOT hand-edited with a guessed `sysinfo` version — the handoff says to run `cargo add sysinfo`
+  locally instead of trusting a version string written from memory.
+- Live-verified in a browser preview against the actual running dev server: the honest
+  "needs the desktop app" state renders correctly outside Tauri. The real running Tauri window
+  (from this session's earlier desktop-launcher test) would currently hit the "command may not
+  be built yet" branch, since Vite HMR reloaded the frontend but the Rust binary hasn't been
+  recompiled — exactly the intended degradation.
+- 67 tests passing (unchanged — no new command-engine behavior), `tsc -b`/`vite build` clean.
+
 ### 2026-08-11 — Milestone 39: self-upgrade skill
 - New `self-upgrade` Skill in `skills/registry.ts`: Level 3 (unlike `continue-project`'s Level
   2 — this touches JARVIS's own running code, not an external project), triggered by "upgrade

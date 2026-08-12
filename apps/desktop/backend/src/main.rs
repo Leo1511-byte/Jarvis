@@ -4,6 +4,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod orchestrator;
+mod system_stats;
 mod voice;
 mod windows;
 
@@ -22,6 +23,7 @@ fn main() {
             voice::stop_speak_daemon,
             voice::queue_speech,
             windows::open_view_window,
+            system_stats::get_system_stats,
         ])
         .run(tauri::generate_context!())
         .expect("error while running jarvis");

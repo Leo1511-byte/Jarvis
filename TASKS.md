@@ -16,13 +16,16 @@ currently active.
       `NEEDS_APPROVAL` case shows the real `ApprovalDialog`, (3) approving actually runs the
       second prompt and denying stops cleanly. See `ROADMAP.md`'s M38 row for what's unit-tested
       vs. still open.
+- [ ] **Milestone 37's Rust half needs `cargo add sysinfo` + `cargo build`** — higher-risk than
+      the usual Rust handoff (new dependency, not just Tauri's own APIs). See
+      `docs/archive/HANDOFF_M37_SYSTEM_STATS_RUST_VERIFICATION.md` for exactly what to run and
+      verify.
 
 ## Next up
 
 Numbered, scoped milestones — see `ROADMAP.md`'s Current milestones table for full detail.
 Unscoped ideas live in Backlog below instead of here.
 
-- [ ] Milestone 37 — System/Settings real performance stats (needs `cargo`)
 - [ ] Milestone 33 — Memory index, carried over from M27 (needs `cargo`)
 
 ## Done
@@ -72,6 +75,11 @@ Unscoped ideas live in Backlog below instead of here.
       denial produced "Not approved" with no orchestrator call. Found and fixed a real gap along
       the way — Supabase's `skills` table needed its own migration (`0006_self_upgrade_skill.sql`,
       not yet run — see "Now"). 6 new tests (67 total).
+- [x] 2026-08-12 — Milestone 37 (frontend half): Performance panel in `SystemView.tsx` polling a
+      new `get_system_stats` Tauri command, honest degradation outside Tauri or if the command
+      errors. Rust half (`system_stats.rs`, `sysinfo` crate) written but unverified — higher risk
+      than the usual Rust handoff since it's a new dependency, not just Tauri's own APIs. See
+      "Now" and `ROADMAP.md`'s M37 row.
 
 ## Blocked
 

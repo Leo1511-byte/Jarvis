@@ -1,7 +1,22 @@
 import { useEffect, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { getStore, type ActivityEvent, type Connection } from "../lib/store";
 import { SKILLS } from "../skills/registry";
 import { useInTauri } from "../hooks/useInTauri";
+
+// Milestone 37: field names match system_stats.rs's SystemStats struct's
+// default serde output exactly (snake_case, not renamed to camelCase) --
+// same convention orchestrator.rs's OrchestratorResponse already uses on
+// the frontend (see App.tsx), kept consistent rather than mixing styles.
+interface SystemStats {
+  cpu_percent: number;
+  memory_used_gb: number;
+  memory_total_gb: number;
+  disk_used_gb: number;
+  disk_total_gb: number;
+}
+
+const STATS_POLL_MS = 5000;
 
 // Kept in sync by hand with package.json's "version" field -- not
 // imported directly, since tsconfig.json's `include: ["src"]` would put
@@ -31,8 +46,12 @@ const RECENT_ACTIVITY_LIMIT = 3;
  * System, Clear Cache, Restart Core, Emergency Protocol) would need a
  * real backend call behind it, and none exists yet. Adding buttons that
  * don't do anything real would be worse than not having the section;
- * revisit once there's an actual action to wire (e.g. once M37's
- * performance stats or a real settings-write path exists).
+ * revisit once there's an actual action to wire.
+ *
+ * Milestone 37 added the Performance panel (CPU/memory/disk via a new
+ * `get_system_stats` Tauri command, system_stats.rs) -- degrades
+ * honestly outside Tauri or if the Rust command isn't built yet, rather
+ * than showing fake numbers.
  *
  * The hardware Devices panel lives here (idea #3 from PROJECT_OBJECTIVE.md)
  * but stays an honest empty state -- no device exists to connect yet (see
@@ -43,6 +62,36 @@ export function SystemView({ onNavigate }: { onNavigate: (view: string) => void 
   const [connections, setConnections] = useState<Connection[]>([]);
   const [recentActivity, setRecentActivity] = useState<ActivityEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<SystemStats | null>(null);
+  const [statsError, setStatsError] = useState(false);
+
+  // Milestone 37: only polls inside Tauri -- invoke() has nothing to
+  // reach in a browser preview, and polling there would just be a
+  // repeated no-op. get_system_stats (system_stats.rs) hasn't been
+  // compiled/verified by this session (needs cargo) -- if it's missing
+  // or errors, this shows an honest message below rather than crashing
+  // or inventing numbers.
+  useEffect(() => {
+    if (!inTauri) return;
+    let cancelled = false;
+    async function poll() {
+      try {
+        const result = await invoke<SystemStats>("get_system_stats");
+        if (!cancelled) {
+          setStats(result);
+          setStatsError(false);
+        }
+      } catch {
+        if (!cancelled) setStatsError(true);
+      }
+    }
+    poll();
+    const interval = window.setInterval(poll, STATS_POLL_MS);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [inTauri]);
 
   useEffect(() => {
     let cancelled = false;
@@ -104,6 +153,38 @@ export function SystemView({ onNavigate }: { onNavigate: (view: string) => void 
             <span>Runtime</span>
             <span>{inTauri ? "Tauri desktop app" : "Browser preview"}</span>
           </div>
+        </div>
+
+        <div className="panel">
+          <h3 className="panel-title">Performance</h3>
+          {!inTauri ? (
+            <p className="empty-state">Needs the desktop app — not available in a browser preview.</p>
+          ) : statsError ? (
+            <p className="empty-state">
+              Couldn't read system stats — Milestone 37's Rust command may not be built yet.
+            </p>
+          ) : !stats ? (
+            <p className="empty-state">Loading…</p>
+          ) : (
+            <>
+              <div className="status-row">
+                <span>CPU</span>
+                <span>{stats.cpu_percent.toFixed(1)}%</span>
+              </div>
+              <div className="status-row">
+                <span>Memory</span>
+                <span>
+                  {stats.memory_used_gb.toFixed(1)} / {stats.memory_total_gb.toFixed(1)} GB
+                </span>
+              </div>
+              <div className="status-row">
+                <span>Disk</span>
+                <span>
+                  {stats.disk_used_gb.toFixed(1)} / {stats.disk_total_gb.toFixed(1)} GB
+                </span>
+              </div>
+            </>
+          )}
         </div>
 
         <div className="panel">
