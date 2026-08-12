@@ -6,14 +6,16 @@ currently active.
 
 ## Now
 
-- [ ] **Milestone 32's Rust half needs `cargo`** — `windows.rs`/`main.rs`/`capabilities/
-      default.json` are written but never compiled. See
-      `docs/archive/HANDOFF_M32_MULTIWINDOW_RUST_VERIFICATION.md` for exactly what to build and
-      click through.
+- [ ] Scope the visual-direction work from `PROJECT_OBJECTIVE.md` (2026-08-11 walkthrough with
+      Leonardo — three reference images, decisions locked in) into actual milestones: design
+      tokens/Core restyle, top-nav migration, honest System/Settings panels. Not yet broken
+      into buildable pieces — see that file's "Not yet decided" section.
 
 ## Next up
 
-- [ ] Milestone 33 — Memory index (carried over from M27, needs `cargo`)
+- [ ] Milestone 33 — Memory index (carried over from M27, needs `cargo` — now confirmed working
+      in a local session, see M32's verification below)
+- [ ] Backlog #1 — `orchestrator.rs` `PATH` resolution fix (needs `cargo`)
 
 ## Done
 
@@ -23,11 +25,17 @@ currently active.
       `permissions.ts`, `lib/store/builtinSkills.ts`, and `App.tsx`'s `SKILL_COMMAND_KINDS` all
       derive from it instead of hand-duplicating). No behavior change, no hardware Skill added.
       57 tests passing, `tsc -b`/`vite build` clean.
-- [x] 2026-08-11 — Milestone 32 (frontend half): any real view can pop out into its own Tauri
-      window (`lib/popoutViews.ts`, `lib/windowManager.ts`, `Sidebar.tsx` pop-out buttons,
-      `main.tsx`/`App.tsx` standalone rendering). Live-verified in a browser preview
-      (`?view=chat`, `?view=activity` both render correctly, no sidebar, real store data).
-      Voice listener disabled outside the main window. Rust half unverified — see "Now".
+- [x] 2026-08-11 — Milestone 32, frontend + Rust, both verified. Any real view pops out into its
+      own Tauri window. `cargo build` succeeded first try; live-confirmed via `cargo tauri dev`
+      that popping out Chat opens a real second OS window (correct title/content/no sidebar) and
+      a second click focuses it instead of duplicating. `core:default` permission glob is
+      structurally correct but not yet behaviorally exercised; multi-monitor placement untested
+      (single-display dev machine). Full detail:
+      `docs/archive/HANDOFF_M32_MULTIWINDOW_RUST_VERIFICATION.md`.
+- [x] 2026-08-11 — Added `PROJECT_OBJECTIVE.md`: walked through Leonardo's final-product vision
+      (open-ended command execution, Iron Man styling, device tab, explicit self-upgrade,
+      self-organization) plus three visual references, with decisions locked in. Not yet
+      scoped into milestones.
 
 ## Blocked
 
