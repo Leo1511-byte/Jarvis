@@ -47,7 +47,7 @@ export function ActivityView() {
         <p className="empty-state">Loading…</p>
       ) : events.length === 0 ? (
         <p className="empty-state">
-          Nothing logged yet — run a Skill (Agents tab, command bar, voice, or Chat) and it'll
+          Nothing logged yet — run a Skill (Skills tab, command bar, voice, or Chat) and it'll
           show up here.
         </p>
       ) : (

@@ -2,10 +2,10 @@
  * Milestone 32 (multi-window foundation): real views (backed by an actual
  * component in App.tsx's renderActive) that support popping out into
  * their own Tauri window. Deliberately excludes still-placeholder
- * sections (Research, Automations, Notifications, System [pending M36]) --
- * popping one of those out would be a window that shows "not built yet"
- * and nothing else, the exact "renders but isn't connected" mistake this
- * project's own discipline rules out (see ARCHITECTURE.md).
+ * sections (Research, Automations, Notifications) -- popping one of
+ * those out would be a window that shows "not built yet" and nothing
+ * else, the exact "renders but isn't connected" mistake this project's
+ * own discipline rules out (see ARCHITECTURE.md).
  *
  * Single source of truth for the nav-name <-> URL-slug mapping:
  * TopNav.tsx (Milestone 35, replaced Sidebar.tsx) uses POPOUT_VIEWS to
@@ -20,6 +20,9 @@
  * integrations->connections); nothing else depended on the old slugs
  * (this app has never shipped, so there's no compatibility need to
  * preserve them).
+ *
+ * Milestone 36 added System now that it renders real content
+ * (SystemView) instead of NotBuiltView.
  */
 export const POPOUT_VIEWS: Record<string, string> = {
   Dashboard: "dashboard",
@@ -30,6 +33,7 @@ export const POPOUT_VIEWS: Record<string, string> = {
   Projects: "projects",
   Tasks: "tasks",
   Activity: "activity",
+  System: "system",
 };
 
 export const SLUG_TO_VIEW: Record<string, string> = Object.fromEntries(

@@ -13,8 +13,6 @@ currently active.
 Numbered, scoped milestones — see `ROADMAP.md`'s Current milestones table for full detail.
 Unscoped ideas live in Backlog below instead of here.
 
-- [ ] Milestone 36 — System/Settings view, software slice, depends on M35 (pure frontend, reuses
-      M23/M26/M28)
 - [ ] Milestone 37 — System/Settings real performance stats (needs `cargo`)
 - [ ] Milestone 38 — "Do anything it has access to" real action path (independent of 34-37)
 - [ ] Milestone 39 — Self-upgrade skill (independent of 34-37, needs its Level 3 approval-flow
@@ -53,6 +51,11 @@ Unscoped ideas live in Backlog below instead of here.
       `docs/DESKTOP_LAUNCHER.md`. Live-verified end to end after clearing a leftover-process port
       conflict from earlier browser-preview testing: `target/debug/jarvis` running, Vite served
       clean on 1420.
+- [x] 2026-08-11 — Milestone 36: System/Settings view, software slice. New `SystemView.tsx` —
+      real App info, real Permissions summary, Connections/Activity summary tiles (link out
+      rather than duplicate full content), honest empty Devices panel. No Quick Actions (nothing
+      real to back one yet). Live-verified: real counts, honest runtime detection, both
+      navigate-out links work. See `ROADMAP.md` for full detail.
 
 ## Blocked
 

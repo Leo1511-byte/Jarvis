@@ -23,6 +23,7 @@ import { ChatView } from "./views/ChatView";
 import { ConnectionsView } from "./views/ConnectionsView";
 import { SkillsView } from "./views/SkillsView";
 import { ActivityView } from "./views/ActivityView";
+import { SystemView } from "./views/SystemView";
 import { NotBuiltView } from "./views/NotBuiltView";
 import { SKILLS } from "./skills/registry";
 import { SLUG_TO_VIEW } from "./lib/popoutViews";
@@ -428,6 +429,8 @@ export default function App({ standaloneView = null }: { standaloneView?: string
         );
       case "Activity":
         return <ActivityView />;
+      case "System":
+        return <SystemView onNavigate={setActive} />;
       default:
         return <NotBuiltView section={active} />;
     }

@@ -6,6 +6,34 @@ going forward — see `ROADMAP.md` for current milestone status and `TASKS.md` f
 
 ## Unreleased
 
+### 2026-08-11 — Milestone 36: System/Settings view, software slice
+- New `SystemView.tsx` replaces the `System` placeholder. Real data only, per
+  `PROJECT_OBJECTIVE.md`'s rule: App panel (version — kept in sync by hand with `package.json`
+  since importing it directly would sit outside `tsconfig.json`'s `include: ["src"]` for
+  `tsc -b`; dev/production build mode via `import.meta.env.DEV`; Tauri-vs-browser runtime via
+  the existing `useInTauri`), Permissions panel (Skill counts by Level 1/2/3, derived live from
+  `skills/registry.ts`), Connections and Activity summary tiles (real counts / last 3 real
+  events, each with an "Open X →" button wired to a new `onNavigate` prop from `App.tsx`), and
+  an honest empty-state Devices panel (checks `SKILLS.filter(s => s.domain === "hardware")`,
+  currently always 0).
+- **Deliberately does not re-embed `ConnectionsView`/`ActivityView`'s full content** — both
+  already have their own top-nav tab since Milestone 35; duplicating full lists here would be
+  exactly the "add stuff, don't overload it" note from the visual-reference review. Summary
+  tiles that link out instead, matching the references' own "OPEN SECURITY CENTER" pattern.
+- **No Quick Actions section.** Every action in the references (Optimize System, Clear Cache,
+  Restart Core, Emergency Protocol) needs a real backend call behind it and none exists yet —
+  adding non-functional buttons would be a worse violation of the real-data rule than omitting
+  the section entirely.
+- `System` added to `lib/popoutViews.ts` now that it renders real content instead of
+  `NotBuiltView`.
+- Fixed a stale label in `ActivityView.tsx`'s empty state ("Agents tab" → "Skills tab",
+  left over from Milestone 35's rename).
+- 57 tests passing (unchanged — no new command-engine behavior), `tsc -b`/`vite build` clean.
+  Live-verified against the actually-running desktop launcher instance (see below): System's
+  counts matched the real registries (5 Level-1 / 1 Level-2 / 0 Level-3 Skills, 6 Connections),
+  runtime correctly showed "Browser preview" outside Tauri, both "Open X →" links navigated
+  correctly.
+
 ### 2026-08-11 — Desktop launcher (tooling, not a numbered milestone)
 - `~/Desktop/Jarvis.app` — double-click launches JARVIS with no terminal. Compiled with macOS's
   built-in `osacompile` from `scripts/JarvisLauncher.applescript`, which backgrounds
