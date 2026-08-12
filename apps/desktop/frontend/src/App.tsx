@@ -9,7 +9,7 @@ import { useCurrentConversation } from "./hooks/useCurrentConversation";
 import { useApproval } from "./hooks/useApproval";
 import { type CoreState } from "./components/JarvisCore";
 import { CommandBar } from "./components/CommandBar";
-import { Sidebar } from "./components/Sidebar";
+import { TopNav } from "./components/TopNav";
 import { ThemeSwitcher } from "./components/ThemeSwitcher";
 import { ApprovalDialog } from "./components/ApprovalDialog";
 import { parseCommand, executeCommand } from "./commandEngine";
@@ -75,9 +75,9 @@ async function runOrchestrator(prompt: string): Promise<string> {
 
 // Milestone 32: `standaloneView` is the `?view=<slug>` a popped-out
 // window (windows.rs's open_view_window) launches with -- resolved to a
-// Sidebar-name string so the existing renderActive() switch below needs
-// no changes. Undefined/null (the normal main-window case) behaves
-// exactly as before this milestone.
+// nav-name string so the existing renderActive() switch below needs no
+// changes. Undefined/null (the normal main-window case) behaves exactly
+// as before this milestone.
 export default function App({ standaloneView = null }: { standaloneView?: string | null }) {
   const { theme, setTheme } = useTheme();
   const { settings: voiceSettings, update: updateVoiceSettings } = useVoiceSettings();
@@ -416,9 +416,9 @@ export default function App({ standaloneView = null }: { standaloneView?: string
             }}
           />
         );
-      case "Integrations":
+      case "Connections":
         return <ConnectionsView />;
-      case "Agents":
+      case "Skills":
         return (
           <SkillsView
             onRun={(text) => {
@@ -434,8 +434,8 @@ export default function App({ standaloneView = null }: { standaloneView?: string
   }
 
   return (
-    <div className={standaloneView ? "app-shell app-shell--standalone" : "app-shell"}>
-      {!standaloneView && <Sidebar active={active} onSelect={setActive} />}
+    <div className="app-shell">
+      {!standaloneView && <TopNav active={active} onSelect={setActive} />}
 
       <main className="main">
         <header className="main-header">

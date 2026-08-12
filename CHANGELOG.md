@@ -6,6 +6,29 @@ going forward — see `ROADMAP.md` for current milestone status and `TASKS.md` f
 
 ## Unreleased
 
+### 2026-08-11 — Milestone 35: top-nav migration
+- `Sidebar.tsx` (13 items, 5 never-backed placeholders — Research, Automations, Notifications,
+  and the old Settings) deleted, replaced by `TopNav.tsx`: a flat 9-item bar — Dashboard, Chat,
+  Skills, Memory, Connections, Projects, Tasks, Activity, System. Every item is real except
+  System, kept because all three `PROJECT_OBJECTIVE.md` references confirm it as a primary
+  destination — it shows an honest `NotBuiltView` until Milestone 36, the same pattern this app
+  already uses rather than hiding the gap or faking content.
+- Decided against a "more" dropdown for the 4 non-primary-5 views (Projects/Tasks/Connections/
+  Activity) — flat list keeps every real view one click away with no extra interaction layer.
+  Revisit if the bar feels crowded in practice.
+- Renamed two mismatched nav labels while migrating: "Agents" → "Skills" and "Integrations" →
+  "Connections" — both always rendered `SkillsView`/`ConnectionsView`, only the label was wrong.
+  Updated `lib/popoutViews.ts`'s keys/slugs and `App.tsx`'s `renderActive` switch to match; old
+  slugs (`agents`, `integrations`) have no compatibility need since this app has never shipped.
+- `.app-shell` changed from a 220px+1fr grid to a flex column (nav row + scrollable `.main`,
+  `flex: 1; min-height: 0` on `.main` for correct internal scrolling).
+- M32's pop-out buttons moved from `Sidebar.tsx` into `TopNav.tsx`, unchanged otherwise (same
+  `useInTauri`/`openViewWindow` mechanism).
+- 57 tests passing (unchanged), `tsc -b`/`vite build` clean. Live-verified in a browser preview:
+  routing to all 9 items, System's honest not-built state, `?view=skills` standalone rendering
+  with the renamed slug (no nav, full width). Rust side untouched — `windows.rs` just passes
+  through whatever slug string it's given, so this stayed pure frontend as scoped.
+
 ### 2026-08-11 — Milestone 34: visual design system (tokens + `JarvisCore` restyle)
 - `.panel` (shared across every view) restyled: bracket-corner accents via two pseudo-elements,
   tightened `--radius-lg` (16px → 4px) for an angular HUD look, accent-glow box-shadow. One CSS

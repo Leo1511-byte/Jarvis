@@ -1,45 +1,53 @@
 .app-shell {
-  display: grid;
-  grid-template-columns: 220px 1fr;
+  display: flex;
+  flex-direction: column;
   height: 100vh;
 }
 
-/* Milestone 32: a popped-out per-view window renders without the
-   Sidebar, so it doesn't need the two-column layout. */
-.app-shell--standalone {
-  grid-template-columns: 1fr;
-}
-
-/* Sidebar */
-.sidebar {
+/* Milestone 35: top nav bar, replaces the old left Sidebar -- see
+   TopNav.tsx. A popped-out standalone window (Milestone 32) renders no
+   nav at all (App.tsx only mounts TopNav when !standaloneView), so
+   .app-shell just ends up with one flex child; no modifier class needed
+   the way the old two-column grid required one. */
+.top-nav {
   background: var(--bg-panel);
-  border-right: 1px solid var(--border);
-  padding: var(--space-5) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  padding: var(--space-3) var(--space-5);
   display: flex;
-  flex-direction: column;
-  gap: var(--space-5);
+  align-items: center;
+  gap: var(--space-6);
+  flex-wrap: wrap;
 }
 
-.sidebar-brand {
+.top-nav-brand {
   font-family: var(--font-mono);
   letter-spacing: 4px;
   font-size: 13px;
   color: var(--accent);
-  padding: 0 var(--space-2);
+  white-space: nowrap;
 }
 
-.sidebar-list {
+.top-nav-list {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px;
+  flex: 1;
+}
+
+/* Row wrapper so a real view's nav item can carry a pop-out button
+   alongside it without changing top-nav-item's own click target --
+   same pattern the old sidebar-row used. */
+.top-nav-row {
+  display: flex;
+  align-items: center;
   gap: 2px;
 }
 
-.sidebar-item {
-  width: 100%;
-  text-align: left;
+.top-nav-item {
   background: transparent;
   border: none;
   border-radius: var(--radius-sm);
@@ -47,53 +55,45 @@
   font-size: 13px;
   color: var(--text-dim);
   cursor: pointer;
+  white-space: nowrap;
   transition: background var(--transition-fast), color var(--transition-fast);
 }
 
-.sidebar-item:hover {
+.top-nav-item:hover {
   background: var(--accent-soft);
   color: var(--text);
 }
 
-.sidebar-item.active {
+.top-nav-item.active {
   background: var(--accent-soft);
   color: var(--accent);
   font-weight: 600;
 }
 
-/* Milestone 32: row wrapper so a real view's nav item can carry a
-   pop-out button alongside it without changing sidebar-item's own
-   width/click target. */
-.sidebar-row {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.sidebar-row .sidebar-item {
-  flex: 1;
-}
-
-.sidebar-popout {
-  flex: 0 0 auto;
+.top-nav-popout {
   background: transparent;
   border: none;
   border-radius: var(--radius-sm);
   color: var(--text-dim);
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1;
-  padding: var(--space-2);
+  padding: var(--space-1);
   cursor: pointer;
   transition: background var(--transition-fast), color var(--transition-fast);
 }
 
-.sidebar-popout:hover {
+.top-nav-popout:hover {
   background: var(--accent-soft);
   color: var(--accent);
 }
 
 /* Main */
 .main {
+  /* Milestone 35: .app-shell is now a flex column (top nav + main), not a
+     grid -- flex: 1 + min-height: 0 is what lets this scroll internally
+     instead of the whole window growing past the viewport. */
+  flex: 1;
+  min-height: 0;
   padding: var(--space-6);
   overflow-y: auto;
   display: flex;

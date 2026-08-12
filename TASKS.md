@@ -13,8 +13,6 @@ currently active.
 Numbered, scoped milestones — see `ROADMAP.md`'s Current milestones table for full detail.
 Unscoped ideas live in Backlog below instead of here.
 
-- [ ] Milestone 35 — Top-nav migration, depends on M34 (pure frontend; still needs a decision on
-      Projects/Tasks/Activity/Integrations' fate in the new nav)
 - [ ] Milestone 36 — System/Settings view, software slice, depends on M35 (pure frontend, reuses
       M23/M26/M28)
 - [ ] Milestone 37 — System/Settings real performance stats (needs `cargo`)
@@ -45,6 +43,11 @@ Unscoped ideas live in Backlog below instead of here.
       milestones table, in build order, none started yet.
 - [x] 2026-08-11 — Milestone 34: visual design system (tokens + `JarvisCore` restyle), live-
       verified across all 4 themes in a browser preview. See `ROADMAP.md` for full detail.
+- [x] 2026-08-11 — Milestone 35: top-nav migration. `Sidebar.tsx` (13 items, 5 dead placeholders)
+      replaced by `TopNav.tsx` (flat 9-item bar, only System is a placeholder and it's honest
+      about it). Renamed "Agents"→"Skills", "Integrations"→"Connections" to match what they
+      actually render. Live-verified: routing, System's not-built state, `?view=skills` pop-out
+      with the renamed slug. See `ROADMAP.md` for full detail.
 
 ## Blocked
 
