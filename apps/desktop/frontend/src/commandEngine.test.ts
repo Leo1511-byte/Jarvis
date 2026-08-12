@@ -292,8 +292,8 @@ describe("executeCommand", () => {
     expect(response).toBe("Nothing unprocessed in your inbox.");
   });
 
-  it("routes ask through the orchestrator with the original message and an act-don't-do instruction", async () => {
-    const runOrchestrator = vi.fn().mockResolvedValue("It's sunny where you are, I think.");
+  it("routes ask through the orchestrator asking it to classify SAFE vs NEEDS_APPROVAL", async () => {
+    const runOrchestrator = vi.fn().mockResolvedValue("SAFE: It's sunny where you are, I think.");
     const response = await executeCommand(
       { kind: "ask", text: "what's the weather like" },
       { setTheme: vi.fn(), runOrchestrator }
@@ -301,7 +301,17 @@ describe("executeCommand", () => {
     expect(runOrchestrator).toHaveBeenCalledWith(
       expect.stringContaining("what's the weather like")
     );
-    expect(runOrchestrator).toHaveBeenCalledWith(expect.stringContaining("not authorization"));
+    expect(runOrchestrator).toHaveBeenCalledWith(expect.stringContaining("SAFE:"));
+    expect(runOrchestrator).toHaveBeenCalledWith(expect.stringContaining("NEEDS_APPROVAL:"));
+    expect(response).toBe("It's sunny where you are, I think.");
+  });
+
+  it("falls back to the raw reply if ask's classification doesn't follow the SAFE/NEEDS_APPROVAL format", async () => {
+    const runOrchestrator = vi.fn().mockResolvedValue("It's sunny where you are, I think.");
+    const response = await executeCommand(
+      { kind: "ask", text: "what's the weather like" },
+      { setTheme: vi.fn(), runOrchestrator }
+    );
     expect(response).toBe("It's sunny where you are, I think.");
   });
 
@@ -311,5 +321,47 @@ describe("executeCommand", () => {
       { setTheme: vi.fn() }
     );
     expect(response).toMatch(/isn't available/i);
+  });
+
+  it("gates a NEEDS_APPROVAL ask behind the approval flow, then executes it once approved", async () => {
+    const runOrchestrator = vi
+      .fn()
+      .mockResolvedValueOnce("NEEDS_APPROVAL: delete the file notes.txt")
+      .mockResolvedValueOnce("Deleted notes.txt.");
+    const requestApproval = vi.fn().mockResolvedValue(true);
+    const response = await executeCommand(
+      { kind: "ask", text: "delete notes.txt" },
+      { setTheme: vi.fn(), runOrchestrator, requestApproval }
+    );
+    expect(requestApproval).toHaveBeenCalledWith(
+      expect.objectContaining({ action: expect.stringContaining("delete the file notes.txt") })
+    );
+    expect(runOrchestrator).toHaveBeenCalledTimes(2);
+    expect(runOrchestrator).toHaveBeenLastCalledWith(
+      expect.stringContaining("delete the file notes.txt")
+    );
+    expect(response).toBe("Deleted notes.txt.");
+  });
+
+  it("does not execute a NEEDS_APPROVAL ask if the user denies it", async () => {
+    const runOrchestrator = vi.fn().mockResolvedValue("NEEDS_APPROVAL: delete the file notes.txt");
+    const requestApproval = vi.fn().mockResolvedValue(false);
+    const response = await executeCommand(
+      { kind: "ask", text: "delete notes.txt" },
+      { setTheme: vi.fn(), runOrchestrator, requestApproval }
+    );
+    expect(runOrchestrator).toHaveBeenCalledTimes(1);
+    expect(response).toBe("Not approved — nothing was run.");
+  });
+
+  it("describes a NEEDS_APPROVAL ask without executing when no approval flow is available", async () => {
+    const runOrchestrator = vi.fn().mockResolvedValue("NEEDS_APPROVAL: delete the file notes.txt");
+    const response = await executeCommand(
+      { kind: "ask", text: "delete notes.txt" },
+      { setTheme: vi.fn(), runOrchestrator }
+    );
+    expect(runOrchestrator).toHaveBeenCalledTimes(1);
+    expect(response).toContain("delete the file notes.txt");
+    expect(response).toMatch(/approval/i);
   });
 });

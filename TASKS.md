@@ -6,7 +6,12 @@ currently active.
 
 ## Now
 
-(nothing in progress — see "Next up")
+- [ ] **Milestone 38 needs a real live click-through**, not just unit tests — try a phrase like
+      "delete my notes.txt file" in the actual running app (local, not Cowork) and confirm: (1)
+      the orchestrator's reply actually starts with `SAFE:` or `NEEDS_APPROVAL:` as asked, (2) a
+      `NEEDS_APPROVAL` case shows the real `ApprovalDialog`, (3) approving actually runs the
+      second prompt and denying stops cleanly. See `ROADMAP.md`'s M38 row for what's unit-tested
+      vs. still open.
 
 ## Next up
 
@@ -14,9 +19,8 @@ Numbered, scoped milestones — see `ROADMAP.md`'s Current milestones table for 
 Unscoped ideas live in Backlog below instead of here.
 
 - [ ] Milestone 37 — System/Settings real performance stats (needs `cargo`)
-- [ ] Milestone 38 — "Do anything it has access to" real action path (independent of 34-37)
-- [ ] Milestone 39 — Self-upgrade skill (independent of 34-37, needs its Level 3 approval-flow
-      specifics worked out first)
+- [ ] Milestone 39 — Self-upgrade skill (needs its Level 3 approval-flow specifics worked out
+      first)
 - [ ] Milestone 33 — Memory index, carried over from M27 (needs `cargo`)
 
 ## Done
@@ -56,6 +60,10 @@ Unscoped ideas live in Backlog below instead of here.
       rather than duplicate full content), honest empty Devices panel. No Quick Actions (nothing
       real to back one yet). Live-verified: real counts, honest runtime detection, both
       navigate-out links work. See `ROADMAP.md` for full detail.
+- [x] 2026-08-11 — Milestone 38: "ask" extended from permanent describe-only to a real,
+      approval-gated action path (SAFE/NEEDS_APPROVAL classification, same `ApprovalDialog` the
+      built-in Skills' Level 3 case uses). Unit-tested (4 new tests, 61 total), not yet
+      live-verified end to end — see "Now" above.
 
 ## Blocked
 

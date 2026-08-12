@@ -303,6 +303,11 @@ export default function App({ standaloneView = null }: { standaloneView?: string
         runOrchestrator,
         runOrchestratorBackground,
         activeProject: activeProject ? { name: activeProject.name } : null,
+        // Milestone 38: lets "ask" gate a real action behind the same
+        // approval dialog Level 3 Skills already use (see runAsk in
+        // commandEngine.ts) -- reusing this hook instance, not a second
+        // approval flow.
+        requestApproval,
       });
     } finally {
       if (thinkingTimer !== undefined) window.clearTimeout(thinkingTimer);

@@ -6,6 +6,34 @@ going forward — see `ROADMAP.md` for current milestone status and `TASKS.md` f
 
 ## Unreleased
 
+### 2026-08-11 — Milestone 38: "do anything it has access to" real action path
+- `ask` (`commandEngine.ts`'s fallback for anything not matching a built-in Skill) no longer
+  permanently describe-only. New two-call design in a `runAsk` helper: first prompt asks the
+  orchestrator to classify its own reply — `SAFE:` prefix if answering only needs reading/
+  analyzing/explaining, `NEEDS_APPROVAL:` prefix with a concrete plan if fulfilling the request
+  well would mean actually changing something.
+- A `NEEDS_APPROVAL` plan routes through the same `ApprovalDialog`/`useApproval` flow the six
+  built-in Skills' Level 3 case already uses — new `requestApproval` field on `CommandContext`,
+  wired from `App.tsx`'s existing `useApproval()` instance (not a second dialog). Approving
+  sends a second, independent prompt telling the orchestrator to actually do it; denying returns
+  "Not approved — nothing was run," same message the Skill-level gate uses.
+- Deliberately binary (SAFE/NEEDS_APPROVAL), not Level 1/2/3 — unlike a built-in Skill's
+  pre-reviewed prompt template, arbitrary free text has no declared permission level to trust
+  ahead of time, so treating any real change as needing approval is the safer default.
+- **Honesty caveat, documented in code:** this is a behavioral guardrail via prompting, not a
+  technical sandbox. Nothing prevents the model from acting before classifying — same limitation
+  the old always-describe prompt had, just carried forward, not newly introduced.
+- If the orchestrator's reply doesn't follow the SAFE/NEEDS_APPROVAL format at all, falls back to
+  relaying the raw reply (matches the old behavior) rather than blocking.
+- `help`'s text updated to describe the new behavior honestly instead of the old "I'll just ask
+  Claude directly and read back what it says."
+- 4 new tests (61 total, up from 57) covering the gating logic: approve-then-execute, deny-then-
+  stop, no-approval-flow-available fallback, and format-fallback. `tsc -b`/`vite build` clean.
+- **Not yet live-verified end to end** — needs a real Tauri session where the actual `claude` CLI
+  is asked to follow the SAFE/NEEDS_APPROVAL convention and the approval dialog is confirmed to
+  fire correctly; a browser preview can't exercise this since `invoke` fails outside Tauri. See
+  `TASKS.md`'s "Now" for the suggested live test phrase.
+
 ### 2026-08-11 — Milestone 36: System/Settings view, software slice
 - New `SystemView.tsx` replaces the `System` placeholder. Real data only, per
   `PROJECT_OBJECTIVE.md`'s rule: App panel (version — kept in sync by hand with `package.json`

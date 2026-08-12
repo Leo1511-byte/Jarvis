@@ -1,6 +1,7 @@
 import { THEMES, type Theme } from "./hooks/useTheme";
 import { getSkill } from "./skills/registry";
 import type { SkillContext } from "./skills/types";
+import type { ApprovalRequest } from "./permissions";
 
 /**
  * Command engine — Milestone 5. Parses free-text (voice STT or typed,
@@ -196,6 +197,13 @@ export interface CommandContext {
    * project set, or the caller didn't wire this up, e.g. in tests) falls
    * back to the original unscoped behavior unchanged. */
   activeProject?: { name: string } | null;
+  /** Milestone 38: the same promise-based approval flow (spec §55) the
+   * Level 3 Skill gate in App.tsx already uses -- injected here so the
+   * "ask" case below can gate a real action on it too. Optional so
+   * commandEngine.ts stays testable without wiring a real dialog; if
+   * omitted, "ask" falls back to describing rather than acting (see
+   * runAsk's comment). */
+  requestApproval?: (req: ApprovalRequest) => Promise<boolean>;
 }
 
 /**
@@ -214,7 +222,7 @@ export async function executeCommand(
     case "system-status":
       return "Claude, Voice, Supabase, GitHub, and Obsidian all reach the app now — see the System Status panel for exact per-system state.";
     case "help":
-      return "I can switch themes (e.g. \"switch to neon void\"), report status, \"research <topic>\", \"continue project <name>\", \"check my calendar\", \"check my email\", \"check my github\", and \"check my memory\" — the last six via the local orchestrator. Anything else, I'll just ask Claude directly and read back what it says.";
+      return "I can switch themes (e.g. \"switch to neon void\"), report status, \"research <topic>\", \"continue project <name>\", \"check my calendar\", \"check my email\", \"check my github\", and \"check my memory\" — the last six via the local orchestrator. Anything else, I'll ask Claude directly — if fulfilling it well means actually changing something, I'll describe the plan and ask you to approve it first.";
     case "delete-project":
       return `"Delete project ${command.name}" is a Level 3 action and needs a real approval dialog, not a typed command — use the Delete button in the Projects view instead.`;
     case "research":
@@ -230,15 +238,7 @@ export async function executeCommand(
     case "check-memory":
       return runSkill("check-memory", ctx);
     case "ask":
-      return runOrchestratorOrExplain(
-        ctx,
-        `Leonardo just said: "${command.text}". This didn't match any of my built-in commands, ` +
-          `so treat it as a direct question or message for you to answer as JARVIS -- keep it ` +
-          `short since it may be read aloud. This is a conversational message, not authorization ` +
-          `to take action: if answering well would mean actually doing something (editing files, ` +
-          `sending something, running a command, etc.), describe what you'd do and ask me to ` +
-          `confirm separately rather than doing it now.`
-      );
+      return runAsk(command.text, ctx);
     case "unknown":
       return `Not implemented yet: "${command.raw}". See ROADMAP.md for what's actually built.`;
   }
@@ -279,4 +279,99 @@ async function runSkill(id: string, ctx: CommandContext, input?: unknown): Promi
     activeProject: ctx.activeProject,
   };
   return skill.execute(skillCtx, input);
+}
+
+const SAFE_PREFIX = "SAFE:";
+const NEEDS_APPROVAL_PREFIX = "NEEDS_APPROVAL:";
+
+/**
+ * Milestone 38 — "do anything it has access to": "ask" (the fallback for
+ * anything that doesn't match a built-in Skill) used to be permanently
+ * describe-only, per its old prompt ("this is not authorization to take
+ * action"). This extends it to actually act, but gated the same way the
+ * six built-in Skills' Level 3 case is (App.tsx's approval dialog) --
+ * not a new permission system, an application of the existing one to
+ * requests that don't have a pre-reviewed Skill behind them.
+ *
+ * Two-call design, since there's no registry entry to read a permission
+ * level from ahead of time the way runSkill() has:
+ *   1. Ask the orchestrator to classify its own response: reply prefixed
+ *      "SAFE:" if answering only requires reading/analyzing/explaining
+ *      (nothing changes), or "NEEDS_APPROVAL:" with a concrete plan if
+ *      fulfilling the request well would mean actually changing
+ *      something. Deliberately binary (not Level 1/2/3) -- for a
+ *      pre-reviewed Skill prompt we can trust the declared level, but
+ *      for arbitrary free text interpreted by the model in the moment,
+ *      treating any real change as needing approval is the safer default
+ *      than trying to also guess "traceable, not gated" (Level 2) via
+ *      self-classification.
+ *   2. If NEEDS_APPROVAL and the user approves (same ApprovalDialog
+ *      Level 3 Skills use), a second, independent prompt tells the
+ *      orchestrator to actually do what it described.
+ *
+ * Honesty caveat, not swept under the rug: this is a behavioral
+ * guardrail via prompting, not a hard technical sandbox. A single `claude
+ * -p` call has real tool access and nothing here can force it to
+ * genuinely refrain from acting before the "SAFE:"/"NEEDS_APPROVAL:"
+ * classification -- it's asked to, the same way the old prompt asked it
+ * to just describe, not physically prevented. If the model doesn't
+ * follow the format at all, this falls back to treating the raw reply as
+ * the final answer (matches the old behavior) rather than blocking on a
+ * response it can't parse.
+ */
+async function runAsk(text: string, ctx: CommandContext): Promise<string> {
+  const classifyPrompt =
+    `Leonardo just said: "${text}". This didn't match any of my built-in commands, so treat it ` +
+    `as a direct question or request.\n\n` +
+    `If answering well only requires reading, searching, or explaining something -- nothing ` +
+    `changes as a result -- just answer normally, and start your reply with "${SAFE_PREFIX}".\n\n` +
+    `If fulfilling this well would mean actually changing something (editing a file, sending ` +
+    `something, running a command that writes/deletes/modifies anything), do NOT do it yet. ` +
+    `Instead reply with "${NEEDS_APPROVAL_PREFIX}" followed by a short, concrete description of ` +
+    `exactly what you would do -- specific enough that Leonardo can approve or reject it without ` +
+    `guessing.`;
+
+  const classification = await runOrchestratorOrExplain(ctx, classifyPrompt);
+
+  if (classification.startsWith(NEEDS_APPROVAL_PREFIX)) {
+    const plan = classification.slice(NEEDS_APPROVAL_PREFIX.length).trim();
+
+    if (!ctx.requestApproval) {
+      return (
+        `This would need your approval to actually do, but there's no approval flow available ` +
+        `here. What I'd do: ${plan}`
+      );
+    }
+
+    const approved = await ctx.requestApproval({
+      action: `Do: ${plan}`,
+      context: `You asked: "${text}". This wasn't a known Skill, so JARVIS classified it as ` +
+        `needing your approval before acting rather than executing it directly.`,
+      reason:
+        "Free-form requests that would change something get the same approval gate as a " +
+        "Level 3 Skill -- there's no pre-reviewed prompt template to trust the way built-in " +
+        "Skills have.",
+      risk:
+        "JARVIS interpreted your request itself; its judgment about what to do isn't " +
+        "pre-vetted the way a built-in Skill's prompt is. Review the plan above before approving.",
+    });
+
+    if (!approved) {
+      return "Not approved — nothing was run.";
+    }
+
+    return runOrchestratorOrExplain(
+      ctx,
+      `Leonardo approved this plan: "${plan}" (in response to: "${text}"). Go ahead and do it ` +
+        `now, then reply with 2-3 sentences summarizing what you did.`
+    );
+  }
+
+  if (classification.startsWith(SAFE_PREFIX)) {
+    return classification.slice(SAFE_PREFIX.length).trim();
+  }
+
+  // Didn't follow the format -- honest fallback, same as the old
+  // always-describe behavior: relay the raw reply rather than blocking.
+  return classification;
 }
