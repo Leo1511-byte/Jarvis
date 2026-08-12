@@ -33,6 +33,19 @@
   filter: drop-shadow(0 0 12px var(--accent-glow));
 }
 
+/* Milestone 34: fixed instrument-bezel ticks and vertical beam, added
+   around the existing ring/nucleus system rather than replacing it. */
+.core-tick {
+  stroke: var(--text-dim);
+  stroke-width: 1.5;
+  opacity: 0.5;
+}
+
+.core-beam {
+  stroke-width: 2;
+  opacity: 0.6;
+}
+
 /* IDLE — slow, barely-there breathing */
 .jarvis-core[data-state="idle"] .core-ring-outer {
   animation: spin-slow 40s linear infinite;

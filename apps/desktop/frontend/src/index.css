@@ -16,6 +16,15 @@ body {
   color: var(--text);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  /* Milestone 34: faint technical-grid backdrop, per PROJECT_OBJECTIVE.md's
+     visual references -- deliberately subtle (a hint of structure, not a
+     pattern that competes with real content) and theme-driven via
+     var(--border), not a hardcoded color, so it stays correct across all
+     4 themes. */
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--border) 40%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--border) 40%, transparent) 1px, transparent 1px);
+  background-size: 48px 48px;
 }
 
 button,

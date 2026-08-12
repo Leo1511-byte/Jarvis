@@ -6,6 +6,21 @@ going forward — see `ROADMAP.md` for current milestone status and `TASKS.md` f
 
 ## Unreleased
 
+### 2026-08-11 — Milestone 34: visual design system (tokens + `JarvisCore` restyle)
+- `.panel` (shared across every view) restyled: bracket-corner accents via two pseudo-elements,
+  tightened `--radius-lg` (16px → 4px) for an angular HUD look, accent-glow box-shadow. One CSS
+  change, whole app updated with no per-view edits.
+- Added a faint theme-driven grid backdrop to `body` (`color-mix` with `--border`, same pattern
+  already used elsewhere for opacity — not a hardcoded color).
+- `JarvisCore.tsx`: extended (not replaced) with 24 fixed instrument-bezel tick marks and a
+  vertical light beam through the core, alongside the existing 3-ring/nucleus animation system.
+  All 10 states still read correctly through the additions.
+- `status-connected` badges get a small text-shadow glow — deliberately left off unverified/
+  not-wired states so the glow stays an honest signal, not decoration.
+- 57 tests passing (unchanged), `tsc -b`/`vite build` clean, checked live in a browser preview
+  across Holographic Core, Crimson Command, and Neon Void themes plus several `JarvisCore`
+  states.
+
 ### 2026-08-11 — Milestone 32 Rust half: verified live (`cargo build` clean, real click-through)
 - `cargo build` compiled clean on the first try — no fixes needed to `windows.rs`, `main.rs`, or
   `capabilities/default.json`.

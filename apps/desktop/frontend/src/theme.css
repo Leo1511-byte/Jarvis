@@ -10,7 +10,14 @@
   /* Shared, theme-independent tokens */
   --radius-sm: 6px;
   --radius-md: 10px;
-  --radius-lg: 16px;
+  /* Milestone 34: was 16px (soft/rounded). PROJECT_OBJECTIVE.md's visual
+     references are angular HUD panels, not rounded cards -- tightened so
+     .panel (used across every view) reads as a technical instrument panel
+     rather than a consumer-app card. Paired with .panel's new bracket-
+     corner accents below, not a replacement for them. */
+  --radius-lg: 4px;
+  /* Milestone 34: corner-bracket accent size for .panel -- see App.css. */
+  --hud-bracket: 14px;
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;

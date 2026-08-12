@@ -13,7 +13,6 @@ currently active.
 Numbered, scoped milestones — see `ROADMAP.md`'s Current milestones table for full detail.
 Unscoped ideas live in Backlog below instead of here.
 
-- [ ] Milestone 34 — Visual design system: tokens + `JarvisCore` restyle (pure frontend)
 - [ ] Milestone 35 — Top-nav migration, depends on M34 (pure frontend; still needs a decision on
       Projects/Tasks/Activity/Integrations' fate in the new nav)
 - [ ] Milestone 36 — System/Settings view, software slice, depends on M35 (pure frontend, reuses
@@ -44,6 +43,8 @@ Unscoped ideas live in Backlog below instead of here.
       self-organization) plus three visual references, with decisions locked in.
 - [x] 2026-08-11 — Scoped `PROJECT_OBJECTIVE.md` into Milestones 34-39 in `ROADMAP.md`'s Current
       milestones table, in build order, none started yet.
+- [x] 2026-08-11 — Milestone 34: visual design system (tokens + `JarvisCore` restyle), live-
+      verified across all 4 themes in a browser preview. See `ROADMAP.md` for full detail.
 
 ## Blocked
 

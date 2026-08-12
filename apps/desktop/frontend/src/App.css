@@ -120,15 +120,50 @@
   gap: var(--space-4);
 }
 
+/* Milestone 34: restyled as an angular HUD instrument panel rather than a
+   rounded card, per PROJECT_OBJECTIVE.md's visual references. .panel is
+   shared across every view (Dashboard/Projects/Tasks/Memory/Chat/
+   Connections/Skills/Activity, StatusPanel, VoiceSettings) so this one
+   change gives the whole app the new look with no per-view edits. */
 .panel {
+  position: relative;
   background: var(--bg-panel);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: var(--space-4);
+  box-shadow: 0 0 24px -10px var(--accent-glow);
+}
+
+/* Corner-bracket accents (top-left + bottom-right) -- the HUD "viewfinder
+   corner" look from the references, done with two pseudo-elements instead
+   of extra markup so every existing .panel usage picks it up for free. */
+.panel::before,
+.panel::after {
+  content: "";
+  position: absolute;
+  width: var(--hud-bracket);
+  height: var(--hud-bracket);
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+.panel::before {
+  top: -1px;
+  left: -1px;
+  border-top: 2px solid var(--accent);
+  border-left: 2px solid var(--accent);
+}
+
+.panel::after {
+  bottom: -1px;
+  right: -1px;
+  border-bottom: 2px solid var(--accent);
+  border-right: 2px solid var(--accent);
 }
 
 .panel-title {
   margin: 0 0 var(--space-3) 0;
+  font-family: var(--font-mono);
   font-size: 11px;
   letter-spacing: 2px;
   text-transform: uppercase;
@@ -168,6 +203,11 @@
 .status-connected {
   color: var(--success);
   background: color-mix(in srgb, var(--success) 15%, transparent);
+  /* Milestone 34: small glow on genuinely-connected status, matching the
+     references' green ONLINE/ACTIVE tags -- deliberately only on the real
+     "connected" state, not on unverified/not-wired, so the glow itself
+     stays an honest signal rather than decoration. */
+  text-shadow: 0 0 8px color-mix(in srgb, var(--success) 60%, transparent);
 }
 
 .status-disconnected,
