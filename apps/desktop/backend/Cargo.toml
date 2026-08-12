@@ -11,12 +11,7 @@ tauri-build = { version = "2", features = [] }
 tauri = { version = "2", features = [] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-# Milestone 37 (system_stats.rs) needs `sysinfo` -- deliberately NOT added
-# here as a guessed version string (no cargo in this session to resolve
-# it correctly, and a wrong pin would break the whole build before
-# system_stats.rs's own code is even reached). Run `cargo add sysinfo`
-# from apps/desktop/backend/ first; see docs/archive/
-# HANDOFF_M37_SYSTEM_STATS_RUST_VERIFICATION.md.
+sysinfo = "0.39.6"
 
 [[bin]]
 name = "jarvis"

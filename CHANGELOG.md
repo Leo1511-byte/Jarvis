@@ -6,6 +6,28 @@ going forward — see `ROADMAP.md` for current milestone status and `TASKS.md` f
 
 ## Unreleased
 
+### 2026-08-12 — Fixed: app wouldn't open (M37's Rust half genuinely compiled and verified)
+- Leonardo reported the Desktop launcher wasn't opening JARVIS. Root cause: `system_stats.rs`
+  (added for M37 earlier the same session) imports the `sysinfo` crate, which was deliberately
+  never added to `Cargo.toml` — that broke compilation of the *entire* app binary, not just the
+  Performance panel, so `cargo tauri dev` failed and no window ever opened. Compounded by two
+  earlier test launches from this session leaving `vite`/`cargo-tauri` processes stuck holding
+  port 1420 without a working app behind them.
+- **Real finding while diagnosing this:** `cargo`/`rustc` turned out to be genuinely reachable
+  in this Cowork session at `~/.cargo/bin` once `PATH` was set explicitly
+  (`export PATH="$HOME/.cargo/bin:$PATH"`) — `which cargo` fails with the default shell PATH,
+  which is why this session (and every prior one) had concluded "no cargo here." With the fix,
+  `cargo add sysinfo` resolved the real current version (`0.39.6`) and `cargo build` succeeded
+  on the first try — no fixes needed to `system_stats.rs`'s hand-written API usage.
+  **Not yet confirmed whether this holds for every Cowork session** — noted in `CLAUDE.md` as an
+  open question, not a settled fact.
+- Killed the stuck processes, cleared port 1420, relaunched `~/Desktop/Jarvis.app` clean:
+  `target/debug/jarvis` running, no compile errors, `System` tab should now show real Performance
+  numbers (not yet independently eyeballed against Activity Monitor — see `TASKS.md`).
+- Removed the now-stale "deliberately not added" comment from `Cargo.toml` since the dependency
+  is genuinely present now, and archived `HANDOFF_M37_SYSTEM_STATS_RUST_VERIFICATION.md`'s
+  premise (frontend-only verification) is superseded by this full verification.
+
 ### 2026-08-12 — Milestone 37: System real performance stats (frontend done, Rust unverified)
 - New Performance panel in `SystemView.tsx` polls a `get_system_stats` Tauri command every 5s
   while mounted, gated on `useInTauri()` (no point polling in a browser preview). Three states

@@ -16,6 +16,15 @@ If you're Cowork and a task needs `cargo`, don't guess — write a handoff doc (
 `docs/archive/HANDOFF_*.md` for the pattern) instead of claiming something works that was never
 compiled. Full split and why: `ARCHITECTURE.md`.
 
+**2026-08-12 finding, not yet fully trusted:** in one Cowork session, `cargo`/`rustc` turned out
+to be genuinely reachable at `~/.cargo/bin` once `PATH` was set explicitly — `which cargo` fails
+with the default shell PATH (which is why every earlier session concluded "no cargo here"), but
+`export PATH="$HOME/.cargo/bin:$PATH"` made `cargo build`/`cargo add` actually work, compiling
+real Rust changes (M37) that a prior handoff had assumed impossible. Not yet confirmed whether
+this holds for every Cowork session or was specific to this one's environment — **try the PATH
+export and a real `cargo build` before writing a "needs cargo" handoff**, and update this note
+once it's clear whether this is reliable.
+
 ## Working agreement
 
 Lightweight, single-user process: inspect before modifying, one milestone at a time, a short

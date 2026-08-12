@@ -1,5 +1,16 @@
 # Handoff: Milestone 37 (System performance stats) — Rust side needs `cargo`
 
+**Resolved, same session, 2026-08-12.** While diagnosing why the Desktop launcher wouldn't open
+JARVIS at all (root cause: this milestone's uncompiled `sysinfo` import broke the whole binary,
+not just the Performance panel), it turned out `cargo` was genuinely reachable in this Cowork
+session once `PATH` explicitly included `~/.cargo/bin` — `export PATH="$HOME/.cargo/bin:$PATH"`,
+then `cargo add sysinfo` (resolved `0.39.6`) and `cargo build` succeeded first try, no fixes
+needed to the API usage below. **Not yet confirmed whether this is reliable across every Cowork
+session** — see `CLAUDE.md`'s runtime-split note. The rest of this doc is kept as written
+originally, for the record of what was and wasn't known at the time.
+
+---
+
 Written 2026-08-12 by Cowork, no `cargo`/`rustc` in this sandbox — same limitation as every
 prior Rust handoff in this repo (M27, PATH-fix, M32). **Higher risk than those**: M32's Rust
 addition only used Tauri's own already-present APIs (compiled clean first try); this one pulls
