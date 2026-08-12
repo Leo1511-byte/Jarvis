@@ -15,7 +15,9 @@ Projects/Tasks/Chat/Connections/Skills/Activity, Obsidian vault read access, voi
 transcribe → speak, crash-recovery, main window only), calendar/email/GitHub read-only checks,
 Level 1/2/3 permission classification with a real approval dialog for Level 3, launchd-based
 (not n8n) scheduled morning brief (written, not activated), multi-window pop-out (any real view
-opens in its own Tauri window, verified both frontend and Rust — M32).
+opens in its own Tauri window, verified both frontend and Rust — M32), a double-clickable
+Desktop launcher (`~/Desktop/Jarvis.app`, see `docs/DESKTOP_LAUNCHER.md` — tooling, not a
+numbered milestone).
 
 **Target end-state:** `PROJECT_OBJECTIVE.md` (2026-08-11) is Leonardo's own description of what
 JARVIS should actually become, walked through against three visual references. Its two

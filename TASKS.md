@@ -48,6 +48,11 @@ Unscoped ideas live in Backlog below instead of here.
       about it). Renamed "Agents"→"Skills", "Integrations"→"Connections" to match what they
       actually render. Live-verified: routing, System's not-built state, `?view=skills` pop-out
       with the renamed slug. See `ROADMAP.md` for full detail.
+- [x] 2026-08-11 — Desktop launcher (`~/Desktop/Jarvis.app`, not a numbered milestone — tooling,
+      not a feature). Double-click launches the live dev build silently, no terminal. See
+      `docs/DESKTOP_LAUNCHER.md`. Live-verified end to end after clearing a leftover-process port
+      conflict from earlier browser-preview testing: `target/debug/jarvis` running, Vite served
+      clean on 1420.
 
 ## Blocked
 

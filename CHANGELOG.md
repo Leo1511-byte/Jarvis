@@ -6,6 +6,24 @@ going forward — see `ROADMAP.md` for current milestone status and `TASKS.md` f
 
 ## Unreleased
 
+### 2026-08-11 — Desktop launcher (tooling, not a numbered milestone)
+- `~/Desktop/Jarvis.app` — double-click launches JARVIS with no terminal. Compiled with macOS's
+  built-in `osacompile` from `scripts/JarvisLauncher.applescript`, which backgrounds
+  `scripts/launch-jarvis.sh` and exits immediately (that's what makes it silent, not just
+  simple). The script runs the live dev build (`cargo tauri dev`), deliberately not a compiled
+  release bundle, since the app is still under active development — revisit once it's
+  feature-complete enough that a release build's rebuild-per-change tradeoff makes sense.
+- `launch-jarvis.sh` explicitly adds `~/.cargo/bin` to `PATH` before checking for `cargo` — GUI-
+  launched processes don't source `.zshrc`, so it's genuinely missing otherwise even though it
+  works fine from an interactive terminal. Fails with a real macOS alert, not silently, if
+  `cargo` still isn't found.
+- Real app icon copied in (`apps/desktop/backend/icons/icon.icns`), not the generic AppleScript
+  one.
+- Live-verified end to end: first attempt hit a real port-1420 conflict from a leftover `vite`
+  process left over from earlier browser-preview testing in this same session — cleared it,
+  retried clean, confirmed `target/debug/jarvis` running and Vite serving correctly. See
+  `docs/DESKTOP_LAUNCHER.md` for the full writeup and how to rebuild it if the repo ever moves.
+
 ### 2026-08-11 — Milestone 35: top-nav migration
 - `Sidebar.tsx` (13 items, 5 never-backed placeholders — Research, Automations, Notifications,
   and the old Settings) deleted, replaced by `TopNav.tsx`: a flat 9-item bar — Dashboard, Chat,
