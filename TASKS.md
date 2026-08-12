@@ -6,16 +6,23 @@ currently active.
 
 ## Now
 
-- [ ] Scope the visual-direction work from `PROJECT_OBJECTIVE.md` (2026-08-11 walkthrough with
-      Leonardo — three reference images, decisions locked in) into actual milestones: design
-      tokens/Core restyle, top-nav migration, honest System/Settings panels. Not yet broken
-      into buildable pieces — see that file's "Not yet decided" section.
+(nothing in progress — see "Next up")
 
 ## Next up
 
-- [ ] Milestone 33 — Memory index (carried over from M27, needs `cargo` — now confirmed working
-      in a local session, see M32's verification below)
-- [ ] Backlog #1 — `orchestrator.rs` `PATH` resolution fix (needs `cargo`)
+Numbered, scoped milestones — see `ROADMAP.md`'s Current milestones table for full detail.
+Unscoped ideas live in Backlog below instead of here.
+
+- [ ] Milestone 34 — Visual design system: tokens + `JarvisCore` restyle (pure frontend)
+- [ ] Milestone 35 — Top-nav migration, depends on M34 (pure frontend; still needs a decision on
+      Projects/Tasks/Activity/Integrations' fate in the new nav)
+- [ ] Milestone 36 — System/Settings view, software slice, depends on M35 (pure frontend, reuses
+      M23/M26/M28)
+- [ ] Milestone 37 — System/Settings real performance stats (needs `cargo`)
+- [ ] Milestone 38 — "Do anything it has access to" real action path (independent of 34-37)
+- [ ] Milestone 39 — Self-upgrade skill (independent of 34-37, needs its Level 3 approval-flow
+      specifics worked out first)
+- [ ] Milestone 33 — Memory index, carried over from M27 (needs `cargo`)
 
 ## Done
 
@@ -34,8 +41,9 @@ currently active.
       `docs/archive/HANDOFF_M32_MULTIWINDOW_RUST_VERIFICATION.md`.
 - [x] 2026-08-11 — Added `PROJECT_OBJECTIVE.md`: walked through Leonardo's final-product vision
       (open-ended command execution, Iron Man styling, device tab, explicit self-upgrade,
-      self-organization) plus three visual references, with decisions locked in. Not yet
-      scoped into milestones.
+      self-organization) plus three visual references, with decisions locked in.
+- [x] 2026-08-11 — Scoped `PROJECT_OBJECTIVE.md` into Milestones 34-39 in `ROADMAP.md`'s Current
+      milestones table, in build order, none started yet.
 
 ## Blocked
 
@@ -54,8 +62,8 @@ far).
 1. `[process]` Fix `orchestrator.rs`'s bundled-app `PATH` resolution gap — see
    `docs/archive/HANDOFF_PATH_FIX_AND_VERIFICATION.md`. Blocks a real release build.
 2. `[daily-life]` School/study tracking — next daily-life depth pass, per VISION.md's explicit
-   naming of it as a core job, not a side feature. Wants M32's window foundation live-verified
-   first so it has somewhere ambient to live.
+   naming of it as a core job, not a side feature. M32's window foundation is now live-verified,
+   so this is unblocked whenever it's prioritized above Milestones 34-39.
 3. `[workshop]` First hardware Skill (3D printer or robotic arm) — needs M31's `Skill` interface
    (done) plus an actual reachable device; not scoped until Leonardo names which device and
    what "start a print job" or equivalent should really do.
