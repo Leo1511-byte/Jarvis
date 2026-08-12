@@ -24,6 +24,7 @@ describe("permissionLevelFor", () => {
 
   it("classifies destructive commands as level 3", () => {
     expect(permissionLevelFor("delete-project")).toBe(3);
+    expect(permissionLevelFor("self-upgrade")).toBe(3);
   });
 
   it("defaults unknown command kinds to the strictest level", () => {

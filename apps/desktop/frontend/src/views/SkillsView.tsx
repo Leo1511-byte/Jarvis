@@ -73,9 +73,17 @@ export function SkillsView({ onRun }: { onRun: (text: string) => void }) {
       return;
     }
     const draft = (drafts[skill.id] ?? "").trim();
-    if (!draft) return;
-    if (skill.id === "research") onRun(`research ${draft}`);
-    else if (skill.id === "continue-project") onRun(`continue project ${draft}`);
+    if (skill.id === "research") {
+      if (!draft) return;
+      onRun(`research ${draft}`);
+    } else if (skill.id === "continue-project") {
+      if (!draft) return;
+      onRun(`continue project ${draft}`);
+    } else if (skill.id === "self-upgrade") {
+      // Milestone 39: focus is optional -- runs with or without a draft,
+      // unlike research/continue-project which need one to mean anything.
+      onRun(draft ? `upgrade yourself: ${draft}` : "upgrade yourself");
+    }
   }
 
   return (
@@ -100,7 +108,8 @@ export function SkillsView({ onRun }: { onRun: (text: string) => void }) {
       ) : (
         <div className="panel-grid">
           {skills.map((s) => {
-            const needsInput = s.id === "research" || s.id === "continue-project";
+            const requiredInput = s.id === "research" || s.id === "continue-project";
+            const optionalInput = s.id === "self-upgrade";
             const usedConnections = connections[s.id] ?? [];
             return (
               <div key={s.id} className="panel">
@@ -127,12 +136,18 @@ export function SkillsView({ onRun }: { onRun: (text: string) => void }) {
                       : "local filesystem/git (no registered Connection)"}
                   </span>
                 </div>
-                {needsInput ? (
+                {requiredInput || optionalInput ? (
                   <div style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-3)" }}>
                     <input
                       className="command-bar-input"
                       style={{ flex: 1 }}
-                      placeholder={s.id === "research" ? "topic…" : "project name…"}
+                      placeholder={
+                        s.id === "research"
+                          ? "topic…"
+                          : s.id === "continue-project"
+                            ? "project name…"
+                            : "focus (optional)…"
+                      }
                       value={drafts[s.id] ?? ""}
                       onChange={(e) => setDrafts((prev) => ({ ...prev, [s.id]: e.target.value }))}
                     />

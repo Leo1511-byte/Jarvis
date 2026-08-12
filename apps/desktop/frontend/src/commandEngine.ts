@@ -23,6 +23,7 @@ export type Command =
   | { kind: "check-email" }
   | { kind: "check-github" }
   | { kind: "check-memory" }
+  | { kind: "self-upgrade"; focus: string | null }
   | { kind: "ask"; text: string }
   | { kind: "unknown"; raw: string };
 
@@ -163,6 +164,20 @@ export function parseCommand(input: string): Command {
     return { kind: "check-memory" };
   }
 
+  // "upgrade yourself" / "update yourself" -- Milestone 39: JARVIS's own
+  // continue-project-equivalent, pointed at its own repo instead of an
+  // external project. Optional focus after a colon/comma ("upgrade
+  // yourself: fix the memory index bug"); if omitted, the Skill itself
+  // decides what to work on (see skills/registry.ts). Deliberately an
+  // explicit, unambiguous phrase per PROJECT_OBJECTIVE.md's idea #4 --
+  // this should never fire from an offhand remark.
+  const selfUpgradeMatch = stripWakePhrase(input).match(
+    /^(?:upgrade|update) yourself(?:\s*[:,]\s*(.+))?$/i
+  );
+  if (selfUpgradeMatch) {
+    return { kind: "self-upgrade", focus: selfUpgradeMatch[1]?.trim() || null };
+  }
+
   // Anything else -- hit live 2026-08-10: Leonardo asking JARVIS ordinary
   // questions/conversation got a hardcoded "not implemented yet" instead
   // of ever reaching Claude, since every case above is a rigid pattern
@@ -222,7 +237,7 @@ export async function executeCommand(
     case "system-status":
       return "Claude, Voice, Supabase, GitHub, and Obsidian all reach the app now — see the System Status panel for exact per-system state.";
     case "help":
-      return "I can switch themes (e.g. \"switch to neon void\"), report status, \"research <topic>\", \"continue project <name>\", \"check my calendar\", \"check my email\", \"check my github\", and \"check my memory\" — the last six via the local orchestrator. Anything else, I'll ask Claude directly — if fulfilling it well means actually changing something, I'll describe the plan and ask you to approve it first.";
+      return "I can switch themes (e.g. \"switch to neon void\"), report status, \"research <topic>\", \"continue project <name>\", \"check my calendar\", \"check my email\", \"check my github\", \"check my memory\", and \"upgrade yourself\" (optionally with a focus, e.g. \"upgrade yourself: fix the memory index\") — that last one needs your approval every time. Anything else, I'll ask Claude directly — if fulfilling it well means actually changing something, I'll describe the plan and ask you to approve it first.";
     case "delete-project":
       return `"Delete project ${command.name}" is a Level 3 action and needs a real approval dialog, not a typed command — use the Delete button in the Projects view instead.`;
     case "research":
@@ -237,6 +252,8 @@ export async function executeCommand(
       return runSkill("check-github", ctx);
     case "check-memory":
       return runSkill("check-memory", ctx);
+    case "self-upgrade":
+      return runSkill("self-upgrade", ctx, command.focus);
     case "ask":
       return runAsk(command.text, ctx);
     case "unknown":

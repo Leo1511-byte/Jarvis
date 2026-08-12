@@ -132,7 +132,7 @@ describe("LocalStore", () => {
     expect(unknown).toEqual([]);
   });
 
-  it("lists the six built-in skills with permission levels matching permissions.ts", async () => {
+  it("lists the seven built-in skills with permission levels matching permissions.ts", async () => {
     const store = new LocalStore();
     const skills = await store.listSkills();
     expect(skills.map((s) => s.id).sort()).toEqual(
@@ -143,6 +143,7 @@ describe("LocalStore", () => {
         "check-email",
         "check-github",
         "check-memory",
+        "self-upgrade",
       ].sort()
     );
     expect(skills.every((s) => s.builtin)).toBe(true);

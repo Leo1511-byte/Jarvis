@@ -6,6 +6,10 @@ currently active.
 
 ## Now
 
+- [ ] **Run `packages/database/migrations/0006_self_upgrade_skill.sql`** in the Supabase SQL
+      editor (same as every prior migration) — without it, the live Skills tab shows only 6 of
+      the 7 real Skills, since Supabase's `skills` table is seeded once via SQL, not read from
+      `skills/registry.ts`.
 - [ ] **Milestone 38 needs a real live click-through**, not just unit tests — try a phrase like
       "delete my notes.txt file" in the actual running app (local, not Cowork) and confirm: (1)
       the orchestrator's reply actually starts with `SAFE:` or `NEEDS_APPROVAL:` as asked, (2) a
@@ -19,8 +23,6 @@ Numbered, scoped milestones — see `ROADMAP.md`'s Current milestones table for 
 Unscoped ideas live in Backlog below instead of here.
 
 - [ ] Milestone 37 — System/Settings real performance stats (needs `cargo`)
-- [ ] Milestone 39 — Self-upgrade skill (needs its Level 3 approval-flow specifics worked out
-      first)
 - [ ] Milestone 33 — Memory index, carried over from M27 (needs `cargo`)
 
 ## Done
@@ -64,6 +66,12 @@ Unscoped ideas live in Backlog below instead of here.
       approval-gated action path (SAFE/NEEDS_APPROVAL classification, same `ApprovalDialog` the
       built-in Skills' Level 3 case uses). Unit-tested (4 new tests, 61 total), not yet
       live-verified end to end — see "Now" above.
+- [x] 2026-08-11 — Milestone 39: self-upgrade skill (Level 3, "upgrade yourself" with optional
+      focus, reuses `continue-project`'s background pattern). Zero new gating code needed thanks
+      to M28/M31. Live-verified against the running app: real `ApprovalDialog` fired correctly,
+      denial produced "Not approved" with no orchestrator call. Found and fixed a real gap along
+      the way — Supabase's `skills` table needed its own migration (`0006_self_upgrade_skill.sql`,
+      not yet run — see "Now"). 6 new tests (67 total).
 
 ## Blocked
 

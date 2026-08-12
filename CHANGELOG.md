@@ -6,6 +6,36 @@ going forward — see `ROADMAP.md` for current milestone status and `TASKS.md` f
 
 ## Unreleased
 
+### 2026-08-11 — Milestone 39: self-upgrade skill
+- New `self-upgrade` Skill in `skills/registry.ts`: Level 3 (unlike `continue-project`'s Level
+  2 — this touches JARVIS's own running code, not an external project), triggered by "upgrade
+  yourself" / "update yourself" with an optional `: <focus>` suffix. Reuses `continue-project`'s
+  exact background-mode-with-sync-fallback pattern.
+- If no focus is given, the prompt tells the orchestrator to read `ROADMAP.md`/`TASKS.md` and
+  pick the next sensible item itself, then follow this repo's own documented discipline
+  (`CLAUDE.md`): inspect first, one change at a time, real tests/build before done, update
+  CHANGELOG/ROADMAP/TASKS the same way every milestone in this repo's history has been recorded.
+- **Zero new gating/logging code needed** — this is the actual payoff of M28's generic Level-3
+  gate and M31's registry redesign: adding a Level 3 Skill is now just a registry entry.
+  `permissions.ts` and `App.tsx`'s `SKILL_COMMAND_KINDS`/activity logging picked it up
+  automatically.
+- `SkillsView.tsx` updated for a third input mode: optional (not required) focus, distinct from
+  `research`/`continue-project`'s required topic/name.
+- **Live-verified against the actual running desktop launcher instance** (unlike M38, this part
+  didn't need a real orchestrator response to test): typing "upgrade yourself" in the command
+  bar correctly triggered the real `ApprovalDialog` with accurate Level 3 context/reason/risk
+  text; denying it produced "Not approved — nothing was run" in the Command Log with no
+  orchestrator call attempted, exactly as designed.
+- **Real gap found and fixed during that verification, not swept under the rug:** the running
+  app uses real Supabase (`.env.local` is configured), and Supabase's `skills` table is seeded
+  once via migration SQL (`0004_skills.sql`) — it doesn't read from `skills/registry.ts` the way
+  `LocalStore`'s fallback does. The new Skill genuinely didn't appear in the live Skills tab
+  (confirmed: only 6 panel titles rendered, not 7) until this was caught. New
+  `packages/database/migrations/0006_self_upgrade_skill.sql` fixes it — **Leonardo needs to run
+  this in the Supabase SQL editor**, same as every prior migration.
+- 6 new tests (67 total, up from 61): parsing (with/without focus), background-mode routing,
+  sync fallback, registry-level Level 3 check. `tsc -b`/`vite build` clean.
+
 ### 2026-08-11 — Milestone 38: "do anything it has access to" real action path
 - `ask` (`commandEngine.ts`'s fallback for anything not matching a built-in Skill) no longer
   permanently describe-only. New two-call design in a `runAsk` helper: first prompt asks the

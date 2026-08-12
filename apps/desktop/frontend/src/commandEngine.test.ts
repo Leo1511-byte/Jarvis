@@ -101,6 +101,19 @@ describe("parseCommand", () => {
     });
   });
 
+  it("parses self-upgrade commands, with and without a focus", () => {
+    expect(parseCommand("upgrade yourself")).toEqual({ kind: "self-upgrade", focus: null });
+    expect(parseCommand("update yourself")).toEqual({ kind: "self-upgrade", focus: null });
+    expect(parseCommand("upgrade yourself: fix the memory index bug")).toEqual({
+      kind: "self-upgrade",
+      focus: "fix the memory index bug",
+    });
+    expect(parseCommand("upgrade yourself, fix the memory index bug")).toEqual({
+      kind: "self-upgrade",
+      focus: "fix the memory index bug",
+    });
+  });
+
   it("parses calendar-check commands in their common phrasings", () => {
     expect(parseCommand("check my calendar")).toEqual({ kind: "check-calendar" });
     expect(parseCommand("check calendar")).toEqual({ kind: "check-calendar" });
@@ -238,6 +251,48 @@ describe("executeCommand", () => {
     );
     expect(response).toMatch(/orchestrator error/i);
     expect(response).toContain("claude --bg failed");
+  });
+
+  it("routes self-upgrade through background mode with the given focus", async () => {
+    const runOrchestrator = vi.fn();
+    const runOrchestratorBackground = vi
+      .fn()
+      .mockResolvedValue({ jobId: "abc123", sessionId: "abc123-session" });
+    const response = await executeCommand(
+      { kind: "self-upgrade", focus: "fix the memory index bug" },
+      { setTheme: vi.fn(), runOrchestrator, runOrchestratorBackground }
+    );
+    expect(runOrchestratorBackground).toHaveBeenCalledWith(
+      expect.stringContaining("fix the memory index bug")
+    );
+    expect(runOrchestrator).not.toHaveBeenCalled();
+    expect(response).toContain("abc123");
+    expect(response).toMatch(/background job/i);
+  });
+
+  it("lets self-upgrade pick its own focus when none is given", async () => {
+    const runOrchestratorBackground = vi
+      .fn()
+      .mockResolvedValue({ jobId: "abc123", sessionId: "abc123-session" });
+    await executeCommand(
+      { kind: "self-upgrade", focus: null },
+      { setTheme: vi.fn(), runOrchestratorBackground }
+    );
+    expect(runOrchestratorBackground).toHaveBeenCalledWith(
+      expect.stringContaining("ROADMAP.md and TASKS.md")
+    );
+  });
+
+  it("falls back to the synchronous orchestrator for self-upgrade without a background connection", async () => {
+    const runOrchestrator = vi.fn().mockResolvedValue("Fixed the bug, tests passing.");
+    const response = await executeCommand(
+      { kind: "self-upgrade", focus: "fix the memory index bug" },
+      { setTheme: vi.fn(), runOrchestrator }
+    );
+    expect(runOrchestrator).toHaveBeenCalledWith(
+      expect.stringContaining("fix the memory index bug")
+    );
+    expect(response).toBe("Fixed the bug, tests passing.");
   });
 
   it("routes check-calendar through the orchestrator with a read-only prompt", async () => {

@@ -140,6 +140,50 @@ export const SKILLS: Skill[] = [
       );
     },
   },
+  {
+    id: "self-upgrade",
+    name: "Self-Upgrade",
+    description:
+      "Modify JARVIS's own repository -- inspect, implement, test, and document one change, " +
+      "the same discipline this project uses for every other milestone. Runs in the background " +
+      "(claude --bg). Level 3, unlike continue-project's Level 2: this touches the app's own " +
+      "running code, not an external project, so a bad change can break JARVIS itself.",
+    permissionLevel: 3,
+    domain: "software",
+    connectionIds: [],
+    async execute(ctx, input) {
+      const focus = input ? String(input) : null;
+      const prompt =
+        `This is a self-upgrade request: you (JARVIS) are being asked to modify your own ` +
+        `repository -- the one you're running from right now -- not an external project. ` +
+        `Leonardo triggered this explicitly and approved it.\n\n` +
+        (focus
+          ? `Work on: ${focus}.\n\n`
+          : `No specific focus was given -- read ROADMAP.md and TASKS.md, pick the single most ` +
+            `sensible next item (prefer the top of TASKS.md's Backlog, or the next unscoped ` +
+            `item in ROADMAP.md), and work on that one thing only.\n\n`) +
+        `Follow this repo's own discipline exactly as documented in CLAUDE.md: inspect before ` +
+        `modifying, one change at a time, run the real test suite and build before considering ` +
+        `it done, update CHANGELOG.md/ROADMAP.md/TASKS.md the same way every other milestone in ` +
+        `this repo's history has been recorded. Do not touch unrelated code. If the change needs ` +
+        `cargo and it's unavailable in this session, write an honest handoff doc instead of ` +
+        `guessing, the same pattern already used elsewhere in this repo (see docs/archive/` +
+        `HANDOFF_*.md). Reply with 2-3 sentences summarizing exactly what you changed.`;
+
+      if (!ctx.runOrchestratorBackground) {
+        return runOrchestratorOrExplain(ctx, prompt);
+      }
+      try {
+        const job = await ctx.runOrchestratorBackground(prompt);
+        return (
+          `Started a self-upgrade as a background job (${job.jobId}) -- this can take a while, ` +
+          `I'll let you know when it's done.`
+        );
+      } catch (e) {
+        return `Orchestrator error: ${e instanceof Error ? e.message : String(e)}`;
+      }
+    },
+  },
 ];
 
 export function getSkill(id: string): Skill | undefined {
