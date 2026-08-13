@@ -23,15 +23,16 @@ currently active.
       defects were found and fixed 2026-08-13 (see `VOICE_SETUP.md`'s dated section), both
       compiled/syntax-checked but neither exercised with a real mic. If it still happens, it's a
       third, different cause — say so rather than assuming these fixes covered it.
-- [ ] **Re-test Gemini Live with headphones/AirPods, not built-in speakers** — first re-test
-      (after the blocking-I/O fix) still cut off after a couple seconds. Root cause: built-in
-      speakers + mic with no echo cancellation, plus a genuine bug where an over-eager end-phrase
-      match could kill the whole session if JARVIS's own echoed voice got mis-transcribed as
-      containing one ("that's all", etc.) — that specific bug is now fixed
-      (`is_end_phrase()`), but the underlying echo issue (Gemini's own interruption signal
-      firing on echo) isn't — headphones should mostly avoid it. See `VOICE_SETUP.md`'s second
-      2026-08-13 section. If cutoffs persist even with headphones, that's a third, different
-      cause.
+- [ ] **Re-test Gemini Live now that a third real bug is fixed** — with headphones (confirming
+      the echo theory), wake word worked but a follow-up question after the first exchange got
+      no response at all. Root cause: `session.receive()` is very likely a per-turn generator,
+      not one stream spanning the whole session — the code only ever called it once, so nothing
+      was left listening after the first turn's generator completed. Fixed by wrapping it in an
+      outer loop that re-enters `session.receive()` per turn. See `VOICE_SETUP.md`'s third
+      2026-08-13 section. Syntax-checked only, not yet re-tested. This is the third distinct bug
+      found from three consecutive live tests — if a fourth shows up, that's expected for a
+      from-scratch integration against a real-time API, not a sign something's fundamentally
+      wrong.
 - [ ] **Report back what the command-log fragment bug looked like** (the "I" / "50 days for"
       screenshot, 2026-08-13) — confirmed unrelated to voice (mic was off), likely a typed
       command-bar submission bug. Not yet investigated.

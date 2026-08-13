@@ -6,6 +6,22 @@ going forward — see `ROADMAP.md` for current milestone status and `TASKS.md` f
 
 ## Unreleased
 
+### 2026-08-13 — Fixed: Gemini Live only handled one turn per session
+- Headphones test (confirming the echo theory from the previous fix) surfaced a third, distinct
+  bug: one exchange worked, then a follow-up question got no response — no error, no crash, just
+  silence, matching a process with nothing left listening.
+- Root cause: `receive_and_play()` had a single `async for response in session.receive():`, no
+  outer loop. "One turn works, then nothing" is strong evidence `session.receive()` is a
+  per-turn generator that completes naturally once the model finishes speaking, not one stream
+  spanning the whole live session — the mic kept streaming the follow-up the whole time, but
+  nothing was left to receive or play the response.
+- Fixed: wrapped the `async for` in an outer `while not ended:` loop, re-entering
+  `session.receive()` for each subsequent turn. Added a stderr log line so this is visible on
+  the next test instead of another silent black box.
+- Third real bug found from three consecutive live tests, each genuinely new — noted in
+  `VOICE_SETUP.md` as expected for a from-scratch integration against a real-time API, not a
+  sign of something more broadly wrong. Python syntax-checked only, not yet re-tested.
+
 ### 2026-08-13 — Fixed: Gemini Live session-killing bug + disclosed a real echo limitation
 - Re-test after the blocking-I/O fix still cut off after a couple seconds. No exceptions in the
   logs — pointed at intentional code (our own early-return), not a crash.

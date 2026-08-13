@@ -259,6 +259,33 @@ audio off mid-reply on built-in speakers, that's now correctly a separate, discl
 remaining cutoffs are the echo issue (should mostly disappear) or something else (would still
 happen). **Verified:** Python syntax-checked only, not yet re-tested live.
 
+## Third real bug found from the headphones re-test, 2026-08-13: only one turn per session
+
+With headphones on, the wake word worked (confirming the echo theory was at least part of the
+picture), but a new symptom appeared: one exchange worked fine, then a follow-up question got no
+response at all — not an error, just silence, matching a process that was sitting there doing
+nothing (confirmed: `/tmp/jarvis-dev.log` showed no output at all in the tens of seconds after
+the last wake event, no crash, no traceback).
+
+Root cause: `receive_and_play()` had a single `async for response in session.receive():` with no
+outer loop. The "one turn works, then nothing" pattern is strong evidence that `session.receive()`
+is a **per-turn** generator — it completes naturally once the model finishes speaking, not a
+single stream spanning the whole live session. Once that first generator ended, nothing was left
+listening: `send_mic_audio()` kept streaming the follow-up question to Gemini the whole time
+(and Gemini may well have kept responding), but the code that would have played it back and
+emitted the transcript had already returned.
+
+**Fixed:** wrapped the `async for` in an outer `while not ended:` loop, so completing one turn's
+generator re-enters `session.receive()` for the next turn instead of ending the whole function.
+Added a stderr log line ("One live turn finished; listening for the next") so this is visible
+in `/tmp/jarvis-dev.log` on the next test, rather than being another silent black box.
+
+**Verified:** Python syntax-checked only, not yet re-tested live. This is the third real bug
+found from three consecutive live tests — each one genuinely new, not a repeat of the last,
+which is itself worth noting: a from-scratch integration against a real-time streaming API
+needs several rounds of "actually run it and see what breaks" no amount of doc-reading up front
+fully avoids.
+
 ## Not built yet
 
 - Follow-up conversation mode, configurable timeout, spoken interruption ("Jarvis, stop") — now
