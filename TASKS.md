@@ -23,6 +23,16 @@ currently active.
       defects were found and fixed 2026-08-13 (see `VOICE_SETUP.md`'s dated section), both
       compiled/syntax-checked but neither exercised with a real mic. If it still happens, it's a
       third, different cause — say so rather than assuming these fixes covered it.
+- [ ] **Add your Gemini API key to `config.json`'s `gemini_api_key` field** (`System/voice/` in
+      the Obsidian vault), switch Voice settings → Conversation engine to "Gemini Live", and try
+      a real conversation. Milestone 40's first slice is built and compiled but never run against
+      real audio/API — see `VOICE_SETUP.md`'s dated section for exactly what to check (does it
+      actually stream both ways, does interrupting it work, does it correctly hang up after
+      silence/an end phrase). It can't yet run JARVIS Skills mid-conversation (no tool-calling
+      bridge — separate backlog item), so keep test conversations to plain talk for now.
+- [ ] **Report back what the command-log fragment bug looked like** (the "I" / "50 days for"
+      screenshot, 2026-08-13) — confirmed unrelated to voice (mic was off), likely a typed
+      command-bar submission bug. Not yet investigated.
 
 ## Next up
 
@@ -92,6 +102,15 @@ Unscoped ideas live in Backlog below instead of here.
       app instance forming its own independent voice-process pair sharing the same
       `speaking.flag` file (`tauri-plugin-single-instance` added, real `cargo build` verified).
       Both compiled/syntax-checked, neither exercised with a real mic yet — see "Now".
+- [x] 2026-08-13 — Milestone 40 (first slice): real-time conversational voice via the Gemini
+      Live API. New `gemini_live_listen.py` engine, selectable per-user, classic engine
+      unchanged. One process handles both mic and speaker (no flag-file coordination, so
+      structurally can't have the classic engine's self-listening bug class). Protocol pulled
+      from current `ai.google.dev` docs via web fetch. `voice.rs`/`VoiceEvent` extended (24 Rust
+      tests, 2 new), frontend gets a "Conversation engine" selector (67 tests unchanged, `tsc -b`/
+      `vite build` clean), UI live-checked against the real running app. No tool-calling bridge
+      yet (conversation only) — see backlog item 5. Not live-tested with real audio/API key —
+      see "Now".
 
 ## Blocked
 
@@ -118,13 +137,15 @@ far).
 4. `[daily-life]` GitHub/email/calendar write actions (currently read-only by design, see
    `SECURITY.md`) — real Level 3 surface, needs a considered approval-flow design before any
    of it starts.
-5. `[ambient]` Realtime conversational voice — 2026-08-13, Leonardo compared our voice pipeline
-   (wake word → record → transcribe → 12-44s Claude call → speak) unfavorably to Gemini's live
-   voice mode (continuous, low-latency, interruptible). Confirmed via web search: Claude itself
-   has no real-time speech-to-speech mode yet (push-to-talk only, no barge-in) — closing this
-   gap needs a dedicated realtime voice provider (e.g. OpenAI's Realtime API) as the
-   conversational front-end, handing off to Claude/JARVIS's Skills when a real action is asked
-   for. Direction agreed with Leonardo; not yet designed or scoped into milestones — needs a
-   real design pass (provider choice, cost, how handoff to Skills works, how it coexists with
-   the existing wake-word pipeline) before it gets a milestone number.
+5. `[ambient]` Gemini Live tool-calling bridge — Milestone 40 (2026-08-13) built real-time
+   conversational voice via the Gemini Live API, but Gemini can't yet run a JARVIS Skill
+   mid-conversation. This bridge lets it, via the same approval-gated `commandEngine.ts` path
+   the command bar/Chat/Skills tab already use (not a parallel execution system) — marked in
+   `gemini_live_listen.py` where it goes. Not started; natural follow-up once M40 is
+   live-verified with real audio.
 6. `[process]` n8n — only if launchd/cron scripts genuinely become unwieldy; not a default plan.
+7. `[daily-life]` Command-bar fragment bug — screenshot from Leonardo, 2026-08-13, showed JARVIS
+   responding to partial input it was never actually asked ("I", "50 days for" as separate
+   exchanges building up "What day will be in 50 days for"). Confirmed unrelated to voice (mic
+   was off in the screenshot) — looks like the typed `CommandBar` submitting on something other
+   than a real Enter/click. Not investigated yet; see "Now" for the ask to get repro details.

@@ -58,6 +58,17 @@ export function VoiceSettings({
       </label>
 
       <div className="voice-field">
+        <span>Conversation engine</span>
+        <select
+          value={settings.voiceEngine}
+          onChange={(e) => update({ voiceEngine: e.target.value as VoiceSettingsData["voiceEngine"] })}
+        >
+          <option value="classic">Classic (wake word → Claude → speak)</option>
+          <option value="gemini_live">Gemini Live (real-time, interruptible)</option>
+        </select>
+      </div>
+
+      <div className="voice-field">
         <span>Input device</span>
         <select
           value={settings.inputDeviceId ?? ""}

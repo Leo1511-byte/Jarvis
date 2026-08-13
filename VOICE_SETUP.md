@@ -146,8 +146,72 @@ set it (confirms flags do get abandoned when a process is killed abruptly, e.g. 
 during testing/restarts) — harmless once fix #1 above is in place, but deleted by hand this time
 since no `listen_loop.py` was running to hit the fixed code path.
 
+## Gemini Live engine added, 2026-08-13 — real-time, interruptible conversation
+
+Leonardo compared JARVIS's voice to a Gemini Live demo: continuous, low-latency, and genuinely
+interruptible, vs. our wake word → fixed 5s record → whisper → a `claude -p` call (measured
+12-44s in this project's own benchmark) → speak the whole reply. That gap isn't a bug in the
+classic pipeline, it's what a turn-based design fundamentally is — confirmed via web search that
+Claude itself has no real-time speech-to-speech mode yet. Closing it needed a different engine
+entirely, not a tuning pass on the old one.
+
+**New: `voice_engine` in `config.json`** — `"classic"` (default, unchanged, still
+`listen_loop.py`/`speak_daemon.py`) or `"gemini_live"` (new `gemini_live_listen.py`). Selected
+per-user in the app (Voice settings → "Conversation engine"), not a code change.
+
+**Architecture, and why it structurally can't have the two 2026-08-13 bugs above:** the classic
+pipeline is two independent long-running processes coordinating through a shared `speaking.flag`
+file on disk — exactly the mechanism that caused both bugs above. A Gemini Live session is
+bidirectional over one connection (server-side turn detection decides when the user is
+interrupting vs. the model still has the floor), so `gemini_live_listen.py` is a *single*
+process handling both mic capture and speaker playback — there's no second process to
+coordinate with, so that whole bug class doesn't apply here. Wake-word detection (openWakeWord,
+reused as-is from `listen_loop.py`) still gates when a live session opens — Leonardo's explicit
+choice over push-to-talk or always-on, balancing cost/privacy against the demo's hands-free feel
+— then the session stays open for natural back-and-forth until a ~45s silence timeout or an end
+phrase ("that's all," "stop listening," etc.) in the live transcript.
+
+**Scope, deliberately narrow:** real-time conversation only. Gemini can talk *with* you, but
+can't yet run a JARVIS Skill (check your calendar, research something, self-upgrade, ...)
+mid-conversation — no tools are registered in the Live session config. That bridge (Gemini
+calling into the same approval-gated `commandEngine.ts` path the command bar/Chat/Skills tab
+already use, not a parallel execution system) is real, separately-scoped work — see
+`TASKS.md`/`ROADMAP.md`.
+
+**Rust side (`voice.rs`):** the listener slot/monitor/crash-recovery infrastructure is reused for
+both engines rather than duplicated — `start_voice_listener` now takes an `engine` argument and
+picks which script to spawn; `VoiceEvent` gained `LiveSessionStart`/`LiveTranscript { role, text
+}`/`LiveSessionEnd` variants (`gemini_live_listen.py`'s own JSON-line-per-stdout-line protocol,
+same convention `listen_loop.py` established). **Verified:** real `cargo build`/`cargo test`
+(24 Rust tests passing, 2 new), not a handoff — see `CLAUDE.md`'s note on `cargo` being reachable
+in this Cowork session.
+
+**Frontend:** new "Conversation engine" selector in Voice settings (`VoiceSettings.tsx`,
+persisted like every other voice setting); `useVoiceListener` passes the engine through and
+handles the three new event types by persisting each live turn straight to Chat (no fixed
+"you asked, JARVIS answered" pair the way the classic Command Log expects — one message per
+turn instead, same destination everything else voice produces already uses). Classic engine's
+behavior is completely unchanged. **Verified:** 67 frontend tests passing (unchanged — no new
+command-engine behavior), `tsc -b`/`vite build` clean, and live-checked in a browser tab against
+the actual running app: the selector renders both options and persists the choice correctly.
+
+**Not yet verified, and can't be from this session:** an actual Gemini Live conversation, end to
+end, with real audio hardware and a real API key. `gemini_live_listen.py` was written against
+the Gemini Live API's real, current documentation (pulled via web fetch specifically because a
+fast-moving realtime API isn't something worth guessing at from training data) — audio format
+(16-bit PCM, 16kHz in / 24kHz out), the `google-genai` SDK's async session pattern, and the tool-
+calling message shapes are all sourced from `ai.google.dev`, not memory. But "matches the docs"
+and "works end-to-end with real audio" are two different claims, and only the first one is made
+here. One specific known uncertainty, called out in the code: the interruption signal's exact
+field name (`server_content.interrupted`) wasn't independently confirmed against a real session.
+Leonardo has a Gemini API key already — needs adding to `config.json`'s `gemini_api_key`, then a
+real live test.
+
 ## Not built yet
 
-- Follow-up conversation mode, configurable timeout, spoken interruption ("Jarvis, stop").
+- Follow-up conversation mode, configurable timeout, spoken interruption ("Jarvis, stop") — now
+  real for the `gemini_live` engine (2026-08-13 above); still true of the `classic` engine.
 - Startup greeting, activation sound, speech speed/volume settings.
 - Push-to-talk (the shortcut is displayed in settings but not bound to anything).
+- The tool-calling bridge letting Gemini Live run JARVIS Skills mid-conversation (see the
+  2026-08-13 section above).

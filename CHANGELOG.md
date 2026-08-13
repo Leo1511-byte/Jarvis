@@ -6,6 +6,45 @@ going forward — see `ROADMAP.md` for current milestone status and `TASKS.md` f
 
 ## Unreleased
 
+### 2026-08-13 — Milestone 40 (first slice): real-time conversational voice via Gemini Live
+- New `gemini_live_listen.py` (`System/voice/` in the Obsidian vault) — a second, selectable
+  voice engine alongside the unchanged `classic` pipeline (`config.json`'s new `voice_engine`
+  field). Wake word (openWakeWord, reused as-is) still gates when a live session opens —
+  Leonardo's explicit choice over push-to-talk or always-on, for cost/privacy — then the
+  session stays open for natural back-and-forth via the real Gemini Live API until a ~45s
+  silence timeout or an end phrase ("that's all," "stop listening," etc.).
+- **Protocol pulled from `ai.google.dev`'s current docs via web fetch, not training-data
+  memory** — specifically because a fast-moving realtime API is exactly the kind of thing worth
+  getting verified-current facts for: the `google-genai` SDK's async session pattern
+  (`client.aio.live.connect`), audio format (16-bit PCM, 16kHz in / 24kHz out), and the manual
+  tool-response handling shape. One specific, disclosed uncertainty: the interruption signal's
+  exact field name (`server_content.interrupted`) wasn't independently confirmed against a real
+  session.
+- **Architecturally can't have the classic engine's self-listening bug class**: a live session
+  is bidirectional over one connection with server-side turn detection, so one process handles
+  both mic capture and speaker playback — no second process, no shared `speaking.flag` file, no
+  coordination race to have.
+- `voice.rs`: listener slot/monitor/crash-recovery infrastructure reused for both engines
+  (`start_voice_listener` now takes an `engine` argument; `listener_script_for_engine` picks the
+  script). `VoiceEvent`'s `rename_all` changed from `"lowercase"` to `"snake_case"` (a no-op for
+  the 4 existing single-word variants, required for the 3 new multi-word ones —
+  `LiveSessionStart`/`LiveTranscript`/`LiveSessionEnd` — to match Python's `live_session_start`
+  etc.). 24 Rust tests passing (2 new), real `cargo build`/`cargo test`.
+- Frontend: new "Conversation engine" selector in Voice settings (`useVoiceSettings.ts`,
+  `VoiceSettings.tsx`), `useVoiceListener` passes the engine through and skips starting
+  `speak_daemon.py` for `gemini_live` (it speaks directly, no queue needed). Live transcripts
+  persist straight to Chat, one message per turn — no fixed "you asked, JARVIS answered" pair
+  the way the classic Command Log (`LogEntry`) expects. 67 tests passing (unchanged), `tsc -b`/
+  `vite build` clean, UI live-checked in a browser tab against the actual running app (selector
+  renders both options, choice persists).
+- **Deliberately scoped out**: Gemini can't yet run a JARVIS Skill mid-conversation — no tools
+  registered in the Live session config, no bridge to `commandEngine.ts`'s approval-gated
+  execution path. Marked in `gemini_live_listen.py` (`# TOOL-CALLING BRIDGE GOES HERE`) for when
+  that's built — added as `TASKS.md` backlog item 5.
+- **Not yet live-tested** — no mic, no Gemini API key in this session. Leonardo has a key
+  already; needs adding to `config.json`'s `gemini_api_key` and a real conversation test. See
+  `TASKS.md`'s "Now".
+
 ### 2026-08-13 — Two voice self-listening bugs found and fixed
 - Leonardo reported JARVIS still occasionally "listens to its own voice and starts conversating
   with itself," despite the 2026-08-10 feedback-loop fix. Diagnosed from code (no mic access in
@@ -28,19 +67,6 @@ going forward — see `ROADMAP.md` for current milestone status and `TASKS.md` f
   harmless once fix #1 is in place, deleted by hand this time.
 - Neither fix has been exercised with a real mic yet — that still needs Leonardo or a local
   session. 67 frontend tests unaffected (pure Python/Rust changes).
-
-### 2026-08-13 — Voice direction: realtime conversational voice, agreed but not yet designed
-- Leonardo compared our voice pipeline unfavorably to a Gemini Live demo — continuous, low-
-  latency, interruptible conversation vs. our wake-word → record → transcribe → 12-44s Claude
-  call → speak turn-based pipeline.
-- Confirmed via web search: Claude has no real-time speech-to-speech mode yet (push-to-talk
-  only, no barge-in as of 2026-08-13). Closing this gap needs a dedicated realtime voice
-  provider (e.g. OpenAI's Realtime API) as the conversational front-end, handing off to
-  Claude/JARVIS's Skills when a real action is asked for — agreed with Leonardo over the
-  incremental-improvements-only alternative.
-- Not yet designed or scoped into milestones — added as backlog item 5 in `TASKS.md`, pillar
-  `[ambient]`. Needs a real design pass (provider choice, cost, handoff-to-Skills design, how it
-  coexists with the existing wake-word pipeline) before it gets a milestone number.
 
 ### 2026-08-12 — Fixed: app wouldn't open (M37's Rust half genuinely compiled and verified)
 - Leonardo reported the Desktop launcher wasn't opening JARVIS. Root cause: `system_stats.rs`

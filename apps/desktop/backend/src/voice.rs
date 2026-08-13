@@ -39,20 +39,43 @@ pub struct VoiceState {
     speak_daemon_restarts: Mutex<u32>,
     listener_monitor_started: AtomicBool,
     speak_daemon_monitor_started: AtomicBool,
+    /// Which script the listener slot is currently running -- "" (the
+    /// Default) is treated the same as "classic" by
+    /// listener_script_for_engine. Remembered here so the crash-recovery
+    /// monitor restarts the *same* engine the frontend last chose,
+    /// rather than always falling back to classic.
+    listener_engine: Mutex<String>,
 }
 
-/// Mirrors the JSON lines listen_loop.py prints to stdout, one event per
-/// line, plus a Rust-originated `Status` variant for crash/restart
-/// notifications the frontend can show (e.g. "voice reconnected"). Also
-/// used as the payload emitted to the frontend as the "voice-event" Tauri
-/// event -- one shape, no separate DTO.
+/// Mirrors the JSON lines listen_loop.py (and, as of 2026-08-13,
+/// gemini_live_listen.py) print to stdout, one event per line, plus a
+/// Rust-originated `Status` variant for crash/restart notifications the
+/// frontend can show (e.g. "voice reconnected"). Also used as the
+/// payload emitted to the frontend as the "voice-event" Tauri event --
+/// one shape, no separate DTO.
+///
+/// `rename_all = "snake_case"` (changed from "lowercase" 2026-08-13):
+/// the original four variants are single words, where lowercase and
+/// snake_case produce the same string, so this is a no-op for them --
+/// but "lowercase" would have turned `LiveSessionStart` into
+/// "livesessionstart" (no separator), not gemini_live_listen.py's
+/// "live_session_start". snake_case handles both correctly.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(tag = "event", rename_all = "lowercase")]
+#[serde(tag = "event", rename_all = "snake_case")]
 pub enum VoiceEvent {
     Wake { score: f64 },
     Transcript { text: String },
     Error { message: String },
     Status { message: String },
+    /// gemini_live_listen.py only: a live conversation session opened
+    /// after the wake word fired.
+    LiveSessionStart,
+    /// gemini_live_listen.py only: one utterance from either side of a
+    /// live conversation, as Gemini's own transcription reports it.
+    LiveTranscript { role: String, text: String },
+    /// gemini_live_listen.py only: the live session ended (silence
+    /// timeout or an end phrase) -- back to wake-word listening.
+    LiveSessionEnd,
 }
 
 fn voice_dir() -> PathBuf {
@@ -84,9 +107,27 @@ fn backoff_for_attempt(attempt: u32) -> Duration {
     BASE_BACKOFF * attempt.min(4)
 }
 
-fn spawn_listener_child(app: &AppHandle) -> Result<Child, String> {
+/// `engine` selects which script this slot runs -- "classic"
+/// (listen_loop.py, the original wake -> record -> whisper -> Claude ->
+/// speak pipeline) or "gemini_live" (gemini_live_listen.py, a real-time
+/// conversation via the Gemini Live API, 2026-08-13). Both are spawned
+/// and monitored identically from Rust's point of view -- same crash
+/// recovery, same line-based JSON stdout protocol (VoiceEvent now
+/// includes the Live* variants gemini_live_listen.py emits) -- so this
+/// reuses the one listener slot/monitor rather than duplicating
+/// VoiceState for a second engine. The two are mutually exclusive, not
+/// run simultaneously; start_voice_listener passes through whichever
+/// the frontend's voice engine setting currently selects.
+fn listener_script_for_engine(engine: &str) -> &'static str {
+    match engine {
+        "gemini_live" => "gemini_live_listen.py",
+        _ => "listen_loop.py",
+    }
+}
+
+fn spawn_listener_child(app: &AppHandle, engine: &str) -> Result<Child, String> {
     let mut child = Command::new(venv_python())
-        .arg(voice_dir().join("listen_loop.py"))
+        .arg(voice_dir().join(listener_script_for_engine(engine)))
         .stdout(Stdio::piped())
         // Inherited, not discarded: listen_loop.py's progress/error output
         // (model loading, PortAudio errors, etc.) previously vanished
@@ -183,7 +224,12 @@ fn run_listener_monitor(app: AppHandle) {
         );
         std::thread::sleep(backoff_for_attempt(attempt));
 
-        match spawn_listener_child(&app) {
+        let engine = state
+            .listener_engine
+            .lock()
+            .map(|g| g.clone())
+            .unwrap_or_default();
+        match spawn_listener_child(&app, &engine) {
             Ok(child) => {
                 if let Ok(mut guard) = state.listener.lock() {
                     *guard = Some(child);
@@ -253,15 +299,24 @@ fn run_speak_daemon_monitor(app: AppHandle) {
     }
 }
 
+/// `engine`: "classic" (default if empty/unrecognized) or "gemini_live"
+/// -- see listener_script_for_engine. Remembered in VoiceState so a
+/// later crash-recovery restart uses the same engine, not always
+/// classic.
 #[tauri::command]
-pub fn start_voice_listener(app: AppHandle, state: State<VoiceState>) -> Result<(), String> {
+pub fn start_voice_listener(
+    app: AppHandle,
+    state: State<VoiceState>,
+    engine: String,
+) -> Result<(), String> {
     {
         let mut guard = state.listener.lock().map_err(|e| e.to_string())?;
         if guard.is_some() {
             return Ok(()); // already running -- idempotent, matches stop below
         }
-        *guard = Some(spawn_listener_child(&app)?);
+        *guard = Some(spawn_listener_child(&app, &engine)?);
     }
+    *state.listener_engine.lock().map_err(|e| e.to_string())? = engine;
     // A fresh manual start (first-ever start, or the user toggling voice
     // off and on to recover) resets the auto-restart budget.
     *state.listener_restarts.lock().map_err(|e| e.to_string())? = 0;
@@ -366,6 +421,36 @@ mod tests {
                 message: "boom".to_string()
             }
         );
+    }
+
+    #[test]
+    fn parses_gemini_live_events() {
+        // snake_case rename_all matters here specifically -- these are
+        // the multi-word variants that "lowercase" would have mangled
+        // (see VoiceEvent's doc comment).
+        assert_eq!(
+            parse_voice_line(r#"{"event":"live_session_start"}"#),
+            Some(VoiceEvent::LiveSessionStart)
+        );
+        assert_eq!(
+            parse_voice_line(r#"{"event":"live_transcript","role":"user","text":"hello"}"#),
+            Some(VoiceEvent::LiveTranscript {
+                role: "user".to_string(),
+                text: "hello".to_string()
+            })
+        );
+        assert_eq!(
+            parse_voice_line(r#"{"event":"live_session_end"}"#),
+            Some(VoiceEvent::LiveSessionEnd)
+        );
+    }
+
+    #[test]
+    fn picks_the_right_script_per_engine() {
+        assert_eq!(listener_script_for_engine("gemini_live"), "gemini_live_listen.py");
+        assert_eq!(listener_script_for_engine("classic"), "listen_loop.py");
+        assert_eq!(listener_script_for_engine(""), "listen_loop.py");
+        assert_eq!(listener_script_for_engine("nonsense"), "listen_loop.py");
     }
 
     #[test]

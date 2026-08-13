@@ -1,11 +1,20 @@
 import { useCallback, useEffect, useState } from "react";
 
+export type VoiceEngine = "classic" | "gemini_live";
+
 export interface VoiceSettings {
   micEnabled: boolean;
   wakeWordEnabled: boolean;
   inputDeviceId: string | null;
   outputDeviceId: string | null;
   pushToTalkShortcut: string;
+  /** 2026-08-13: "classic" is the original wake -> record -> whisper ->
+   * Claude -> speak pipeline; "gemini_live" opens a real-time,
+   * interruptible conversation via the Gemini Live API once the wake
+   * word fires. The API key itself lives only in System/voice/
+   * config.json (same place ElevenLabs' key already lives), never in
+   * this app's UI or storage -- matches the existing secrets pattern. */
+  voiceEngine: VoiceEngine;
 }
 
 const STORAGE_KEY = "jarvis.voiceSettings";
@@ -16,6 +25,7 @@ const DEFAULT_SETTINGS: VoiceSettings = {
   inputDeviceId: null,
   outputDeviceId: null,
   pushToTalkShortcut: "Option+Space",
+  voiceEngine: "classic",
 };
 
 function load(): VoiceSettings {

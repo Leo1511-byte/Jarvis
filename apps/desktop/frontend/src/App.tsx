@@ -359,33 +359,49 @@ export default function App({ standaloneView = null }: { standaloneView?: string
   // voice.rs's listener process is a single global backend resource, so
   // two windows both requesting it would just fight over one microphone/
   // wake-word process instead of getting two independent ones.
-  useVoiceListener(!standaloneView && voiceSettings.micEnabled && voiceSettings.wakeWordEnabled, {
-    onWake: () => setCoreState("listening"),
-    onTranscript: (text) => {
-      handleCommand(text, true);
-    },
-    onError: (message) => {
-      // Voice start/runtime failures used to vanish silently (no process,
-      // no log line, nothing on screen -- hit live 2026-08-10). Now they
-      // land in the Command Log like everything else, so a failure is
-      // readable without opening devtools.
-      setLog((prev) => [...prev, { you: "(voice)", jarvis: message }].slice(-6));
-      // Milestone 29: also into Chat's persisted history, same as a real
-      // exchange -- so scrolling back through Chat shows what actually
-      // happened with voice, not just successful commands.
-      persistMessage("jarvis", `(voice) ${message}`);
-      setCoreState("error");
-      window.setTimeout(() => setCoreState("idle"), 1200);
-    },
-    onStatus: (message) => {
-      // Rust-side crash-recovery notifications (voice.rs's monitor
-      // threads): "crashed, restarting", "reconnected", or "gave up".
-      // Logged like any other voice event -- not forced into the error
-      // visual state, since a successful reconnect isn't bad news.
-      setLog((prev) => [...prev, { you: "(voice)", jarvis: message }].slice(-6));
-      persistMessage("jarvis", `(voice) ${message}`);
-    },
-  });
+  useVoiceListener(
+    !standaloneView && voiceSettings.micEnabled && voiceSettings.wakeWordEnabled,
+    voiceSettings.voiceEngine,
+    {
+      onWake: () => setCoreState("listening"),
+      onTranscript: (text) => {
+        handleCommand(text, true);
+      },
+      onError: (message) => {
+        // Voice start/runtime failures used to vanish silently (no process,
+        // no log line, nothing on screen -- hit live 2026-08-10). Now they
+        // land in the Command Log like everything else, so a failure is
+        // readable without opening devtools.
+        setLog((prev) => [...prev, { you: "(voice)", jarvis: message }].slice(-6));
+        // Milestone 29: also into Chat's persisted history, same as a real
+        // exchange -- so scrolling back through Chat shows what actually
+        // happened with voice, not just successful commands.
+        persistMessage("jarvis", `(voice) ${message}`);
+        setCoreState("error");
+        window.setTimeout(() => setCoreState("idle"), 1200);
+      },
+      onStatus: (message) => {
+        // Rust-side crash-recovery notifications (voice.rs's monitor
+        // threads): "crashed, restarting", "reconnected", or "gave up".
+        // Logged like any other voice event -- not forced into the error
+        // visual state, since a successful reconnect isn't bad news.
+        setLog((prev) => [...prev, { you: "(voice)", jarvis: message }].slice(-6));
+        persistMessage("jarvis", `(voice) ${message}`);
+      },
+      // gemini_live engine only (2026-08-13). A live conversation has no
+      // fixed "you asked, jarvis answered" pair the way the classic
+      // Command Log expects (LogEntry) -- persisted straight to Chat
+      // instead, one message per turn, same as everything else voice
+      // produces. No commandEngine involvement: this is Gemini talking
+      // directly, not a JARVIS Skill running (no tool-calling bridge yet,
+      // see gemini_live_listen.py's own doc comment for where that goes).
+      onLiveSessionStart: () => setCoreState("listening"),
+      onLiveTranscript: (role, text) => {
+        persistMessage(role, text);
+      },
+      onLiveSessionEnd: () => setCoreState("idle"),
+    }
+  );
 
   function renderActive() {
     switch (active) {
