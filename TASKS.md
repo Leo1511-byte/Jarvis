@@ -23,12 +23,15 @@ currently active.
       defects were found and fixed 2026-08-13 (see `VOICE_SETUP.md`'s dated section), both
       compiled/syntax-checked but neither exercised with a real mic. If it still happens, it's a
       third, different cause — say so rather than assuming these fixes covered it.
-- [ ] **Re-test Gemini Live now that a real bug from the first attempt is fixed** — Leonardo's
-      first live test ("doesn't answer most of the time, or cuts off") found a genuine blocking-
-      I/O bug (audio playback was freezing the whole event loop). Fixed by moving playback to a
-      dedicated thread — see `VOICE_SETUP.md`'s 2026-08-13 "blocking I/O" section. Syntax-checked
-      only, not yet confirmed against real audio. If it's still broken, that's a different, third
-      cause — say so rather than assuming this fix covered it.
+- [ ] **Re-test Gemini Live with headphones/AirPods, not built-in speakers** — first re-test
+      (after the blocking-I/O fix) still cut off after a couple seconds. Root cause: built-in
+      speakers + mic with no echo cancellation, plus a genuine bug where an over-eager end-phrase
+      match could kill the whole session if JARVIS's own echoed voice got mis-transcribed as
+      containing one ("that's all", etc.) — that specific bug is now fixed
+      (`is_end_phrase()`), but the underlying echo issue (Gemini's own interruption signal
+      firing on echo) isn't — headphones should mostly avoid it. See `VOICE_SETUP.md`'s second
+      2026-08-13 section. If cutoffs persist even with headphones, that's a third, different
+      cause.
 - [ ] **Report back what the command-log fragment bug looked like** (the "I" / "50 days for"
       screenshot, 2026-08-13) — confirmed unrelated to voice (mic was off), likely a typed
       command-bar submission bug. Not yet investigated.
@@ -148,3 +151,10 @@ far).
    exchanges building up "What day will be in 50 days for"). Confirmed unrelated to voice (mic
    was off in the screenshot) — looks like the typed `CommandBar` submitting on something other
    than a real Enter/click. Not investigated yet; see "Now" for the ask to get repro details.
+8. `[ambient]` Real acoustic echo cancellation for Gemini Live on built-in speakers/mic —
+   2026-08-13, found live: no AEC means the mic can pick up JARVIS's own voice and Gemini's
+   server can mistake it for the user interrupting, cutting audio off mid-reply. Headphones are
+   the workaround for now (see `VOICE_SETUP.md`). Real fix is either gating the mic during
+   playback or a true AEC path (CoreAudio's voice-processing tap instead of plain PortAudio) —
+   not scoped yet, wait for the headphones test to confirm this is really the remaining cause
+   before investing in it.

@@ -6,6 +6,20 @@ going forward — see `ROADMAP.md` for current milestone status and `TASKS.md` f
 
 ## Unreleased
 
+### 2026-08-13 — Fixed: Gemini Live session-killing bug + disclosed a real echo limitation
+- Re-test after the blocking-I/O fix still cut off after a couple seconds. No exceptions in the
+  logs — pointed at intentional code (our own early-return), not a crash.
+- Two layers found: (1) no acoustic echo cancellation — built-in speakers/mic means the mic
+  picks up JARVIS's own voice, which Gemini's server can transcribe as the user talking and
+  treat as an interruption, a real but upstream limitation disclosed in the code and
+  `VOICE_SETUP.md` rather than fully fixed (headphones are the workaround; real fix — mic
+  gating or true AEC — is a new backlog item). (2) A genuine bug on top of that: the end-phrase
+  check was a substring match anywhere in the transcript, so an echoed JARVIS reply containing
+  something like "...that's all I can tell you" could kill the entire session outright. New
+  `is_end_phrase()` requires a near-exact match instead.
+- Python syntax-checked only, not yet re-tested. Recommended next test: headphones/AirPods, to
+  isolate whether remaining cutoffs are the echo issue or something else.
+
 ### 2026-08-13 — Fixed: Gemini Live froze mid-conversation (blocking I/O on the event loop)
 - Leonardo's first real test of Milestone 40 ("doesn't answer most of the time, or cuts off")
   surfaced a genuine bug, not flakiness: `receive_and_play()` called `output_stream.write()` —

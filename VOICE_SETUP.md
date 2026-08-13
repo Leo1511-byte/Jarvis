@@ -229,6 +229,36 @@ updated to match — a `FLUSH` sentinel instead of aborting/recreating the strea
 **Verified:** Python syntax-checked only (`python3 -m py_compile`) — still no mic in this
 session to confirm the fix actually resolves the reported symptom. Leonardo re-testing next.
 
+## Second real bug found from the re-test, 2026-08-13: echo + an over-eager end-phrase match
+
+After restarting to pick up the blocking-I/O fix above, Leonardo re-tested: JARVIS replied, but
+still cut off after a couple of seconds. Confirmed: built-in Mac speakers + mic, no headphones —
+and `/tmp/jarvis-dev.log` showed no exceptions at all around the cutoff, which pointed at
+*intentional* code (our own early-return logic), not a crash.
+
+Root cause, two layers:
+1. **No acoustic echo cancellation.** Plain `sounddevice` streams for both capture and playback
+   mean the mic picks up JARVIS's own voice coming back out of the speakers. Gemini's server
+   transcribes that into `input_transcription` as if the user were talking, which can trigger
+   Gemini's own `server_content.interrupted` signal mid-reply — a real, upstream cause our
+   client code can influence (by not feeding it echo) but not fully prevent by itself. Headphones/
+   AirPods remove the acoustic path entirely; see the "Not built yet" list below for a real fix
+   (mic gating during playback, or true AEC).
+2. **A genuine bug on top of that, now fixed:** the end-phrase check
+   (`any(phrase in text.lower() for phrase in END_PHRASES)`) was a substring match against *any*
+   position in the transcript. If JARVIS's own echoed reply happened to contain a phrase like
+   "...that's all I can tell you" anywhere, it matched and killed the entire session outright —
+   not just a flushed audio buffer, the whole live connection closing. New `is_end_phrase()`
+   requires the transcript to be essentially *just* the end phrase (exact match, or the phrase
+   followed by trailing words), not embedded in a longer sentence.
+
+**This does not fully close the echo issue** — Gemini's own interruption signal can still cut
+audio off mid-reply on built-in speakers, that's now correctly a separate, disclosed limitation
+(see the module docstring) rather than conflated with the session-killing bug fixed here.
+**Recommended for the next test:** try headphones/AirPods once, specifically to isolate whether
+remaining cutoffs are the echo issue (should mostly disappear) or something else (would still
+happen). **Verified:** Python syntax-checked only, not yet re-tested live.
+
 ## Not built yet
 
 - Follow-up conversation mode, configurable timeout, spoken interruption ("Jarvis, stop") — now
@@ -237,3 +267,7 @@ session to confirm the fix actually resolves the reported symptom. Leonardo re-t
 - Push-to-talk (the shortcut is displayed in settings but not bound to anything).
 - The tool-calling bridge letting Gemini Live run JARVIS Skills mid-conversation (see the
   2026-08-13 section above).
+- Real acoustic echo cancellation for `gemini_live` on built-in speakers/mic (see the
+  echo-related section above) — either mic gating during playback or a true AEC path (e.g.
+  CoreAudio's voice-processing tap instead of plain PortAudio). Headphones are the workaround
+  until this exists.
