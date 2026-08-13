@@ -207,6 +207,28 @@ field name (`server_content.interrupted`) wasn't independently confirmed against
 Leonardo has a Gemini API key already — needs adding to `config.json`'s `gemini_api_key`, then a
 real live test.
 
+## Real bug found from the first live test, 2026-08-13: blocking I/O froze the event loop
+
+Leonardo added his API key and tried it: "most of the time it doesn't answer, or when
+answering it cuts off." Root cause, found from code (still no mic in this session):
+`receive_and_play()`'s original version called `output_stream.write()` — a **blocking** call
+that waits for sound-card buffer space — directly inside the same `async def` that also reads
+`session.receive()` (the network) and drives `send_mic_audio()`. All three share one asyncio
+event loop. Every blocking write froze *everything* until it returned: no more audio could be
+read from Gemini, no mic audio could be sent, the silence-timeout check couldn't run either.
+That matches both symptoms exactly — apparent non-answers (stalled mid-response) and cut-off
+audio (the stall could outlast the server's own pacing).
+
+`mic_callback` never had this problem — sounddevice runs it on its own C-level callback thread,
+not on the asyncio loop, so its blocking-safe by construction. The output side needed the same
+treatment and didn't have it. **Fixed**: playback now runs on a dedicated Python thread reading
+from a thread-safe `queue.Queue`; `receive_and_play()` only ever does a non-blocking `.put()`
+onto that queue, never touches the sound card directly. Interruption handling (flush the queue)
+updated to match — a `FLUSH` sentinel instead of aborting/recreating the stream inline.
+
+**Verified:** Python syntax-checked only (`python3 -m py_compile`) — still no mic in this
+session to confirm the fix actually resolves the reported symptom. Leonardo re-testing next.
+
 ## Not built yet
 
 - Follow-up conversation mode, configurable timeout, spoken interruption ("Jarvis, stop") — now

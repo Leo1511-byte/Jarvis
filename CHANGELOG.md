@@ -6,6 +6,21 @@ going forward — see `ROADMAP.md` for current milestone status and `TASKS.md` f
 
 ## Unreleased
 
+### 2026-08-13 — Fixed: Gemini Live froze mid-conversation (blocking I/O on the event loop)
+- Leonardo's first real test of Milestone 40 ("doesn't answer most of the time, or cuts off")
+  surfaced a genuine bug, not flakiness: `receive_and_play()` called `output_stream.write()` —
+  a blocking call — directly inside the same `async def` also reading the network
+  (`session.receive()`) and driving mic sends. Every blocking write froze the entire event loop
+  until it returned, matching both symptoms exactly (apparent non-answers = stalled mid-response;
+  cut-off audio = the stall outlasting the server's pacing).
+- Fixed: playback moved to a dedicated thread reading from a thread-safe `queue.Queue`;
+  `receive_and_play()` now only ever does a non-blocking `.put()`. Interruption handling
+  (flushing queued audio) updated to match, using a sentinel instead of aborting/recreating the
+  stream inline. Same principle `mic_callback` already followed correctly (sounddevice's own
+  callback thread, never the asyncio loop) — the output side just didn't have it before.
+- Python syntax-checked only (`python3 -m py_compile`) — still no mic in this session to confirm
+  the fix resolves the reported symptom. Full writeup: `VOICE_SETUP.md`'s "blocking I/O" section.
+
 ### 2026-08-13 — Milestone 40 (first slice): real-time conversational voice via Gemini Live
 - New `gemini_live_listen.py` (`System/voice/` in the Obsidian vault) — a second, selectable
   voice engine alongside the unchanged `classic` pipeline (`config.json`'s new `voice_engine`

@@ -23,13 +23,12 @@ currently active.
       defects were found and fixed 2026-08-13 (see `VOICE_SETUP.md`'s dated section), both
       compiled/syntax-checked but neither exercised with a real mic. If it still happens, it's a
       third, different cause — say so rather than assuming these fixes covered it.
-- [ ] **Add your Gemini API key to `config.json`'s `gemini_api_key` field** (`System/voice/` in
-      the Obsidian vault), switch Voice settings → Conversation engine to "Gemini Live", and try
-      a real conversation. Milestone 40's first slice is built and compiled but never run against
-      real audio/API — see `VOICE_SETUP.md`'s dated section for exactly what to check (does it
-      actually stream both ways, does interrupting it work, does it correctly hang up after
-      silence/an end phrase). It can't yet run JARVIS Skills mid-conversation (no tool-calling
-      bridge — separate backlog item), so keep test conversations to plain talk for now.
+- [ ] **Re-test Gemini Live now that a real bug from the first attempt is fixed** — Leonardo's
+      first live test ("doesn't answer most of the time, or cuts off") found a genuine blocking-
+      I/O bug (audio playback was freezing the whole event loop). Fixed by moving playback to a
+      dedicated thread — see `VOICE_SETUP.md`'s 2026-08-13 "blocking I/O" section. Syntax-checked
+      only, not yet confirmed against real audio. If it's still broken, that's a different, third
+      cause — say so rather than assuming this fix covered it.
 - [ ] **Report back what the command-log fragment bug looked like** (the "I" / "50 days for"
       screenshot, 2026-08-13) — confirmed unrelated to voice (mic was off), likely a typed
       command-bar submission bug. Not yet investigated.
