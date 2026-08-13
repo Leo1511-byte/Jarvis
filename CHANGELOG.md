@@ -6,6 +6,42 @@ going forward — see `ROADMAP.md` for current milestone status and `TASKS.md` f
 
 ## Unreleased
 
+### 2026-08-13 — Two voice self-listening bugs found and fixed
+- Leonardo reported JARVIS still occasionally "listens to its own voice and starts conversating
+  with itself," despite the 2026-08-10 feedback-loop fix. Diagnosed from code (no mic access in
+  this session) and fixed two real, distinct defects — full writeup in `VOICE_SETUP.md`'s dated
+  section:
+  1. **Permanent-deafness gap**: `listen_loop.py`'s `speaking.flag` staleness check only ran
+     between wake-listening streams, not per-chunk during an already-open one (bare `.exists()`
+     check there, no age limit). A flag going stale mid-stream (`speak_daemon.py` crashing
+     mid-speech) could deafen the listener forever. Fixed via a shared, age-aware
+     `is_actively_speaking()` used by both call sites.
+  2. **No single-instance guard**: nothing stopped a second full app launch from spawning its
+     own independent `listen_loop.py`/`speak_daemon.py` pair, both sharing the one
+     `speaking.flag` file — `speak_daemon.py` unconditionally clears that flag on its own
+     startup, so a second instance starting mid-speech would instantly un-mute every listener.
+     Added `tauri-plugin-single-instance`; a second launch now focuses the existing window.
+- **Real `cargo build` verification**, not a handoff — `cargo`/`rustc` turned out to be
+  genuinely reachable in this Cowork session once `PATH` explicitly included `~/.cargo/bin` (see
+  `CLAUDE.md`'s note; not yet confirmed whether this holds for every session). Compiled clean.
+- Cleared a stale `speaking.flag` found sitting on disk with no process alive to have set it —
+  harmless once fix #1 is in place, deleted by hand this time.
+- Neither fix has been exercised with a real mic yet — that still needs Leonardo or a local
+  session. 67 frontend tests unaffected (pure Python/Rust changes).
+
+### 2026-08-13 — Voice direction: realtime conversational voice, agreed but not yet designed
+- Leonardo compared our voice pipeline unfavorably to a Gemini Live demo — continuous, low-
+  latency, interruptible conversation vs. our wake-word → record → transcribe → 12-44s Claude
+  call → speak turn-based pipeline.
+- Confirmed via web search: Claude has no real-time speech-to-speech mode yet (push-to-talk
+  only, no barge-in as of 2026-08-13). Closing this gap needs a dedicated realtime voice
+  provider (e.g. OpenAI's Realtime API) as the conversational front-end, handing off to
+  Claude/JARVIS's Skills when a real action is asked for — agreed with Leonardo over the
+  incremental-improvements-only alternative.
+- Not yet designed or scoped into milestones — added as backlog item 5 in `TASKS.md`, pillar
+  `[ambient]`. Needs a real design pass (provider choice, cost, handoff-to-Skills design, how it
+  coexists with the existing wake-word pipeline) before it gets a milestone number.
+
 ### 2026-08-12 — Fixed: app wouldn't open (M37's Rust half genuinely compiled and verified)
 - Leonardo reported the Desktop launcher wasn't opening JARVIS. Root cause: `system_stats.rs`
   (added for M37 earlier the same session) imports the `sysinfo` crate, which was deliberately

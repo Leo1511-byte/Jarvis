@@ -106,6 +106,46 @@ matches the existing code style.
   bugs; the feedback-loop fix is file-coordination between two long-running scripts that
   needs a live mic to really exercise, same as the rest of this pipeline).
 
+## Two more self-listening bugs found and fixed, 2026-08-13
+
+Leonardo reported JARVIS still occasionally "listens to its own voice and starts conversating
+with itself," despite the 2026-08-10 feedback-loop fix above. Diagnosed from code (no mic
+access in the session that found this — see each fix's own verification note):
+
+1. **Permanent-deafness gap in the staleness check.** `listen_loop.py`'s `speaking.flag`
+   staleness timeout (`SPEAKING_FLAG_MAX_AGE_SECONDS`) only ever ran inside
+   `wait_while_speaking()`, called once before a wake-listening stream opens. But
+   `wake_callback` re-checks the flag on every ~80ms audio chunk for as long as that stream
+   stays open, using a bare `.exists()` check with no age limit. If the flag went stale *while
+   a stream was already open* (`speak_daemon.py` dies mid-speech after `listen_loop.py` had
+   already resumed listening), the per-chunk check would skip prediction forever — no wake word
+   is ever detected, so the loop never gets back to `wait_while_speaking()` to notice the flag
+   is stale and clear it. Voice goes permanently deaf until a manual restart. Fixed by pulling
+   the age-aware logic into one `is_actively_speaking()` function used by both call sites.
+   **Verified:** Python syntax-checked (`python3 -m py_compile`); the actual audio behavior
+   still needs a real mic to exercise, same limitation as the original fix.
+2. **No guard against a second full app instance.** Nothing stopped a second launch (e.g.
+   double-clicking the Desktop launcher while JARVIS was already running) from spawning its own
+   independent `listen_loop.py`/`speak_daemon.py` pair — both sharing the *one*
+   `speaking.flag` file this whole coordination scheme depends on. `speak_daemon.py`
+   unconditionally deletes that flag on its own startup (to clear anything left by a crashed
+   prior run) — so a second instance starting while the first was mid-speech would instantly
+   un-mute every listener while JARVIS was still talking, feeding its own voice back into
+   itself. Fixed with `tauri-plugin-single-instance` (`main.rs`): a second launch attempt now
+   focuses the existing window instead of starting a new one. **Verified:** `cargo build`
+   succeeded (real compile, not a handoff — see `CLAUDE.md`'s note on `cargo` being reachable in
+   this session once `PATH` included `~/.cargo/bin`); a second `open ~/Desktop/Jarvis.app` while
+   the first was running did not spawn a second `target/debug/jarvis` process. Caveat: in dev
+   mode specifically, Vite's own port-1420 conflict would likely have blocked a second instance
+   too, so this test didn't cleanly isolate the plugin's own effect — it's a real, correctly-
+   targeted fix for the coordination hazard found in the code, not a confirmed reproduction of
+   Leonardo's exact reported incident.
+
+Also found and cleared: a stale `speaking.flag` sitting on disk with no process alive to have
+set it (confirms flags do get abandoned when a process is killed abruptly, e.g. via `pkill`
+during testing/restarts) — harmless once fix #1 above is in place, but deleted by hand this time
+since no `listen_loop.py` was running to hit the fixed code path.
+
 ## Not built yet
 
 - Follow-up conversation mode, configurable timeout, spoken interruption ("Jarvis, stop").

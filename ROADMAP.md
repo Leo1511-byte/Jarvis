@@ -5,7 +5,7 @@ Full milestone-by-milestone history (M1–M29, 2026-08-09 to 2026-08-11) is arch
 verification notes, worth keeping but too long to stay the working doc. This file is the
 current-state summary only.
 
-## Where things stand (2026-08-11)
+## Where things stand (2026-08-13)
 
 **Built and live-confirmed:** desktop app shell (Tauri + React) with a top-nav layout (M35,
 replaced the old 13-item left Sidebar) and an Iron-Man-HUD visual system (M34: bracket-corner
@@ -19,6 +19,16 @@ opens in its own Tauri window, verified both frontend and Rust — M32), a real 
 (M36: version/build/runtime, permission-level summary, Connections/Activity summary tiles, honest
 empty Devices panel), a double-clickable Desktop launcher (`~/Desktop/Jarvis.app`, see
 `docs/DESKTOP_LAUNCHER.md` — tooling, not a numbered milestone).
+
+**Voice, 2026-08-13:** two real self-listening bugs found and fixed (a permanent-deafness gap in
+`listen_loop.py`'s staleness check, and no guard against a second app instance forming its own
+independent voice-process pair) — see `VOICE_SETUP.md`'s dated section. Both compiled/syntax-
+checked but not yet exercised with a real mic. Separately, Leonardo wants JARVIS's voice to feel
+like a real-time conversation (Gemini-Live-style: continuous, low-latency, interruptible), which
+the current wake-word/record/transcribe/12-44s-Claude-call/speak pipeline fundamentally isn't —
+confirmed Claude itself has no real-time speech-to-speech mode yet. Direction agreed (a dedicated
+realtime voice provider as the conversational front-end, handing off to Claude/Skills for real
+actions) but not yet designed — see `TASKS.md`'s backlog item 5.
 
 **Target end-state:** `PROJECT_OBJECTIVE.md` (2026-08-11) is Leonardo's own description of what
 JARVIS should actually become, walked through against three visual references. Its two

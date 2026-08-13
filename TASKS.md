@@ -19,6 +19,10 @@ currently active.
 - [ ] **Look at the real Jarvis window's System tab** and confirm the Performance panel's CPU/
       memory/disk numbers look plausible against Activity Monitor — the Rust side compiled and
       the app is running clean, but nobody's looked at the actual on-screen numbers yet.
+- [ ] **Use voice for real and confirm the self-listening bug is actually gone** — two real code
+      defects were found and fixed 2026-08-13 (see `VOICE_SETUP.md`'s dated section), both
+      compiled/syntax-checked but neither exercised with a real mic. If it still happens, it's a
+      third, different cause — say so rather than assuming these fixes covered it.
 
 ## Next up
 
@@ -82,6 +86,12 @@ Unscoped ideas live in Backlog below instead of here.
       resolved the real version (0.39.6) and `cargo build` succeeded first try, no fixes needed.
       App relaunched clean; nobody's eyeballed the actual numbers yet — see "Now". Noted in
       `CLAUDE.md` as unconfirmed whether this holds for every Cowork session.
+- [x] 2026-08-13 — Two voice self-listening bugs found and fixed (see `VOICE_SETUP.md`'s dated
+      section): a permanent-deafness gap in `listen_loop.py`'s staleness check (age-check only
+      ran between streams, not per-chunk during an open one), and no guard against a second full
+      app instance forming its own independent voice-process pair sharing the same
+      `speaking.flag` file (`tauri-plugin-single-instance` added, real `cargo build` verified).
+      Both compiled/syntax-checked, neither exercised with a real mic yet — see "Now".
 
 ## Blocked
 
@@ -108,4 +118,13 @@ far).
 4. `[daily-life]` GitHub/email/calendar write actions (currently read-only by design, see
    `SECURITY.md`) — real Level 3 surface, needs a considered approval-flow design before any
    of it starts.
-5. `[process]` n8n — only if launchd/cron scripts genuinely become unwieldy; not a default plan.
+5. `[ambient]` Realtime conversational voice — 2026-08-13, Leonardo compared our voice pipeline
+   (wake word → record → transcribe → 12-44s Claude call → speak) unfavorably to Gemini's live
+   voice mode (continuous, low-latency, interruptible). Confirmed via web search: Claude itself
+   has no real-time speech-to-speech mode yet (push-to-talk only, no barge-in) — closing this
+   gap needs a dedicated realtime voice provider (e.g. OpenAI's Realtime API) as the
+   conversational front-end, handing off to Claude/JARVIS's Skills when a real action is asked
+   for. Direction agreed with Leonardo; not yet designed or scoped into milestones — needs a
+   real design pass (provider choice, cost, how handoff to Skills works, how it coexists with
+   the existing wake-word pipeline) before it gets a milestone number.
+6. `[process]` n8n — only if launchd/cron scripts genuinely become unwieldy; not a default plan.
