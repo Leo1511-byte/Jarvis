@@ -1,7 +1,7 @@
 import { THEMES, type Theme } from "./hooks/useTheme";
-import { getSkill } from "./skills/registry";
+import { getSkill, SKILLS } from "./skills/registry";
 import type { SkillContext } from "./skills/types";
-import type { ApprovalRequest } from "./permissions";
+import { permissionLevelFor, type ApprovalRequest } from "./permissions";
 
 /**
  * Command engine — Milestone 5. Parses free-text (voice STT or typed,
@@ -145,7 +145,7 @@ export function parseCommand(input: string): Command {
   // "check my github" / "check my prs" / "check my issues" -- Milestone 12.
   // No GitHub MCP server is configured locally (unlike Calendar/Gmail), but
   // none is needed: the local `claude` CLI already has bash/tool access,
-  // and `gh auth status` is verified working (see TASKS.md), so the
+  // and `gh auth status` is verified working (see project/TASKS.md), so the
   // orchestrator prompt just asks it to use `gh` directly.
   if (/^check (?:my )?(?:github|prs?|pull requests?|issues?)$/.test(text)) {
     return { kind: "check-github" };
@@ -208,7 +208,7 @@ export interface CommandContext {
    * name so commandEngine.ts doesn't need the store's shape. `research`
    * uses this to link findings back to a project instead of always
    * writing to the vault-wide Notes/ folder with no association -- the
-   * gap ROADMAP.md's M16 row named explicitly. Undefined/null (no active
+   * gap project/ROADMAP.md's M16 row named explicitly. Undefined/null (no active
    * project set, or the caller didn't wire this up, e.g. in tests) falls
    * back to the original unscoped behavior unchanged. */
   activeProject?: { name: string } | null;
@@ -257,7 +257,93 @@ export async function executeCommand(
     case "ask":
       return runAsk(command.text, ctx);
     case "unknown":
-      return `Not implemented yet: "${command.raw}". See ROADMAP.md for what's actually built.`;
+      return `Not implemented yet: "${command.raw}". See project/ROADMAP.md for what's actually built.`;
+  }
+}
+
+const SKILL_COMMAND_KINDS = new Set(SKILLS.map((skill) => skill.id));
+
+export interface VoiceCommandResult {
+  status: "done" | "needs_confirmation" | "error";
+  text: string;
+}
+
+/**
+ * Milestone 41 (2026-08-14) — the Gemini Live tool-calling bridge's
+ * classify-or-run pass. Runs a voice-issued command through the exact
+ * same executeCommand path typed input and the classic voice engine
+ * already use, WITHOUT ever opening the real on-screen ApprovalDialog —
+ * Leonardo's explicit design choice: Level 3 confirmation for voice is
+ * spoken, not a popup (see project/ROADMAP.md's M41 row).
+ *
+ * Two separate gates exist in this codebase and both need covering:
+ *   1. Level 3 Skills are gated in App.tsx's handleCommand BEFORE
+ *      executeCommand is even called — runSkill()/skill.execute() never
+ *      touch requestApproval at all, so there's nothing to intercept
+ *      once execution starts. Mirrored here as the same pre-check.
+ *   2. "ask"'s NEEDS_APPROVAL path (runAsk, above) is the one case that
+ *      calls ctx.requestApproval from *inside* executeCommand. A
+ *      synthetic requestApproval that captures the request and always
+ *      declines gets the description for free, for exactly the cost of
+ *      the one real classify call runAsk always makes anyway — without
+ *      ever letting the "act" step run.
+ *
+ * If neither gate fires, the command already ran to completion — return
+ * its real result directly.
+ */
+export async function runVoiceCommand(
+  text: string,
+  ctx: Omit<CommandContext, "requestApproval">
+): Promise<VoiceCommandResult> {
+  const command = parseCommand(text);
+
+  if (SKILL_COMMAND_KINDS.has(command.kind) && permissionLevelFor(command.kind) === 3) {
+    return {
+      status: "needs_confirmation",
+      text: `This needs your confirmation: run "${text}"? It's a sensitive action, so say yes to confirm or no to cancel.`,
+    };
+  }
+
+  let captured: ApprovalRequest | null = null;
+  try {
+    const result = await executeCommand(command, {
+      ...ctx,
+      requestApproval: async (req) => {
+        captured = req;
+        return false;
+      },
+    });
+    if (captured) {
+      return {
+        status: "needs_confirmation",
+        text: `This needs your confirmation: ${(captured as ApprovalRequest).action}. Say yes to confirm or no to cancel.`,
+      };
+    }
+    return { status: "done", text: result };
+  } catch (e) {
+    return { status: "error", text: `Something went wrong: ${e instanceof Error ? e.message : String(e)}` };
+  }
+}
+
+/**
+ * Milestone 41's second round trip — called only after
+ * gemini_live_listen.py's own deterministic check (not Gemini's
+ * judgment) confirms the user said yes to the exact question
+ * runVoiceCommand's "needs_confirmation" text asked. requestApproval
+ * always resolves true here: for a Level 3 Skill there's no internal
+ * gate to satisfy (see runVoiceCommand's comment), and for "ask" this is
+ * what lets its real "act" step run instead of describing again.
+ */
+export async function runVoiceCommandConfirmed(
+  text: string,
+  ctx: Omit<CommandContext, "requestApproval">
+): Promise<VoiceCommandResult> {
+  const command = parseCommand(text);
+  try {
+    const result = await executeCommand(command, { ...ctx, requestApproval: async () => true });
+    return { status: "done", text: result };
+  } catch (e) {
+    return { status: "error", text: `Something went wrong: ${e instanceof Error ? e.message : String(e)}` };
   }
 }
 

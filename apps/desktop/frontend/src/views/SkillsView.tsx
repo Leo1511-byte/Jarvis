@@ -19,7 +19,7 @@ const CANONICAL_TRIGGER: Record<string, string> = {
 };
 
 /**
- * Milestone 25 — replaces the "Agents" placeholder (AGENT_SYSTEM.md
+ * Milestone 25 — replaces the "Agents" placeholder (docs/AGENTS.md
  * already frames the six commands this way: "specialists... a prompt
  * template, not a distinct agent process," which is exactly what a Skill
  * is here too). Lists Milestone 24's Skills registry and lets Leonardo

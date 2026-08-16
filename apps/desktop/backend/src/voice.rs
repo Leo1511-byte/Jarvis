@@ -21,7 +21,7 @@
 use serde::{Deserialize, Serialize};
 use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
-use std::process::{Child, Command, Stdio};
+use std::process::{Child, ChildStdin, Command, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -45,6 +45,12 @@ pub struct VoiceState {
     /// monitor restarts the *same* engine the frontend last chose,
     /// rather than always falling back to classic.
     listener_engine: Mutex<String>,
+    /// Milestone 41 (2026-08-14): the listener's stdin, piped so
+    /// send_voice_tool_result can write results back into
+    /// gemini_live_listen.py's ToolBridge -- the first time this
+    /// process's stdin is used for anything (previously inherited/
+    /// unused). None for the classic engine, which never reads stdin.
+    listener_stdin: Mutex<Option<ChildStdin>>,
 }
 
 /// Mirrors the JSON lines listen_loop.py (and, as of 2026-08-13,
@@ -76,6 +82,19 @@ pub enum VoiceEvent {
     /// gemini_live_listen.py only: the live session ended (silence
     /// timeout or an end phrase) -- back to wake-word listening.
     LiveSessionEnd,
+    /// gemini_live_listen.py only, Milestone 41 (2026-08-14): Gemini
+    /// called its one registered tool (run_jarvis_command). The frontend
+    /// runs it through the same approval-gated commandEngine.ts path
+    /// everything else uses, then answers via send_voice_tool_result.
+    /// `pre_approved` is true only for the second, confirmed round trip
+    /// after the user verbally said yes to a NEEDS_APPROVAL action --
+    /// decided by gemini_live_listen.py's own deterministic check, never
+    /// by Gemini's own judgment of what it heard.
+    ToolCall {
+        id: String,
+        command: String,
+        pre_approved: bool,
+    },
 }
 
 fn voice_dir() -> PathBuf {
@@ -125,9 +144,15 @@ fn listener_script_for_engine(engine: &str) -> &'static str {
     }
 }
 
-fn spawn_listener_child(app: &AppHandle, engine: &str) -> Result<Child, String> {
+/// Returns the spawned child plus its piped stdin separately (rather
+/// than leaving it on `Child` for the caller to `.take()` later) --
+/// Milestone 41 needs to hand the stdin handle to VoiceState immediately
+/// so send_voice_tool_result can find it, and `Child::stdin` can only
+/// ever be taken once.
+fn spawn_listener_child(app: &AppHandle, engine: &str) -> Result<(Child, ChildStdin), String> {
     let mut child = Command::new(venv_python())
         .arg(voice_dir().join(listener_script_for_engine(engine)))
+        .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         // Inherited, not discarded: listen_loop.py's progress/error output
         // (model loading, PortAudio errors, etc.) previously vanished
@@ -141,6 +166,10 @@ fn spawn_listener_child(app: &AppHandle, engine: &str) -> Result<Child, String> 
         .stdout
         .take()
         .ok_or("failed to capture voice listener stdout")?;
+    let stdin = child
+        .stdin
+        .take()
+        .ok_or("failed to capture voice listener stdin")?;
 
     let app_handle = app.clone();
     std::thread::spawn(move || {
@@ -152,7 +181,7 @@ fn spawn_listener_child(app: &AppHandle, engine: &str) -> Result<Child, String> 
         }
     });
 
-    Ok(child)
+    Ok((child, stdin))
 }
 
 fn spawn_speak_daemon_child() -> Result<Child, String> {
@@ -165,12 +194,9 @@ fn spawn_speak_daemon_child() -> Result<Child, String> {
 }
 
 fn emit_status(app: &AppHandle, message: impl Into<String>) {
-    let _ = app.emit(
-        "voice-event",
-        VoiceEvent::Status {
-            message: message.into(),
-        },
-    );
+    let message = message.into();
+    eprintln!("[voice.rs] status: {message}"); // temporary diagnostic, see start_voice_listener's note
+    let _ = app.emit("voice-event", VoiceEvent::Status { message });
 }
 
 /// Spawned once per process kind (idempotent via the `*_monitor_started`
@@ -230,9 +256,12 @@ fn run_listener_monitor(app: AppHandle) {
             .map(|g| g.clone())
             .unwrap_or_default();
         match spawn_listener_child(&app, &engine) {
-            Ok(child) => {
+            Ok((child, stdin)) => {
                 if let Ok(mut guard) = state.listener.lock() {
                     *guard = Some(child);
+                }
+                if let Ok(mut guard) = state.listener_stdin.lock() {
+                    *guard = Some(stdin);
                 }
                 emit_status(&app, "Voice listener reconnected.");
             }
@@ -309,12 +338,22 @@ pub fn start_voice_listener(
     state: State<VoiceState>,
     engine: String,
 ) -> Result<(), String> {
+    // 2026-08-14, temporary diagnostic for the "works once then cuts off"
+    // report: jarvis-dev.log showed the whole process restarting with no
+    // Python traceback anywhere, which rules out a crash and points at
+    // something external killing it. This line (and the one in
+    // stop_voice_listener below) makes it unambiguous on the next test
+    // whether the frontend itself is re-invoking start/stop -- remove
+    // once this is diagnosed.
+    eprintln!("[voice.rs] start_voice_listener called (engine={engine})");
     {
         let mut guard = state.listener.lock().map_err(|e| e.to_string())?;
         if guard.is_some() {
             return Ok(()); // already running -- idempotent, matches stop below
         }
-        *guard = Some(spawn_listener_child(&app, &engine)?);
+        let (child, stdin) = spawn_listener_child(&app, &engine)?;
+        *guard = Some(child);
+        *state.listener_stdin.lock().map_err(|e| e.to_string())? = Some(stdin);
     }
     *state.listener_engine.lock().map_err(|e| e.to_string())? = engine;
     // A fresh manual start (first-ever start, or the user toggling voice
@@ -330,6 +369,7 @@ pub fn start_voice_listener(
 
 #[tauri::command]
 pub fn stop_voice_listener(state: State<VoiceState>) -> Result<(), String> {
+    eprintln!("[voice.rs] stop_voice_listener called"); // see diagnostic note on start_voice_listener above
     let mut guard = state.listener.lock().map_err(|e| e.to_string())?;
     if let Some(mut child) = guard.take() {
         child
@@ -337,7 +377,34 @@ pub fn stop_voice_listener(state: State<VoiceState>) -> Result<(), String> {
             .map_err(|e| format!("failed to stop voice listener: {e}"))?;
         let _ = child.wait();
     }
+    *state.listener_stdin.lock().map_err(|e| e.to_string())? = None;
     Ok(())
+}
+
+/// Milestone 41 (2026-08-14): writes the frontend's classification/
+/// execution result back into gemini_live_listen.py's ToolBridge, which
+/// is blocked awaiting exactly this line on its stdin. Silently a no-op
+/// if the listener isn't running or isn't the gemini_live engine (no
+/// stdin handle) -- the Python side's own TOOL_TIMEOUT_SECONDS is what
+/// surfaces that as an error back to Gemini in that case, rather than
+/// this command needing to distinguish "not running" from "wrong engine"
+/// itself.
+#[tauri::command]
+pub fn send_voice_tool_result(
+    state: State<VoiceState>,
+    id: String,
+    status: String,
+    text: String,
+) -> Result<(), String> {
+    let mut guard = state.listener_stdin.lock().map_err(|e| e.to_string())?;
+    let Some(stdin) = guard.as_mut() else {
+        return Ok(());
+    };
+    let payload = serde_json::json!({ "id": id, "status": status, "text": text });
+    writeln!(stdin, "{payload}").map_err(|e| format!("failed to write voice tool result: {e}"))?;
+    stdin
+        .flush()
+        .map_err(|e| format!("failed to flush voice tool result: {e}"))
 }
 
 #[tauri::command]
@@ -442,6 +509,22 @@ mod tests {
         assert_eq!(
             parse_voice_line(r#"{"event":"live_session_end"}"#),
             Some(VoiceEvent::LiveSessionEnd)
+        );
+    }
+
+    #[test]
+    fn parses_a_tool_call_event() {
+        let event = parse_voice_line(
+            r#"{"event":"tool_call","id":"abc-123","command":"what's the status","pre_approved":false}"#,
+        )
+        .expect("should parse");
+        assert_eq!(
+            event,
+            VoiceEvent::ToolCall {
+                id: "abc-123".to_string(),
+                command: "what's the status".to_string(),
+                pre_approved: false,
+            }
         );
     }
 

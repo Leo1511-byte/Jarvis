@@ -38,7 +38,7 @@ In `~/Documents/Obsidian Vault/System/voice/`:
 - `requirements.txt`, `config.example.json`, `README.md` with real setup steps
 
 None of this has been run. Per the same honesty rule applied to the Tauri backend
-(`apps/desktop/backend/README.md`): don't mark Milestone 9 done in `TASKS.md` until you've
+(`apps/desktop/backend/README.md`): don't mark Milestone 9 done in `project/TASKS.md` until you've
 actually run it and it actually works.
 
 ## UI (built and verified — `npm run build`/`test` pass)
@@ -176,7 +176,7 @@ can't yet run a JARVIS Skill (check your calendar, research something, self-upgr
 mid-conversation — no tools are registered in the Live session config. That bridge (Gemini
 calling into the same approval-gated `commandEngine.ts` path the command bar/Chat/Skills tab
 already use, not a parallel execution system) is real, separately-scoped work — see
-`TASKS.md`/`ROADMAP.md`.
+`project/TASKS.md`/`project/ROADMAP.md`.
 
 **Rust side (`voice.rs`):** the listener slot/monitor/crash-recovery infrastructure is reused for
 both engines rather than duplicated — `start_voice_listener` now takes an `engine` argument and
@@ -286,15 +286,235 @@ which is itself worth noting: a from-scratch integration against a real-time str
 needs several rounds of "actually run it and see what breaks" no amount of doc-reading up front
 fully avoids.
 
+## Fourth real report, 2026-08-13: "listening to every noise, when it should only listen to voices"
+
+Leonardo, unprompted this time (not from a specific test-and-report cycle): general sense that
+JARVIS reacts to sounds that aren't real speech, both at the wake-word stage and once a
+conversation is open. Checked running processes first — confirmed only one
+`gemini_live_listen.py` was actually alive (the multiple "Listening for wake word..." lines in
+the log were from repeated legitimate restarts while re-testing earlier fixes, not duplicate
+processes). Two real, separate causes addressed:
+
+1. **Gemini's own voice-activity detection defaults to HIGH sensitivity** on both start-of-speech
+   and end-of-speech (per `ai.google.dev`'s Live API reference, pulled via web fetch) — exactly
+   the setting that would treat background noise, or any echo bleeding through even with
+   headphones, as real speech or an interruption. New `realtime_input_config` in `live_config`
+   sets both to `LOW`. This is the sanctioned, documented way to tune this, not a client-side
+   heuristic layered on top — though the exact nested field structure wasn't independently
+   confirmed against a real session (only the top-level `live_config` fields were, from a full
+   code example; this nested block came from the API reference doc, not a working example).
+2. **openWakeWord's per-chunk score is noisy** — a single ~80ms chunk scoring above the 0.5
+   threshold can be a transient noise spike, not sustained speech. `listen_loop.py` (classic
+   engine) uses the same single-frame threshold and has been live-verified working, so this
+   isn't inherently wrong — but requiring the score to stay above threshold for
+   `WAKE_CONSECUTIVE_FRAMES_REQUIRED` (3) consecutive chunks before triggering is a standard,
+   low-risk way to cut false positives, since a real spoken phrase naturally sustains across
+   several frames and a noise transient usually doesn't. Deliberately not applied to
+   `listen_loop.py` — that engine hasn't been reported to have this problem.
+
+**Verified:** Python syntax-checked only, not yet re-tested live.
+
+## Fifth real report, 2026-08-14: "sometimes it changes the language to spanish"
+
+Leonardo, after the fourth fix above: "this voice setup is terrible." Prompted a step-back review
+(`docs/VOICE_GEMINI_LIVE_REVIEW_2026-08-14.md`) instead of another isolated patch — five bugs from
+five consecutive live tests warranted checking the design against real documentation and the
+actually-installed SDK, not just symptom-chasing.
+
+**Root cause, confirmed against `ai.google.dev`'s current Live API capabilities doc (not memory):**
+`gemini-3.1-flash-live-preview` (the model in `config.json`) is a **native-audio** model, and
+Google's own docs say plainly: *"Native audio output models automatically choose the appropriate
+language and don't support explicitly setting the language code."* `speech_config.language_code`
+(the mechanism for cascaded/non-native models) would have been silently ignored here even if set —
+confirmed by checking the installed `google-genai` v2.18.0 SDK's own field list directly
+(`speech_config`, `system_instruction`, `realtime_input_config` etc. are all real fields, so this
+isn't an SDK-version mismatch either). The documented mechanism for native-audio models is a
+`system_instruction`.
+
+**Fixed:** added a `system_instruction` to `live_config` explicitly telling the model to always
+respond in English unless the user asks otherwise. **Live-tested by Leonardo, 2026-08-14:**
+confirmed working — "nearly perfect" conversation, no language switching observed. One new,
+separate observation from that same test: JARVIS's reply audio stutters briefly at the start of
+each turn — not yet investigated; plausible cause is the `aec_bridge` backend's playback path
+scheduling the first few converted buffers without enough lead time (each incoming chunk goes
+through `AVAudioConverter` and `scheduleBuffer` individually rather than being pre-buffered), but
+this is a guess, not confirmed. See `project/TASKS.md`.
+
+**Voice chosen, 2026-08-14:** tried **Orus** first, switched to **Charon** (documented as an
+informative-sounding voice) — both are Gemini Live prebuilt voices, set via
+`speech_config.voice_config.prebuilt_voice_config.voice_name`. Syntax-checked, not yet live-tested
+with Charon specifically.
+
+**Startup-stutter fix, 2026-08-14:** `aec_bridge/main.swift` now buffers the first 3 chunks
+(~300ms) of each turn before scheduling any of them for playback, instead of scheduling each
+100ms chunk the instant it arrives. Theory: playback began with zero cushion against the
+network/processing jitter that's naturally worst right at the start of a turn (fresh connection
+activity, first converter calls), and stopped stuttering once a few chunks were already queued —
+matching "stutters at the start, fine after" exactly. Re-arms on both a >400ms gap since the last
+chunk (a new turn starting) and on a SIGUSR1 flush (an interruption). Real, disclosed tradeoff:
+adds ~300ms of upfront latency per turn in exchange for the cushion. Compiled clean
+(`aec_bridge/build.sh`); the actual audible effect can't be verified without a real mic — same
+limitation as every other native-audio change today, needs Leonardo's live test.
+
+**"Vibration in the voice," 2026-08-14 — real fix, not a guess:** VoiceProcessingIO is built for
+VoIP calls and, by default, ducks (dynamically reduces the volume of) any audio it doesn't
+classify as the live call's own voice — meant for things like music automatically getting quieter
+under a phone call. JARVIS's own TTS playback is the *entire* output here, so that ducking has
+nothing legitimate to protect and was very plausibly the source of a pumping/warble artifact.
+Confirmed the real API by compiling test snippets directly against the installed SDK (not
+guessing from docs): `AVAudioVoiceProcessingOtherAudioDuckingConfiguration(enableAdvancedDucking:
+duckingLevel:)` is real, with `.min`/`.default`/`.max` as the valid `duckingLevel` cases (no
+"disabled" case exists). Set to `enableAdvancedDucking: false, duckingLevel: .min` right after
+enabling voice processing. Compiled clean, not yet live-tested.
+
+## New: native AEC bridge (`aec_bridge/`), 2026-08-14 — real fix for the still-open echo limitation
+
+The step-back review (above) flagged that real acoustic echo cancellation needs Apple's
+`VoiceProcessingIO` audio unit, which is not reachable from Python's `sounddevice`/PortAudio at
+all — only from native code. Built it: `System/voice/aec_bridge/main.swift`, a small standalone
+Swift binary (built via `aec_bridge/build.sh`, Command Line Tools' `swiftc`, no Xcode project
+needed) using `AVAudioEngine` with `setVoiceProcessingEnabled(true)` on both the input and output
+nodes. It knows nothing about Gemini, wake words, or JSON events — it does one job, shuttling raw
+PCM audio over stdin/stdout, so `gemini_live_listen.py` can treat it as a drop-in replacement for
+the direct sounddevice streams. Opt-in via `config.json`'s new `"audio_backend"` field
+(`"sounddevice"`, the default and unchanged behavior, or `"aec_bridge"`).
+
+**Real engineering, not a guess-and-ship:** the first three attempts to start the engine with
+voice processing enabled failed with CoreAudio error -10875 (`kAUInitialize`), confirmed live
+against this machine's actual hardware, not from docs. Root causes, found by isolating each
+variable in a series of minimal test programs: (1) voice processing must be enabled on **both**
+`inputNode` and `outputNode` — macOS's VoiceProcessingIO is one duplex audio unit under the hood,
+enabling only one side reliably fails the other's `kAUInitialize`; (2) a tap's `format` argument
+must be the node's **actual native format, queried after voice processing is enabled** (which
+changes it — confirmed live: it became a 5-to-7-channel 48kHz Float32 format on this machine, not
+the plain mono format it was before). Requesting any other format directly in `installTap` either
+crashes outright or makes `engine.start()` fail with the same -10875; all resampling has to happen
+manually downstream via `AVAudioConverter`. (3) Of the resulting multi-channel tap buffer, channel
+0 is the real AEC-processed mono signal — the extra channels are reference/diagnostic. None of
+this is guessed — each conclusion came from a real compiled test binary run against real hardware
+on this exact Mac.
+
+**What is and isn't verified:** the compiled binary starts `AVAudioEngine` cleanly and negotiates
+real formats from real hardware — genuine confirmation, not a syntax check. What could **not** be
+verified from the session that built this: actual captured audio bytes flowing end-to-end. The
+Bash tool's process tree runs under the Claude Code app itself, not a real interactive Terminal
+session, and microphone TCC permission is scoped per-process — this is the exact same
+"sandboxed shell can't reach CoreAudio" limitation already documented elsewhere in this file for
+the sounddevice path, now confirmed for this one too. **First real test needs Leonardo, run
+interactively**, so macOS can show the microphone permission prompt for the new binary. One
+incident from this same debugging session, disclosed in full: while trying to *inspect* (not
+change) the current microphone TCC grant, `tccutil reset Microphone` was run by mistake — this
+resets mic permission for every app on the Mac, not just this one. Flagged to Leonardo immediately
+when it happened; the only consequence is that previously-permitted apps (Zoom, browsers, etc.)
+will re-prompt for mic access next time they're used — nothing was deleted or exposed.
+
+**Not yet done:** `aec_bridge` doesn't honor `config.json`'s `input_device`/`output_device`
+selection (always uses the system default input/output) — the sounddevice backend does. Low
+priority until the backend itself is confirmed working end-to-end with real audio.
+
+## Milestone 41, 2026-08-14 — the tool-calling bridge: voice can now (in theory) run real commands
+
+Leonardo, live-tested: "the voice and the actual jarvis app don't work together... if i tell it to
+check the current status, it can't." Real, expected gap — no tools were registered in the Gemini
+Live session at all, by design, until this milestone. His proposed flow (tell Gemini something →
+Gemini asks JARVIS → JARVIS answers → Gemini tells the user) is exactly Gemini Live's real,
+documented function-calling mechanism, confirmed directly against the installed SDK before writing
+any code (`types.LiveConnectConfig.tools`, `Tool.function_declarations`, `FunctionCall`/
+`FunctionResponse` fields, `session.send_tool_response()`/`session.send_client_content()` — all
+real, both coroutines, checked via `inspect` against the actual installed `google-genai` package,
+not assumed from docs).
+
+**Design, one generic tool not one per feature:** `run_jarvis_command`, taking free text — the
+same shape a person would type into the command bar — registered in `live_config["tools"]`. When
+Gemini calls it, `ToolBridge` (new class in `gemini_live_listen.py`) emits
+`{"event":"tool_call","id":...,"command":...,"pre_approved":false}` on stdout and awaits a matching
+result on stdin. The frontend runs the text through `runVoiceCommand` (new, `commandEngine.ts`),
+which calls the *same* `executeCommand` every other input surface uses — not a parallel execution
+system — and replies with `{"status":"done"|"needs_confirmation"|"error","text":...}`, written back
+onto the Python process's stdin via a new Tauri command, `send_voice_tool_result`.
+
+**Level 3 confirmation is spoken, not a popup — Leonardo's explicit design decision** made before
+any code was written: a screen popup defeats the point of a hands-free voice mode. When
+`runVoiceCommand` finds a Level 3 Skill or a NEEDS_APPROVAL `ask`, it never opens the real
+`ApprovalDialog` — it returns a spoken confirmation question instead, which `ToolBridge` sends back
+to Gemini as the tool response's text, and Gemini asks it out loud. The user's *next* turn is
+checked by `gemini_live_listen.py`'s own `is_confirmation_yes`/`is_confirmation_no` — a strict
+near-exact match against yes/no phrasing, mirroring `is_end_phrase()`'s existing pattern — not by
+asking Gemini whether it thinks the user agreed. This was a deliberate choice, discussed explicitly
+before implementation: trusting the model's own read of an ambiguous reply would be a real,
+if subtle, weakening of the same guarantee an on-screen click currently gives. Confirmed execution
+calls `runVoiceCommandConfirmed` (auto-approves internally, since the real yes/no decision already
+happened in Python) and its result is delivered back into the live conversation via
+`session.send_client_content()`, prompting Gemini to speak the actual result rather than a canned
+line.
+
+**Real IPC in a new direction, needed real design work, not just plumbing:** `voice.rs`'s listener
+child previously never had its stdin piped (unused until now) — `spawn_listener_child` now returns
+`(Child, ChildStdin)`, both stored in `VoiceState`, so `send_voice_tool_result` can find it. On the
+Python side, a real bug was caught before it shipped: `main()`'s wake-word loop calls
+`asyncio.run(run_live_session(...))` fresh on *every* wake-word cycle, meaning a new event loop is
+created and later closed each time. An `asyncio.Future` (or a loop reference) captured once when
+`ToolBridge` is constructed would belong to whichever loop happened to exist at that moment, not
+necessarily the current session's — scheduling a callback on a stale, closed loop raises. Fixed by
+having the one persistent stdin-reader thread push onto a plain, loop-agnostic `queue.Queue`, and
+adding `drain_results()` — a task started fresh *inside* every `run_live_session` call, on that
+session's own current loop — to resolve that session's pending futures from the queue. `VoiceEvent`
+gained a `ToolCall { id, command, pre_approved }` variant.
+
+**Verified:** real `cargo build`/`cargo test` (25 Rust tests, 1 new — `parses_a_tool_call_event`),
+73 frontend tests (6 new, in `commandEngine.test.ts` — covering a Level 1/2 command running
+straight through, a Level 3 Skill flagged for confirmation without executing or calling
+`runOrchestrator`/`runOrchestratorBackground`, that same Skill actually running once "confirmed,"
+and the equivalent SAFE/NEEDS_APPROVAL pair for `ask`), `tsc -b`/`vite build` clean, Python
+syntax-checked. **Not yet verified:** an actual spoken tool call, end to end, with real audio — the
+same limitation as every other native-audio change this session. Needs Leonardo's live test; see
+`project/TASKS.md`.
+
+## Real bug found and fixed on first live test, 2026-08-14: cuts off after one command
+
+Leonardo tried it: worked once, then the whole `gemini_live_listen.py` process visibly restarted
+(a fresh "Listening for wake word..." line, meaning a new Python interpreter, not just looping
+back internally) — with no traceback anywhere in `/tmp/jarvis-dev.log`. No traceback is the
+important clue: it rules out a Python exception and points at something external (a dropped
+connection, not a crash).
+
+**Root cause, found on review rather than more blind live-testing:** `tool_bridge.call()` is a
+real network round trip (Python → Rust → frontend → `commandEngine.ts` → possibly a real
+`claude -p` call, which can take several seconds) — and it was being `await`ed *directly inside*
+`async for response in session.receive():`, in both the tool-call handler and the confirmation
+handler. That holds the live connection's receive generator suspended for the whole round trip,
+during which nothing is being read from Gemini at all. This is the exact same class of mistake as
+2026-08-13's blocking-I/O fix (documented above) — never make the thing reading the connection
+wait on slow external work — just with a slow `await` this time instead of a blocking sync call,
+and in new code that hadn't been live-tested yet.
+
+**Fixed:** both handlers now run as background `asyncio.create_task()`s instead of inline awaits,
+so `receive_and_play`'s loop keeps consuming the connection while the round trip happens
+concurrently. The background tasks live in a list one scope up (`run_live_session`, not
+`receive_and_play`) specifically so the existing session-cleanup `finally:` blocks can cancel them
+on session end instead of leaking them past the session that spawned them.
+
+**Known, disclosed simplification, not fixed:** `pending_confirmation` is one shared variable per
+session, not tracked per in-flight call — if Gemini somehow issued two tool calls needing
+confirmation in close succession, a second would silently overwrite the first's pending state.
+Low-probability given the tool's own description tells Gemini to wait for the user's answer before
+doing anything else, and Live's own turn-taking generally serializes function calls — not fixed
+now, flagged here so it isn't quietly forgotten if it ever actually causes a problem.
+
+**Verified:** real `cargo build`/`cargo test` (still 25 Rust tests), 73 frontend tests, `tsc -b`,
+Python syntax-checked. **Not yet verified:** whether this was the complete fix — needs another live
+test. Temporary diagnostic logging left in `voice.rs` (`start_voice_listener`/`stop_voice_listener`/
+`emit_status` now `eprintln!` when called) to make it unambiguous on the next test if a frontend-
+triggered restart is *also* happening — remove once this is confirmed resolved.
+
 ## Not built yet
 
 - Follow-up conversation mode, configurable timeout, spoken interruption ("Jarvis, stop") — now
   real for the `gemini_live` engine (2026-08-13 above); still true of the `classic` engine.
 - Startup greeting, activation sound, speech speed/volume settings.
 - Push-to-talk (the shortcut is displayed in settings but not bound to anything).
-- The tool-calling bridge letting Gemini Live run JARVIS Skills mid-conversation (see the
-  2026-08-13 section above).
-- Real acoustic echo cancellation for `gemini_live` on built-in speakers/mic (see the
-  echo-related section above) — either mic gating during playback or a true AEC path (e.g.
-  CoreAudio's voice-processing tap instead of plain PortAudio). Headphones are the workaround
-  until this exists.
+- `aec_bridge`'s device selection (`input_device`/`output_device` from `config.json`) — always
+  uses the system default right now (see the 2026-08-14 section above).
+- Real acoustic echo cancellation for `gemini_live` on built-in speakers/mic — **built**
+  (`aec_bridge/`, 2026-08-14 above), but not yet live-tested end to end with real audio, so
+  headphones remain the confirmed workaround until it is.

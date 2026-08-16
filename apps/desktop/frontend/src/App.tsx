@@ -12,7 +12,7 @@ import { CommandBar } from "./components/CommandBar";
 import { TopNav } from "./components/TopNav";
 import { ThemeSwitcher } from "./components/ThemeSwitcher";
 import { ApprovalDialog } from "./components/ApprovalDialog";
-import { parseCommand, executeCommand } from "./commandEngine";
+import { parseCommand, executeCommand, runVoiceCommand, runVoiceCommandConfirmed } from "./commandEngine";
 import { permissionLevelFor } from "./permissions";
 import { getStore, type Conversation, type Message, type Project } from "./lib/store";
 import { DashboardView, type LogEntry } from "./views/DashboardView";
@@ -277,7 +277,7 @@ export default function App({ standaloneView = null }: { standaloneView?: string
         action: `Run: "${text}"`,
         context: `Skill "${command.kind}" is classified Level 3 (sensitive) in permissions.ts.`,
         reason:
-          "Level 3 Skills require your explicit approval every time before JARVIS runs them (SECURITY.md).",
+          "Level 3 Skills require your explicit approval every time before JARVIS runs them (docs/SECURITY.md).",
         risk: "This action may be irreversible or touch a sensitive system — review before approving.",
       });
       if (!approved) {
@@ -326,7 +326,7 @@ export default function App({ standaloneView = null }: { standaloneView?: string
     persistMessage("user", text);
     persistMessage("jarvis", response);
 
-    // Milestone 26: log every Skill run to activity_events (SECURITY.md's
+    // Milestone 26: log every Skill run to activity_events (docs/SECURITY.md's
     // Level 2 "traceable" requirement) -- separate from the message
     // persistence above since not every command is a Skill (switch-theme,
     // status, help, ask aren't in SKILL_COMMAND_KINDS). Fire-and-forget,
@@ -400,6 +400,31 @@ export default function App({ standaloneView = null }: { standaloneView?: string
         persistMessage(role, text);
       },
       onLiveSessionEnd: () => setCoreState("idle"),
+      // Milestone 41 (2026-08-14): the tool-calling bridge. Gemini asked
+      // to actually run something -- routes through the same
+      // executeCommand path everything else uses (via runVoiceCommand/
+      // runVoiceCommandConfirmed in commandEngine.ts), NOT the real
+      // ApprovalDialog even for a Level 3 action -- Leonardo's explicit
+      // choice, confirmation is spoken by Gemini instead of a popup.
+      // send_voice_tool_result writes the result back onto
+      // gemini_live_listen.py's stdin, where its ToolBridge is awaiting
+      // exactly this by call id.
+      onToolCall: async (id, command, preApproved) => {
+        const voiceCtx = {
+          setTheme,
+          runOrchestrator,
+          runOrchestratorBackground,
+          activeProject: activeProject ? { name: activeProject.name } : null,
+        };
+        const result = preApproved
+          ? await runVoiceCommandConfirmed(command, voiceCtx)
+          : await runVoiceCommand(command, voiceCtx);
+        await invoke("send_voice_tool_result", { id, status: result.status, text: result.text }).catch(
+          () => {}
+        );
+        persistMessage("user", command);
+        persistMessage("jarvis", result.text);
+      },
     }
   );
 

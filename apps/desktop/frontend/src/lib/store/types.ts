@@ -112,7 +112,7 @@ export interface Skill {
 
 /**
  * Milestone 26 — extends the `activity_events` table 0001_init.sql already
- * created (per SECURITY.md's Level 2 "every action must be traceable"
+ * created (per docs/SECURITY.md's Level 2 "every action must be traceable"
  * rule) rather than inventing a parallel `skill_runs` log. `skillId`/
  * `conversationId` are new, nullable columns added by
  * 0005_activity_events_skill_tracking.sql; `projectId`/`type`/`summary`
@@ -146,7 +146,7 @@ export interface JarvisStore {
   listProjects(): Promise<Project[]>;
   createProject(input: NewProjectInput): Promise<Project>;
   updateProject(id: string, patch: Partial<NewProjectInput> & { status?: ProjectStatus }): Promise<Project>;
-  /** Level 3 (sensitive) per SECURITY.md — callers must route this through an approval step. */
+  /** Level 3 (sensitive) per docs/SECURITY.md — callers must route this through an approval step. */
   deleteProject(id: string): Promise<void>;
 
   listTasks(projectId?: string): Promise<Task[]>;

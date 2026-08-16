@@ -1,5 +1,12 @@
 # Architecture
 
+Moved here 2026-08-15 as part of the docs restructure (was `ARCHITECTURE.md` at repo root,
+content otherwise unchanged from its original 2026-08-09 drafting). This file covers the *why* —
+tier split, stack decisions, and the risks known at the time. For what's actually built and how
+it works today, see `docs/SYSTEMS.md` and the per-system docs it links to — a lot has shipped
+since this was written (Skills registry, real permission enforcement, voice, multi-window,
+themes) that this file predates and doesn't describe.
+
 ## Why this differs from the original spec
 
 The master spec assumes one Claude Code agent, running locally, with full-time access to your
@@ -60,9 +67,9 @@ the actual JARVIS orchestrator, because only it has real access to your machine.
 ## Design rules carried over from the spec
 
 Inspect before modifying. Plan before major architecture changes. Build incrementally — one
-milestone at a time (`ROADMAP.md`). Never mark something complete because the UI renders;
+milestone at a time (`project/ROADMAP.md`). Never mark something complete because the UI renders;
 verify the underlying connection actually works. Least-privilege access, secrets never in
-source (`SECURITY.md`). No component failure should crash the whole app — see "safe
+source (`docs/SECURITY.md`). No component failure should crash the whole app — see "safe
 degradation" in the original spec (§96), preserved here as a requirement once the desktop app
 exists.
 

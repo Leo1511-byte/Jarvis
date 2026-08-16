@@ -82,7 +82,7 @@ export function ProjectsView({
         <p className="empty-state">
           {isSupabaseConfigured()
             ? "Backed by Supabase."
-            : "Backed by local storage only — Supabase isn't configured yet (see M7 in ROADMAP.md). Data stays on this machine."}
+            : "Backed by local storage only — Supabase isn't configured yet (see M7 in project/ROADMAP.md). Data stays on this machine."}
         </p>
       </div>
 

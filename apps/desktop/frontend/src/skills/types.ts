@@ -11,7 +11,7 @@
  * Skills already use. No hardware Skill is defined yet — there's no
  * driver, no connection, nothing to run. Adding one here without a real
  * device behind it would be exactly the "renders but isn't connected"
- * mistake this project's own discipline (see ARCHITECTURE.md) rules out.
+ * mistake this project's own discipline (see docs/ARCHITECTURE.md) rules out.
  */
 
 /** Same three Connection contexts a Skill can execute in as commands

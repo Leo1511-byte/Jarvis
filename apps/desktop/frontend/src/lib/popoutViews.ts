@@ -5,7 +5,7 @@
  * sections (Research, Automations, Notifications) -- popping one of
  * those out would be a window that shows "not built yet" and nothing
  * else, the exact "renders but isn't connected" mistake this project's
- * own discipline rules out (see ARCHITECTURE.md).
+ * own discipline rules out (see docs/ARCHITECTURE.md).
  *
  * Single source of truth for the nav-name <-> URL-slug mapping:
  * TopNav.tsx (Milestone 35, replaced Sidebar.tsx) uses POPOUT_VIEWS to

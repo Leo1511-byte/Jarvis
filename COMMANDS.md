@@ -36,7 +36,7 @@ a working state, not assume these resolve like the local commands above:**
 
 All five are Level 1 (research/calendar/email/github — explicitly read-only) or Level 2
 (continue-project — writes, but not sensitive in the delete/send/deploy/purchase sense) per
-`permissions.ts`. None are Level 3, so none go through `ApprovalDialog` — see `SECURITY.md` for
+`permissions.ts`. None are Level 3, so none go through `ApprovalDialog` — see `docs/SECURITY.md` for
 what does.
 
 Parser + executor: `apps/desktop/frontend/src/commandEngine.ts`, tested in

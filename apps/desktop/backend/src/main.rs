@@ -41,6 +41,7 @@ fn main() {
             voice::start_speak_daemon,
             voice::stop_speak_daemon,
             voice::queue_speech,
+            voice::send_voice_tool_result,
             windows::open_view_window,
             system_stats::get_system_stats,
         ])

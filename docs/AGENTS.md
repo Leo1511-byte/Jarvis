@@ -1,4 +1,12 @@
-# Agent System
+# Agents
+
+Moved here 2026-08-15 as part of the docs restructure (was `AGENT_SYSTEM.md` at repo root,
+content otherwise unchanged from its 2026-08-10 state). One addition since: **Milestone 41
+(2026-08-14)** gave Gemini Live a tool-calling bridge — a generic `run_jarvis_command` function
+Gemini can call mid-conversation, routed through the *same* `commandEngine.ts`/orchestrator path
+described below, not a new agent mechanism. See `docs/VOICE.md` for that. Everything else in this
+file still reflects reality: no separate agent process, no state machine — see `docs/SYSTEMS.md`
+for the current map.
 
 ## Today (updated 2026-08-09)
 
@@ -29,7 +37,7 @@ turns out to be insufficient:
 | "Plan the next milestone" | Planning agent |
 | "Update documentation" | Documentation agent |
 
-Specialists don't independently touch sensitive systems — Level 3 actions (`SECURITY.md`) still
+Specialists don't independently touch sensitive systems — Level 3 actions (`docs/SECURITY.md`) still
 require approval regardless of which agent (or prompt template) is asking.
 
 ## Status display (once agents exist)

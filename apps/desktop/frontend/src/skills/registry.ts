@@ -159,12 +159,12 @@ export const SKILLS: Skill[] = [
         `Leonardo triggered this explicitly and approved it.\n\n` +
         (focus
           ? `Work on: ${focus}.\n\n`
-          : `No specific focus was given -- read ROADMAP.md and TASKS.md, pick the single most ` +
-            `sensible next item (prefer the top of TASKS.md's Backlog, or the next unscoped ` +
-            `item in ROADMAP.md), and work on that one thing only.\n\n`) +
+          : `No specific focus was given -- read project/ROADMAP.md and project/TASKS.md, pick the single most ` +
+            `sensible next item (prefer the top of project/TASKS.md's Backlog, or the next unscoped ` +
+            `item in project/ROADMAP.md), and work on that one thing only.\n\n`) +
         `Follow this repo's own discipline exactly as documented in CLAUDE.md: inspect before ` +
         `modifying, one change at a time, run the real test suite and build before considering ` +
-        `it done, update CHANGELOG.md/ROADMAP.md/TASKS.md the same way every other milestone in ` +
+        `it done, update CHANGELOG.md/project/ROADMAP.md/project/TASKS.md the same way every other milestone in ` +
         `this repo's history has been recorded. Do not touch unrelated code. If the change needs ` +
         `cargo and it's unavailable in this session, write an honest handoff doc instead of ` +
         `guessing, the same pattern already used elsewhere in this repo (see docs/archive/` +

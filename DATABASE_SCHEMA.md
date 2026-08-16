@@ -49,10 +49,10 @@ settings (
 ## Decided (2026-08-09)
 
 **Supabase Cloud (free tier)**, not self-hosted/Docker Postgres — Docker isn't installed on
-this machine and disk is tight (~22 GiB free). See `ARCHITECTURE.md` for the reasoning.
+this machine and disk is tight (~22 GiB free). See `docs/ARCHITECTURE.md` for the reasoning.
 
 ## Explicitly not done yet
 
 The actual Supabase project doesn't exist. Until it does, the app runs on a local-storage
 adapter (`localStore.ts`) implementing the identical `JarvisStore` interface — see
-`ARCHITECTURE.md` and `ROADMAP.md` Milestone 8.
+`docs/ARCHITECTURE.md` and `project/ROADMAP.md` Milestone 8.

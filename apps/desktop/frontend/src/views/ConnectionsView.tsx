@@ -26,7 +26,7 @@ const LABEL: Record<Status, string> = {
 function statusFor(id: string, inTauri: boolean): Status {
   switch (id) {
     // M14/M15/M12: confirmed live via real command-bar results (see
-    // TASKS.md) -- same evidence bar StatusPanel's GitHub row uses.
+    // project/TASKS.md) -- same evidence bar StatusPanel's GitHub row uses.
     case "calendar":
     case "gmail":
     case "github":
@@ -35,7 +35,7 @@ function statusFor(id: string, inTauri: boolean): Status {
     // row, not yet clicked through live in the running app.
     case "obsidian":
       return inTauri ? "unverified" : "not-wired";
-    // M16: research <topic> works and is tested, but ROADMAP.md's M16 row
+    // M16: research <topic> works and is tested, but project/ROADMAP.md's M16 row
     // (unlike M12/M14/M15) never claims a live UI confirmation -- stays
     // unverified rather than borrowing that claim.
     case "web":

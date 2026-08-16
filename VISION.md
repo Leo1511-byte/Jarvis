@@ -62,8 +62,8 @@ Two different things, and worth keeping separate:
 | Andrew John Lund (CEO, Inanomiq) | Not a day-to-day builder. Brought in later for restructuring, fixing a concrete objective, and figuring out how this scales — organizational and strategic, not implementation. |
 
 No fixed process exists yet beyond "inspect before modifying, build one milestone at a time, test
-and document everything, never fake a status" — the engineering discipline in `ARCHITECTURE.md`
-and `SECURITY.md`. That discipline has held up for 29 milestones and is worth keeping regardless
+and document everything, never fake a status" — the engineering discipline in `docs/ARCHITECTURE.md`
+and `docs/SECURITY.md`. That discipline has held up for 29 milestones and is worth keeping regardless
 of how the team structure evolves.
 
 ## Not goals (for now)
@@ -91,5 +91,5 @@ Explicit, so scope doesn't quietly creep:
 
 ## Where this lives
 
-This file is meant to sit alongside `ARCHITECTURE.md`/`ROADMAP.md`/`SECURITY.md` as the "why,"
+This file is meant to sit alongside `docs/ARCHITECTURE.md`/`project/ROADMAP.md`/`docs/SECURITY.md` as the "why,"
 not the "how" — update it when the actual goal changes, not every time a milestone ships.

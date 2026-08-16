@@ -18,7 +18,7 @@ The report found two real vault candidates:
 
 **Leonardo confirmed `~/Documents/Obsidian Vault` as the real vault** by directing the
 inspection report to be saved there. It's now the canonical path for everything in this doc and
-in `ARCHITECTURE.md`.
+in `docs/ARCHITECTURE.md`.
 
 ## What this actually means
 

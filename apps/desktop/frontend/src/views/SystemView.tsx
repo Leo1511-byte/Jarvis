@@ -55,7 +55,7 @@ const RECENT_ACTIVITY_LIMIT = 3;
  *
  * The hardware Devices panel lives here (idea #3 from PROJECT_OBJECTIVE.md)
  * but stays an honest empty state -- no device exists to connect yet (see
- * TASKS.md's backlog item #3).
+ * project/TASKS.md's backlog item #3).
  */
 export function SystemView({ onNavigate }: { onNavigate: (view: string) => void }) {
   const inTauri = useInTauri();
@@ -190,7 +190,7 @@ export function SystemView({ onNavigate }: { onNavigate: (view: string) => void 
         <div className="panel">
           <h3 className="panel-title">Permissions</h3>
           <p className="empty-state" style={{ marginBottom: "var(--space-2)" }}>
-            Every Skill is classified Level 1-3 (SECURITY.md); Level 3 requires your explicit
+            Every Skill is classified Level 1-3 (docs/SECURITY.md); Level 3 requires your explicit
             approval every time, no exceptions.
           </p>
           <div className="status-row">

@@ -3,7 +3,7 @@
 Status: **plan only, nothing implemented.** Per Leonardo's spec ("Do NOT modify anything yet")
 and this repo's own standing rule (inspect before modifying, plan before major architecture
 changes), this document is the required first deliverable. No code, schema, or doc other than
-this plan and the `TASKS.md`/`ROADMAP.md` entries pointing to it has been touched.
+this plan and the `project/TASKS.md`/`project/ROADMAP.md` entries pointing to it has been touched.
 
 ## CURRENT V1 STATE
 
@@ -38,7 +38,7 @@ this plan and the `TASKS.md`/`ROADMAP.md` entries pointing to it has been touche
 
 ## REUSABLE COMPONENTS (do not duplicate)
 
-- **Skills = the existing prompt-template pattern**, not a new execution engine. `AGENT_SYSTEM.md`
+- **Skills = the existing prompt-template pattern**, not a new execution engine. `docs/AGENTS.md`
   already documents this exact design decision ("specialists... a prompt template, not a distinct
   agent process"). The Skills milestone is about giving these six prompts a data row (name,
   description, prompt template, required connections, permission level) instead of a `switch`
@@ -87,7 +87,7 @@ the working design, not final DDL):
 - `connections` — id, name (`calendar`/`gmail`/`github`/`obsidian`/`web`/`supabase`), status
   (mirrors `StatusPanel`'s connected/unverified/not-wired), created_at. **No credential columns,
   ever** — this table is a status/metadata registry only, per the spec's own Phase 15 constraint
-  and `SECURITY.md`'s existing "never commit/store credentials" rule.
+  and `docs/SECURITY.md`'s existing "never commit/store credentials" rule.
 - `connection_capabilities` — id, connection_id (fk), capability (e.g. `read-events`,
   `send-email`), read_only (bool).
 - `skill_connections` — skill_id (fk), connection_id (fk) — join table enforcing which Connections
@@ -146,7 +146,7 @@ views of the same underlying calls.
   `delete-project` — no second, weaker approval path for Skills.
 - `skill_connections` is the least-privilege mechanism: a Skill cannot invoke a Connection it
   isn't linked to, checked before the orchestrator call is made, not just documented.
-- Logging (`activity_events` extension) follows `SECURITY.md`'s existing rule: captures actions/
+- Logging (`activity_events` extension) follows `docs/SECURITY.md`'s existing rule: captures actions/
   errors/state, never captures tokens or auth headers — nothing about this plan changes what's
   safe to log.
 
@@ -165,7 +165,7 @@ views of the same underlying calls.
 | 29 | Voice ↔ Chat integration polish | M9, M22 | Low–medium |
 
 Sequencing rule carried over from the rest of this repo: data model before UI, existing systems
-extended before new ones invented, each milestone tested + `TASKS.md`/`CHANGELOG.md` updated
+extended before new ones invented, each milestone tested + `project/TASKS.md`/`CHANGELOG.md` updated
 before the next starts. M27 is the one milestone in this set that needs `cargo` — flagged for
 local Claude Code same as prior Rust work, not attempted blind from Cowork.
 

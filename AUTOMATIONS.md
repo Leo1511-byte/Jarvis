@@ -27,7 +27,7 @@ Node/Python scripts triggered by macOS `launchd`/cron for the "runs on a schedul
 (morning brief gathering, weekly review, calendar sync, reminders). Per spec principle #46,
 n8n isn't used for anything simpler and safer done locally — this is that judgment call in
 practice, not a rejection of n8n. Revisit if script-based scheduling gets unwieldy (Milestone 13
-in `ROADMAP.md` stays the checkpoint for that decision).
+in `project/ROADMAP.md` stays the checkpoint for that decision).
 
 ## Interface (once automations exist beyond the one above)
 

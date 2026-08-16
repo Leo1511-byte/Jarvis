@@ -14,7 +14,12 @@ export type VoiceEvent =
   // doesn't need.
   | { event: "live_session_start" }
   | { event: "live_transcript"; role: "user" | "jarvis"; text: string }
-  | { event: "live_session_end" };
+  | { event: "live_session_end" }
+  // Milestone 41 (2026-08-14), gemini_live_listen.py only: Gemini called
+  // its one registered tool. `preApproved` is true only on the second,
+  // confirmed round trip after the user verbally said yes to a
+  // NEEDS_APPROVAL action -- see App.tsx's handleVoiceToolCall.
+  | { event: "tool_call"; id: string; command: string; pre_approved: boolean };
 
 export interface VoiceCallbacks {
   onWake?: () => void;
@@ -32,6 +37,10 @@ export interface VoiceCallbacks {
   onLiveSessionStart?: () => void;
   onLiveTranscript?: (role: "user" | "jarvis", text: string) => void;
   onLiveSessionEnd?: () => void;
+  /** gemini_live engine only, Milestone 41. Gemini asked to run a real
+   * JARVIS command mid-conversation -- see App.tsx's handleVoiceToolCall
+   * for how this reaches commandEngine.ts and reports back. */
+  onToolCall?: (id: string, command: string, preApproved: boolean) => void;
 }
 
 /**
@@ -69,6 +78,8 @@ export function useVoiceListener(enabled: boolean, engine: string, callbacks: Vo
           else if (payload.event === "live_transcript")
             callbacksRef.current.onLiveTranscript?.(payload.role, payload.text);
           else if (payload.event === "live_session_end") callbacksRef.current.onLiveSessionEnd?.();
+          else if (payload.event === "tool_call")
+            callbacksRef.current.onToolCall?.(payload.id, payload.command, payload.pre_approved);
         });
         if (cancelled) {
           // Cleanup already ran before this async listen() resolved --

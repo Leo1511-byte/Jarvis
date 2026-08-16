@@ -37,7 +37,7 @@ export function ActivityView() {
       <div>
         <h2 style={{ margin: 0, fontSize: 18 }}>Activity</h2>
         <p className="empty-state">
-          Every Skill run, most recent first — the traceability record SECURITY.md's Level 2
+          Every Skill run, most recent first — the traceability record docs/SECURITY.md's Level 2
           rule calls for. Not a chat log (see Chat) and not a note index (see Memory), just what
           ran, when.
         </p>

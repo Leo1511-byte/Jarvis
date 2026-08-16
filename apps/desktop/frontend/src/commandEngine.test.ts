@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { parseCommand, executeCommand } from "./commandEngine";
+import { parseCommand, executeCommand, runVoiceCommand, runVoiceCommandConfirmed } from "./commandEngine";
 
 describe("parseCommand", () => {
   it("parses theme switch commands with aliases", () => {
@@ -279,7 +279,7 @@ describe("executeCommand", () => {
       { setTheme: vi.fn(), runOrchestratorBackground }
     );
     expect(runOrchestratorBackground).toHaveBeenCalledWith(
-      expect.stringContaining("ROADMAP.md and TASKS.md")
+      expect.stringContaining("project/ROADMAP.md and project/TASKS.md")
     );
   });
 
@@ -418,5 +418,64 @@ describe("executeCommand", () => {
     expect(runOrchestrator).toHaveBeenCalledTimes(1);
     expect(response).toContain("delete the file notes.txt");
     expect(response).toMatch(/approval/i);
+  });
+});
+
+describe("runVoiceCommand / runVoiceCommandConfirmed (Milestone 41)", () => {
+  it("runs a Level 1/2 command straight through, no confirmation needed", async () => {
+    const result = await runVoiceCommand("status", { setTheme: vi.fn() });
+    expect(result.status).toBe("done");
+    expect(result.text).toMatch(/status/i);
+  });
+
+  it("flags a Level 3 Skill as needing confirmation instead of running it or opening a dialog", async () => {
+    const runOrchestrator = vi.fn();
+    const runOrchestratorBackground = vi.fn();
+    const result = await runVoiceCommand("upgrade yourself", {
+      setTheme: vi.fn(),
+      runOrchestrator,
+      runOrchestratorBackground,
+    });
+    expect(result.status).toBe("needs_confirmation");
+    expect(runOrchestrator).not.toHaveBeenCalled();
+    expect(runOrchestratorBackground).not.toHaveBeenCalled();
+  });
+
+  it("actually runs a Level 3 Skill once confirmed", async () => {
+    const runOrchestratorBackground = vi
+      .fn()
+      .mockResolvedValue({ jobId: "job-1", sessionId: "sess-1" });
+    const result = await runVoiceCommandConfirmed("upgrade yourself", {
+      setTheme: vi.fn(),
+      runOrchestratorBackground,
+    });
+    expect(result.status).toBe("done");
+    expect(runOrchestratorBackground).toHaveBeenCalled();
+  });
+
+  it("answers a SAFE ask directly", async () => {
+    const runOrchestrator = vi.fn().mockResolvedValue("SAFE: it's sunny.");
+    const result = await runVoiceCommand("what's the weather", { setTheme: vi.fn(), runOrchestrator });
+    expect(result.status).toBe("done");
+    expect(result.text).toBe("it's sunny.");
+  });
+
+  it("flags a NEEDS_APPROVAL ask as needing confirmation without running the act step", async () => {
+    const runOrchestrator = vi.fn().mockResolvedValue("NEEDS_APPROVAL: delete the file notes.txt");
+    const result = await runVoiceCommand("delete notes.txt", { setTheme: vi.fn(), runOrchestrator });
+    expect(result.status).toBe("needs_confirmation");
+    expect(result.text).toContain("delete the file notes.txt");
+    expect(runOrchestrator).toHaveBeenCalledTimes(1);
+  });
+
+  it("runs the confirmed ask's act step once the user says yes", async () => {
+    const runOrchestrator = vi
+      .fn()
+      .mockResolvedValueOnce("NEEDS_APPROVAL: delete the file notes.txt")
+      .mockResolvedValueOnce("Deleted notes.txt.");
+    const result = await runVoiceCommandConfirmed("delete notes.txt", { setTheme: vi.fn(), runOrchestrator });
+    expect(result.status).toBe("done");
+    expect(result.text).toBe("Deleted notes.txt.");
+    expect(runOrchestrator).toHaveBeenCalledTimes(2);
   });
 });

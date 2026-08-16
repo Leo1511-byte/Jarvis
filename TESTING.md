@@ -33,9 +33,9 @@ at the end.
   `claude agents --json` all exercised by hand before writing the Rust code around them). What's
   **not yet verified**: an actual "research topic" typed into the running app's command bar,
   end to end through the real webview IPC bridge — that needs a human at the actual window, see
-  `TASKS.md`.
+  `project/TASKS.md`.
 - **Not applicable yet:** M16/17's own test rows below — those milestones are architecture-only
-  beyond M10's first slice (see `ROADMAP.md`), there's no further implementation to test.
+  beyond M10's first slice (see `project/ROADMAP.md`), there's no further implementation to test.
 - **Not started:** performance benchmarking (app startup, command latency).
 
 ## Required tests, by milestone
@@ -60,5 +60,5 @@ at the end.
 
 ## Rule
 
-A milestone doesn't close in `ROADMAP.md`/`TASKS.md` until its test above actually passes —
+A milestone doesn't close in `project/ROADMAP.md`/`project/TASKS.md` until its test above actually passes —
 not when the UI merely renders (spec principle #6).

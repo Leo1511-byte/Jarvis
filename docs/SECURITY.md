@@ -17,8 +17,10 @@ approved code; create a research entry. Allowed, but every action must be tracea
 
 **Level 3 — Sensitive.** Delete files, send email, deploy, publish, change accounts or
 security settings, modify credentials, push risky code, run destructive terminal commands.
-Requires explicit approval each time via the approval UI (`AGENT_SYSTEM.md`) — no standing
-auto-approval for these, ever.
+Requires explicit approval each time via the real `ApprovalDialog`/`useApproval` flow
+(`apps/desktop/frontend/src/components/ApprovalDialog.tsx`) — no standing auto-approval for
+these, ever. As of Milestone 41, voice has its own parallel confirmation path (spoken, not a
+popup) with the same real guarantee — see `docs/VOICE.md`.
 
 ## Rules
 
@@ -30,8 +32,12 @@ auto-approval for these, ever.
 - Logs capture actions, agent runs, tool calls, errors, permission requests, and state
   transitions. Logs never capture passwords, tokens, API keys, private keys, or auth headers.
 
-## Current state
+## Current state (updated 2026-08-15, moved from repo root as part of the docs restructure)
 
-No secrets exist in this repo yet — nothing has been provisioned (no Supabase project, no n8n
-instance, no OAuth apps). This file will grow real content once Milestone 7 (Supabase) and
-Milestone 18 (permissions + security UI) start.
+No secrets exist in *this git repo* — real API keys (ElevenLabs, Gemini) live in
+`~/Documents/Obsidian Vault/System/voice/config.json`, which is outside this repo and never
+committed (the vault isn't even a git repository). Supabase is provisioned and in real use
+(confirmed live as of Milestone 39). Permission levels above are real and enforced —
+`permissions.ts`, `ApprovalDialog`/`useApproval`, checked in `App.tsx`'s `handleCommand` for
+built-in Skills and inside `commandEngine.ts`'s `ask` fallback — not aspirational. n8n was never
+adopted (see `docs/ARCHITECTURE.md`'s stack decision).

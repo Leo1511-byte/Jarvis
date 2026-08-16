@@ -5,7 +5,7 @@ words. Captured directly, not reworded or reorganized on the way in.
 
 Relationship to other docs: `VISION.md` is the first-draft charter (2026-08-11, written to be
 argued with and eventually reviewed with Andrew). This file is where the concrete end-state
-picture lives once Leonardo lays it out — `VISION.md` and `ROADMAP.md` get reconciled against
+picture lives once Leonardo lays it out — `VISION.md` and `project/ROADMAP.md` get reconciled against
 it afterward, not the other way around.
 
 ---
@@ -49,7 +49,7 @@ present: System Status, Active Protocols, Core Functions (with progress bars), N
 
 **Flag for Leonardo:** some of the reference image's numbers are decorative sci-fi flavor, not
 real data ("Learning Rate 2.7x", "Neurons Active 12.6B" — there's no actual neural net being
-trained here). This app's whole existing discipline (see `ARCHITECTURE.md`/`CLAUDE.md`) is
+trained here). This app's whole existing discipline (see `docs/ARCHITECTURE.md`/`CLAUDE.md`) is
 never showing a status that isn't real — `StatusPanel` already had a bug fixed for exactly this
 (M6) where it claimed things were wired that weren't. Recommend: adopt the *visual language*
 (glow, bracket-corner panels, rings, monospace, status-tag styling) but keep every number/status
@@ -125,7 +125,7 @@ of this project's core rule (see `CLAUDE.md`): never show a status that isn't re
   vague/undefined ones ("Optimize System," "Emergency Protocol") unless we define what they'd
   actually do.
 - Security Status → reflect the real Level 1/2/3 permission system and approval-gate config
-  (`permissions.ts`, `SECURITY.md`), not invented "Intrusion Detection"/"Encryption"/"Threat
+  (`permissions.ts`, `docs/SECURITY.md`), not invented "Intrusion Detection"/"Encryption"/"Threat
   Level" fields.
 - **This is also where idea #3's device-connection panel belongs** — System/Settings is the
   natural home for both software Connections and hardware Devices.

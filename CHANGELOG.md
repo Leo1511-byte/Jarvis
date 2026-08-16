@@ -2,9 +2,78 @@
 
 Full changelog for M1–M29 (2026-08-09 to 2026-08-11) is archived at
 [`docs/archive/CHANGELOG_M1-29.md`](docs/archive/CHANGELOG_M1-29.md). Entries below are terse
-going forward — see `ROADMAP.md` for current milestone status and `TASKS.md` for active work.
+going forward — see `project/ROADMAP.md` for current milestone status and `project/TASKS.md` for active work.
 
 ## Unreleased
+
+### 2026-08-14 — Milestone 41: Gemini Live tool-calling bridge, voice-native Level 3 confirmation
+- Leonardo, live-tested: "the voice and the actual jarvis app don't work together" — asking Gemini
+  Live to check status got nothing, since no tools were registered in the Live session (by design,
+  deliberately deferred from M40). Confirmed the real, documented mechanism directly against the
+  installed `google-genai` SDK (function calling: `tools`, `FunctionCall`/`FunctionResponse`,
+  `send_tool_response`/`send_client_content`) before writing any code.
+- One generic tool (`run_jarvis_command`, free text — same shape as the command bar) routes through
+  the *same* `executeCommand` path every other input surface uses, not a parallel execution system.
+  New real IPC in a new direction: `voice.rs` now pipes the listener's stdin (previously unused)
+  and gained `send_voice_tool_result` + `VoiceEvent::ToolCall`; `gemini_live_listen.py` gained
+  `ToolBridge`; the frontend gained `runVoiceCommand`/`runVoiceCommandConfirmed` in
+  `commandEngine.ts` and an `onToolCall` handler in `App.tsx`.
+- **Level 3 confirmation is spoken, not a popup — Leonardo's explicit design decision, made before
+  implementation.** A sensitive action never opens the real `ApprovalDialog` from voice; Gemini
+  asks a yes/no question out loud instead, and the actual go/no-go on the next turn is decided
+  deterministically by `gemini_live_listen.py`'s own near-exact yes/no phrase match (mirroring
+  `is_end_phrase()`), never by trusting Gemini's own read of an ambiguous reply — discussed and
+  agreed as the one place not to compromise on, since that's the same real guarantee the on-screen
+  click currently provides.
+- Real bug caught and fixed before shipping: `main()`'s wake-word loop calls `asyncio.run()` fresh
+  every cycle, so a naively loop-bound `asyncio.Future` in `ToolBridge` would target a stale,
+  already-closed event loop from a previous cycle. Fixed with a loop-agnostic `queue.Queue` plus a
+  `drain_results()` task started fresh inside each live session.
+- **Verified:** real `cargo build`/`cargo test` (25 Rust tests, 1 new), 73 frontend tests (6 new,
+  covering both the Level-3-Skill and "ask" NEEDS_APPROVAL paths on both the discovery and
+  confirmed passes), `tsc -b`/`vite build` clean, Python syntax-checked. **Not yet verified:** an
+  actual spoken tool call end to end with real audio — needs Leonardo's live test. See
+  `VOICE_SETUP.md`'s 2026-08-14 section.
+
+### 2026-08-14 — Step-back review, language fix, and a new native AEC bridge for Gemini Live
+- Five real bugs from five consecutive live tests (blocking I/O, echo/end-phrase match, single-turn
+  receive loop, VAD sensitivity, and now a Spanish-language report) prompted a full design review
+  instead of another isolated patch — see `docs/VOICE_GEMINI_LIVE_REVIEW_2026-08-14.md` for the
+  complete hardware/architecture/bug-history writeup.
+- **Language fix:** confirmed via `ai.google.dev`'s current docs that `gemini-3.1-flash-live-preview`
+  is a native-audio model, for which `speech_config.language_code` "don't support explicitly
+  setting the language code" — that field would have been silently ignored. Added a
+  `system_instruction` locking output to English instead, the documented mechanism for native-audio
+  models. Syntax-checked only, not yet re-tested live.
+- **New: `System/voice/aec_bridge/`**, a small native Swift binary giving Gemini Live real
+  acoustic echo cancellation via CoreAudio's VoiceProcessingIO — not reachable from Python's audio
+  libraries at all. Opt-in via `config.json`'s new `audio_backend` field (default unchanged).
+  Fixed three real CoreAudio -10875 engine-start failures during development (voice processing
+  needed on both input and output nodes; tap format must be queried after enabling it, not before)
+  by isolating each cause in minimal test binaries against real hardware — the compiled engine now
+  starts cleanly and negotiates real device formats. Actual captured-audio behavior end-to-end
+  could not be verified from this session (microphone TCC permission is scoped to the Claude Code
+  app process, not a real interactive Terminal) — needs Leonardo's own live test. See `project/TASKS.md`.
+- **Disclosed incident:** while inspecting (not intending to change) the current microphone TCC
+  grant during this work, `tccutil reset Microphone` was run by mistake, which resets mic
+  permission for every app on the machine, not just this one. Flagged immediately; only
+  consequence is other apps (Zoom, browsers, etc.) will re-prompt for mic access once.
+
+### 2026-08-13 — Fixed: Gemini Live reacted to noise, not just voices
+- Leonardo: "listening to every noise, when it only should listen to voices." Checked running
+  processes first — confirmed only one `gemini_live_listen.py` alive (the repeated "Listening
+  for wake word..." lines in the log were legitimate restarts from earlier re-testing, not
+  duplicate processes).
+- Two real, separate fixes: (1) Gemini Live's own voice-activity detection defaults to HIGH
+  sensitivity on both start-of-speech and end-of-speech (per `ai.google.dev`'s API reference,
+  pulled via web fetch) — lowered both via a new `realtime_input_config` block, the sanctioned
+  way to tune this rather than a client-side heuristic. (2) openWakeWord's per-chunk score is
+  noisy; a single chunk above threshold can be a transient noise spike. Now requires 3
+  consecutive above-threshold chunks before triggering — standard hysteresis, real speech
+  naturally sustains across frames, noise usually doesn't. Deliberately not applied to
+  `listen_loop.py` (classic engine), which hasn't been reported to have this problem.
+- Python syntax-checked only, not yet re-tested. Fourth distinct bug found from four consecutive
+  live tests — full history in `VOICE_SETUP.md`.
 
 ### 2026-08-13 — Fixed: Gemini Live only handled one turn per session
 - Headphones test (confirming the echo theory from the previous fix) surfaced a third, distinct
@@ -85,10 +154,10 @@ going forward — see `ROADMAP.md` for current milestone status and `TASKS.md` f
 - **Deliberately scoped out**: Gemini can't yet run a JARVIS Skill mid-conversation — no tools
   registered in the Live session config, no bridge to `commandEngine.ts`'s approval-gated
   execution path. Marked in `gemini_live_listen.py` (`# TOOL-CALLING BRIDGE GOES HERE`) for when
-  that's built — added as `TASKS.md` backlog item 5.
+  that's built — added as `project/TASKS.md` backlog item 5.
 - **Not yet live-tested** — no mic, no Gemini API key in this session. Leonardo has a key
   already; needs adding to `config.json`'s `gemini_api_key` and a real conversation test. See
-  `TASKS.md`'s "Now".
+  `project/TASKS.md`'s "Now".
 
 ### 2026-08-13 — Two voice self-listening bugs found and fixed
 - Leonardo reported JARVIS still occasionally "listens to its own voice and starts conversating
@@ -130,7 +199,7 @@ going forward — see `ROADMAP.md` for current milestone status and `TASKS.md` f
   open question, not a settled fact.
 - Killed the stuck processes, cleared port 1420, relaunched `~/Desktop/Jarvis.app` clean:
   `target/debug/jarvis` running, no compile errors, `System` tab should now show real Performance
-  numbers (not yet independently eyeballed against Activity Monitor — see `TASKS.md`).
+  numbers (not yet independently eyeballed against Activity Monitor — see `project/TASKS.md`).
 - Removed the now-stale "deliberately not added" comment from `Cargo.toml` since the dependency
   is genuinely present now, and archived `HANDOFF_M37_SYSTEM_STATS_RUST_VERIFICATION.md`'s
   premise (frontend-only verification) is superseded by this full verification.
@@ -162,7 +231,7 @@ going forward — see `ROADMAP.md` for current milestone status and `TASKS.md` f
   2 — this touches JARVIS's own running code, not an external project), triggered by "upgrade
   yourself" / "update yourself" with an optional `: <focus>` suffix. Reuses `continue-project`'s
   exact background-mode-with-sync-fallback pattern.
-- If no focus is given, the prompt tells the orchestrator to read `ROADMAP.md`/`TASKS.md` and
+- If no focus is given, the prompt tells the orchestrator to read `project/ROADMAP.md`/`project/TASKS.md` and
   pick the next sensible item itself, then follow this repo's own documented discipline
   (`CLAUDE.md`): inspect first, one change at a time, real tests/build before done, update
   CHANGELOG/ROADMAP/TASKS the same way every milestone in this repo's history has been recorded.
@@ -213,7 +282,7 @@ going forward — see `ROADMAP.md` for current milestone status and `TASKS.md` f
 - **Not yet live-verified end to end** — needs a real Tauri session where the actual `claude` CLI
   is asked to follow the SAFE/NEEDS_APPROVAL convention and the approval dialog is confirmed to
   fire correctly; a browser preview can't exercise this since `invoke` fails outside Tauri. See
-  `TASKS.md`'s "Now" for the suggested live test phrase.
+  `project/TASKS.md`'s "Now" for the suggested live test phrase.
 
 ### 2026-08-11 — Milestone 36: System/Settings view, software slice
 - New `SystemView.tsx` replaces the `System` placeholder. Real data only, per
@@ -345,6 +414,6 @@ going forward — see `ROADMAP.md` for current milestone status and `TASKS.md` f
   clean, no behavior change.
 
 ### 2026-08-11 — Milestone 30: docs restructure
-- Archived `ROADMAP.md`/`TASKS.md`/`CHANGELOG.md` (M1-29 history) to `docs/archive/`.
+- Archived `project/ROADMAP.md`/`project/TASKS.md`/`CHANGELOG.md` (M1-29 history) to `docs/archive/`.
 - Rewrote all three as lean, current-state docs.
 - Removed 11 stray `dist.bak_*` build-backup folders from `apps/desktop/frontend/`.

@@ -11,7 +11,7 @@ Copy everything below the line into Claude Code and run it.
 ---
 
 Inspect this machine and this repo. Do not install or modify anything — this is read-only
-reconnaissance for Milestone 1 of the JARVIS project (see `ARCHITECTURE.md` and `ROADMAP.md`
+reconnaissance for Milestone 1 of the JARVIS project (see `docs/ARCHITECTURE.md` and `project/ROADMAP.md`
 in this repo for context).
 
 Determine and report:

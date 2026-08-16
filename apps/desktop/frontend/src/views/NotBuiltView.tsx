@@ -10,7 +10,7 @@ export function NotBuiltView({ section }: { section: string }) {
     <div className="panel" style={{ maxWidth: 480 }}>
       <h3 className="panel-title">{section}</h3>
       <p className="empty-state">
-        Not built yet. Check ROADMAP.md for which milestone covers this.
+        Not built yet. Check project/ROADMAP.md for which milestone covers this.
       </p>
     </div>
   );

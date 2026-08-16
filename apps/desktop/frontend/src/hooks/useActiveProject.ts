@@ -7,7 +7,7 @@ const STORAGE_KEY = "jarvis.activeProjectId";
  * now" -- used to give commands like `research <topic>` (see
  * commandEngine.ts's CommandContext.activeProject) real project context
  * instead of always writing to the vault-wide Notes/ folder with no
- * association (a gap ROADMAP.md's M16 row named explicitly).
+ * association (a gap project/ROADMAP.md's M16 row named explicitly).
  *
  * Distinct from Project.status ("active" / "paused" / "archived", each
  * project's own independent lifecycle field, see lib/store/types.ts) --

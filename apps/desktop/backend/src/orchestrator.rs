@@ -2,7 +2,7 @@
 // synchronously (`claude -p --output-format json`) rather than standing up
 // a separate Agent SDK server -- reuses the already-authenticated CLI and
 // its already-verified local MCP servers (Calendar, Gmail, GitHub auth)
-// with no new credential handling. See ARCHITECTURE.md / MCP_SETUP.md.
+// with no new credential handling. See docs/ARCHITECTURE.md / MCP_SETUP.md.
 //
 // Known limitation, not yet fixed: relies on `claude` being resolvable via
 // PATH, which is true under `cargo tauri dev` (inherits the launching
@@ -99,7 +99,7 @@ pub async fn run_orchestrator(prompt: String) -> Result<OrchestratorResponse, St
 //   path -- reuses `parse_claude_output` unchanged. Costs one small extra
 //   API call per completed job and asks the model to reproduce text
 //   rather than reading it back byte-exact -- acceptable for now, noted
-//   as a real limitation in AGENT_SYSTEM.md rather than hidden.
+//   as a real limitation in docs/AGENTS.md rather than hidden.
 
 #[derive(Serialize, Debug, Clone, PartialEq)]
 pub struct BackgroundJob {

@@ -4,7 +4,7 @@
 
 This repo exists. Nothing else is installed yet. Do not install anything before Milestone 1
 (system inspection) is done for real — that inspection determines the stack decision in
-`ARCHITECTURE.md`.
+`docs/ARCHITECTURE.md`.
 
 ## Step 1 — real system inspection (do this now)
 

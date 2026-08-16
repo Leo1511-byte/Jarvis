@@ -7,7 +7,7 @@ split instead of Tauri's default `src-tauri/` next to the frontend. `tauri.conf.
 ## Not yet verified
 
 This was written from a Cowork sandbox with no Rust toolchain — `cargo`/`rustc` aren't
-available there, so **this has not been compiled**. Per `ARCHITECTURE.md`'s risk log, installing
+available there, so **this has not been compiled**. Per `docs/ARCHITECTURE.md`'s risk log, installing
 Rust is an explicit approved step (~1–2 GB, and disk was at ~22 GiB free at last check). Before
 relying on this:
 
@@ -18,5 +18,5 @@ relying on this:
    yet — the bundle config references `icons/` which doesn't exist on disk yet either)
 5. `cargo tauri dev` from `apps/desktop/backend` to confirm it actually launches
 
-Don't mark Milestone 3 done in `TASKS.md` until step 5 has actually run successfully — an
+Don't mark Milestone 3 done in `project/TASKS.md` until step 5 has actually run successfully — an
 unverified config isn't a working app (spec principle #6).
