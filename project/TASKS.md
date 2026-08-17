@@ -6,16 +6,22 @@ currently active.
 
 ## Now
 
-- [ ] **Milestone 42 — native Rust voice rewrite, next step: real audio streaming.** WebSocket
-      handshake spike succeeded 2026-08-15 (`src/bin/gemini_live_spike.rs`) — genuine
-      `setupComplete` received from the real API. Two real findings baked into it: rustls needs
-      an explicit crypto provider installed at startup, and Gemini Live sends JSON as *binary*
-      WebSocket frames, not text frames (easy to miss, silently drops all responses if you only
-      check `Message::Text`). Next real step: extend the spike to send real `realtimeInput` audio
-      (can reuse a short recorded PCM clip, doesn't need a live mic yet) and confirm a real
-      `serverContent` reply comes back with audio data — proving the actual conversation loop
-      before wiring in wake word, AEC, or the app. Supersedes further patches to
-      `gemini_live_listen.py`/`aec_bridge/` — those get replaced, not maintained in parallel.
+- [ ] **Milestone 42 — native Rust voice rewrite, next step: the real STT→Claude Code→relay
+      loop.** Architecture decision, 2026-08-15: Gemini Live is a pure audio↔text relay, never
+      the decision-maker — Claude Code (the same `commandEngine.ts`/orchestrator path everything
+      else uses) is the only brain. This removes M41's tool-calling bridge from scope entirely
+      (no `toolCall` handling needed). The one real assumption this depends on — that Gemini will
+      speak text back verbatim instead of conversing freely, given the right system instruction —
+      is now **live-verified** (`gemini_live_spike.rs` Phase 2: exact-match `outputTranscription`
+      against the input text). Also still true from Phase 1: rustls needs an explicit crypto
+      provider at startup, and Gemini Live sends JSON as *binary* WebSocket frames, not text
+      frames. Next real step: real `realtimeInput` mic audio in, real orchestrator call with the
+      transcribed text, real relay of the response back out — the actual loop, not just its two
+      halves proven separately. Supersedes further patches to `gemini_live_listen.py`/
+      `aec_bridge/` — those get replaced, not maintained in parallel. M41's `ToolBridge`/
+      function-calling code in `gemini_live_listen.py` and `voice.rs` is now dead-end work,
+      superseded — leave as-is until M42 actually replaces it (still functions today, no need to
+      rip out early).
 - [ ] **Re-test Milestone 41 after the "cuts off after one command" fix** — first live test found
       a real bug: `tool_bridge.call()`'s network round trip was awaited inline inside the loop
       reading the live connection, stalling it long enough to drop the session (same class of

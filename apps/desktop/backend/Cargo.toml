@@ -3,6 +3,12 @@ name = "jarvis"
 version = "0.1.0"
 description = "JARVIS desktop command center"
 edition = "2021"
+# 2026-08-15: src/bin/gemini_live_spike.rs (M42 spike) made this crate have
+# two binaries, which broke `cargo run` -- and by extension Tauri's dev
+# command -- with "could not determine which binary to run". This pins the
+# real app as the default; the spike still runs via `cargo run --bin
+# gemini_live_spike` explicitly.
+default-run = "jarvis"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
